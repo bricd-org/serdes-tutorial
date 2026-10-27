@@ -268,7 +268,7 @@ permalink: "/chapters/10-receiver-front-end-and-samplers/"
 <h5 id="crossing-into-the-core-clock">Crossing into the core clock</h5>
 <p>The recovered 312.5 MHz clock and the core’s 312.5 MHz clock, which comes from the local PLL, have the same frequency in near-end loopback, or when both ends share a reference, but an unknown and wandering phase. A small asynchronous FIFO, 4–8 words deep with Gray-coded pointers, absorbs that. If the far end has its own reference (<span class="math inline">\(\pm100\,\mathrm{ppm}\)</span> each), the frequencies differ by up to 200 ppm: one word slips every 5000 words, or every 16 µs. That needs an elastic buffer with skip and insert symbols, which is a protocol feature. For bring-up, run the PRBS checker directly in the recovered domain, before the FIFO, so a BER measurement needs no clock crossing at all.</p>
 <h2 id="sec:ch10-checklist"><span class="secnum">10.7</span>RX design checklist</h2>
-<p><a href="#tab:ch10-check">Table 10.1</a> collects the RX checks and a first-cut power estimate of about 70 mW, without the PLL, phase interpolator and CDR logic (<a href="{% endraw %}{{ '/chapters/14-the-open-serdes-architecture/' | relative_url }}{% raw %}#sec:power-budget">Section 14.5</a>).</p>
+<p><a href="#tab:ch10-check">Table 10.1</a> collects the RX checks and a first-cut power estimate of about 70 mW, without the PLL, phase interpolator and CDR logic (<a href="{% endraw %}{{ '/chapters/14-the-open-serdes-architecture/' | relative_url }}{% raw %}#sec:power-budget">Section 14.6</a>).</p>
 <div id="tab:ch10-check">
 
 </div>

@@ -6,14 +6,15 @@
 
 \chapter{The Open-SERDES Architecture}\label{ch:arch}
 
-\chapterlead{Every decision of the last thirteen chapters on a few pages: what the project delivers, the blocks and clocks, the number each block must meet, the test chip around them, and the plan to get there.}
+\chapterlead{Every decision of the last thirteen chapters on a few pages: what the project delivers, the blocks and clocks, the number each block must meet at 5 and at 10\,Gb/s, the test chip around them, and the plan to get there.}
 
 \begin{objectives}
 \begin{itemize}
   \item Say what the project delivers, and which chapter feeds each deliverable.
   \item Read the complete \OS{} block diagram and follow a bit from the 16-bit TX word to the 16-bit RX word.
   \item Trace every clock in the chip from the 50\,MHz reference to the last divider, with its frequency and phase.
-  \item Use the block specification table to find the target, and the chapter that derives it, for any block you design.
+  \item Use the block specification table to find the 5 and 10\,Gb/s targets, and the chapter that derives them, for any block you design.
+  \item Explain why the same architecture reaches 10\,Gb/s, and list the six things that must change.
   \item Build a first-cut power budget from tail currents and convert it to energy per bit.
   \item Place the transceiver on a test chip: its test logic, its floorplan and its package.
   \item Defend the ten main architecture decisions, and map the five project phases to what each must prove.
@@ -28,7 +29,7 @@ Before the block diagram, the goal. \OS{} is not only a chip: it is a chip, the 
 \begin{specnote}[Project highlights]
 \begin{enumerate}
   \item The first open multi-Gb/s mixed-signal SerDes on an open PDK.
-  \item A 5\,Gb/s NRZ transceiver, with TX, RX, PLL and CDR, in \sgx{}.
+  \item A 10\,Gb/s-capable NRZ transceiver, with TX, RX, PLL and CDR, in \sgx{}, guaranteed at 5\,Gb/s (\cref{sec:ch14-10g}).
   \item One reproducible flow from the channel model to GDS (\cref{ch:flow}).
   \item A link model calibrated against post-layout simulation and, later, silicon (\cref{sec:model-loop}).
   \item Everything public: design files, models and lab data.
@@ -46,7 +47,7 @@ Before the block diagram, the goal. \OS{} is not only a chip: it is a chip, the 
 \toprule
 \textbf{Deliverable} & \textbf{What it is} & \textbf{Phase} & \textbf{Built in}\\
 \midrule
-GDSII & the tape-out-ready 5\,Gb/s transceiver test chip of \cref{sec:ch14-testchip} & 2 & \cref{ch:tx,ch:rx,ch:pll,ch:cdr,ch:flow}\\
+GDSII & the tape-out-ready 5/10\,Gb/s transceiver test chip of \cref{sec:ch14-testchip} & 2 & \cref{ch:tx,ch:rx,ch:pll,ch:cdr,ch:flow}\\
 RTL + testbenches & serializer, deserializer, PRBS generator and checker, CDR loop logic, and their benches & 1--2 & \cref{sec:serializer,sec:deserializer,sec:picdr,sec:testbenches}\\
 Link model & the Python link simulator, statistical eye and GUI, driven by one spec file & 0 & \cref{ch:linkanalysis,ch:labs}\\
 Cell library & reusable HBT/CML drivers, latches, muxes and CTLE cells for \sgx{} & 1 & \cref{ch:ctle,ch:tx,ch:rx}\\
@@ -91,7 +92,7 @@ Clone the repository, run \code{make all}, and reproduce the chip, the models an
 \end{equation}
 \end{keyeq}
 
-The TX needs one clock phase: the final 2:1 mux uses both edges of the 2.5\,GHz clock as its select (\cref{sec:serializer}). The RX needs four phases half a UI apart: data samplers on the edges of I (eye centers), edge samplers on the edges of Q (crossings), all moved together by the CDR in 6.25\,ps steps. The RX dividers run from the \emph{recovered} clock, so the deserializer and the CDR logic sit in a clock domain that is not phase-locked to the TX word clock; a small FIFO crosses back to the core (\cref{sec:deserializer}). In near-end loopback both ends share the PLL, so the frequency offset is zero. Through a board to a second chip, the CDR must absorb up to $\pm300$\,ppm (\cref{sec:picdr}).
+The TX needs one clock phase: the final 2:1 mux uses both edges of the 2.5\,GHz clock as its select (\cref{sec:serializer}). The RX needs four phases half a UI apart: data samplers on the edges of I (eye centers), edge samplers on the edges of Q (crossings), all moved together by the CDR in 6.25\,ps steps. The RX dividers run from the \emph{recovered} clock, so the deserializer and the CDR logic sit in a clock domain that is not phase-locked to the TX word clock; a small FIFO crosses back to the core (\cref{sec:deserializer}). In near-end loopback both ends share the PLL, so the frequency offset is zero. Through a board to a second chip, the CDR must absorb up to $\pm300$\,ppm (\cref{sec:picdr}). \Cref{sec:ch14-10g} keeps this plan for a 10\,Gb/s target with the clocks doubled, and takes I and Q from a $\div2$ instead of the polyphase filter.
 
 \begin{figure}[!tbp]
 \centering
@@ -107,36 +108,37 @@ Three boundaries organize the chip, and most integration bugs live on them: the 
 %% =====================================================================
 \section{Block specifications}\label{sec:ch14-specs}
 
-\Cref{tab:specs} is the contract between the system model and the circuit designers: one row per block, the numbers that block must meet, and the chapter where each number is derived. Values marked $^\dagger$ are first estimates from hand analysis or behavioral models. They must be confirmed by simulation in \sgx{}, and some of them will move.
+\Cref{tab:specs} is the contract between the system model and the circuit designers: one row per block, the numbers that block must meet, and the chapter where each number is derived. It has two target columns. The \textbf{5\,Gb/s} column is the baseline that the rest of this book derives, and the pass criterion of first silicon. The \textbf{10\,Gb/s} column is the design target of \cref{sec:ch14-10g}: every high-speed block is sized for it, and ``same'' means the 5\,Gb/s value already covers it. Values marked $^\dagger$ are first estimates from hand analysis or behavioral models. They must be confirmed by simulation in \sgx{}, and some of them will move.
 
 \begin{table}[!tbp]
 \centering
-\caption{\textbf{\OS{} block specifications.} $^\dagger$\,First estimate, not yet confirmed by circuit simulation in \sgx{}.}
+\caption{\textbf{\OS{} block specifications: 5\,Gb/s guaranteed, 10\,Gb/s target.} $^\dagger$\,First estimate, not yet confirmed by circuit simulation in \sgx{}. REF-10 is the REF line shortened to 0.5\,m (\cref{sec:ch14-10g}).}
 \label{tab:specs}
-\footnotesize
-\renewcommand{\arraystretch}{1.12}
-\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{19mm} >{\raggedright\arraybackslash}p{27mm} L >{\raggedright\arraybackslash}p{19mm}@{}}
+\scriptsize
+\renewcommand{\arraystretch}{1.1}
+\setlength{\tabcolsep}{3.2pt}
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{15.5mm} >{\raggedright\arraybackslash}p{16.5mm} L >{\raggedright\arraybackslash}p{37mm} >{\raggedright\arraybackslash}p{16.5mm}@{}}
 \toprule
-\textbf{Block} & \textbf{Key specification} & \textbf{Target value} & \textbf{Derived in}\\
+\textbf{Block} & \textbf{Key specification} & \textbf{5\,Gb/s: guaranteed} & \textbf{10\,Gb/s: target} & \textbf{Derived in}\\
 \midrule
-Link & rate, BER, channel & 5\,Gb/s NRZ; BER $\le10^{-12}$ over REF ($-17.4$\,dB at 2.5\,GHz); margin up to 20\,dB & \cref{sec:os-targets,sec:refchannel}\\
-Serializer & ratio, clocks, jitter & 16:1 from 16\,b at 312.5\,MHz; CMOS 16:4, CML 4:2, half-rate CML 2:1; DCD + DDJ $\le8$\,ps$^\dagger$ & \cref{sec:serializer}\\
-TX driver & topology, swing & HBT CML, \qty{50}{\ohm} back-termination per side; 0.8--1.0\,Vppd ($I_T$ = 16--20\,mA); every $V_\mathrm{CE}<\mathrm{BV}_\mathrm{CEO}\approx1.6$\,V at all corners & \cref{sec:cml-driver}\\
-TX FFE & taps, range, resolution & $c_{-1}, c_0, c_1$ with $\sum\lvert c_k\rvert=1$; $c_1$ to $-0.25$ (6\,dB), $c_{-1}$ to $-0.1$; 5-bit current cells (steps of 1/32) & \cref{sec:ffe-taps,sec:ffe-impl}\\
-Termination, pad & impedance, $C_p$, return loss & \qty{100}{\ohm} diff., $\pm10$\,\% after 3--4-bit trim; $C_p\le0.85$\,pF (0.63\,pF estimated$^\dagger$); RL $\ge10$\,dB at $\fN$ & \cref{sec:termination,sec:esd-pad}\\
-CTLE & peaking, poles, noise & 0--12\,dB programmable; $f_{p1}\approx2.5$\,GHz, $f_{p2}\ge7.5$\,GHz; noise $\le0.25$\,mV rms$^\dagger$ & \cref{ch:ctle}\\
-DFE & taps, loop timing & half-rate, 2 taps, direct feedback; $w_1$ up to $0.5\,p_0$, $w_2$ to $\pm0.15\,p_0$; tap-1 loop $\approx$140\,ps$^\dagger$ $<$ 1\,UI; loop unrolling as fallback & \cref{sec:dfe-timing}\\
-Samplers & count, sensitivity, offset & 4 HBT CML master--slave (D0 E0 D1 E1); $V_\mathrm{sens}\approx20$\,mV; offset $\sigma\approx4.9$\,mV raw$^\dagger$, $\pm0.46$\,mV after 5-bit trim; $\tau\le5$\,ps; aperture $\le0.2$\,UI & \cref{sec:sampler,sec:offset}\\
-Deserializer & ratio, output & 1:16 CMOS; 16 data + 16 edge bits at 312.5\,MHz; two extra latches on the edge path; FIFO to the core & \cref{sec:deserializer,sec:metastability}\\
-PLL & architecture, jitter & integer-N CP-PLL, $f_\mathrm{ref}$ = 50\,MHz, $N$ = 50; LC VCO 2.5\,GHz (4\,nH, $Q$ = 16.8); $\Kvco\approx2\pi\times150$\,MHz/V; $f_u\approx3$\,MHz; RJ $\le1.0$\,ps rms$^\dagger$ & \cref{ch:pll}\\
-Quadrature & accuracy & 2-stage polyphase + CML buffers; I/Q error $\le\ang{2}$ (3$\sigma$); duty cycle $50\pm0.5$\,\% with DCC & \cref{sec:quadrature}\\
-PI & resolution, linearity & 2 PIs, 64 steps per 400\,ps (6.25\,ps = 0.031\,UI); INL $\le\ang{1}$ & \cref{sec:picdr}\\
-CDR & loop, tracking & half-rate Alexander BBPD; P+I at 625\,MHz, $K_P$ = 1/8 LSB, $K_P/K_I$ = 128; $\pm300$\,ppm; lock $<1$\,\textmu{}s; wander $\le20$\,ps pp$^\dagger$; JTOL above the USB-style mask & \cref{sec:bbcdr,sec:jtol}\\
-Timing budget & total jitter & TJ $\le0.3$\,UI (60\,ps) at $10^{-12}$; estimated 58.6\,ps$^\dagger$ & \cref{sec:jitter-budget}\\
-Voltage budget & margin at the sampler & $\ge50$\,mV after noise, offset and sensitivity; 76\,mV on REF with 2-tap de-emphasis$^\dagger$ & \cref{sec:noisebudget}\\
-Test & on-chip & PRBS7/31 generator and checker with error counter; near-end loopback; SPI registers & \cref{sec:ch14-testchip,sec:labtest}\\
-Die, package & size, pinout & die about $2\times2$\,mm$^2$ (to be sized); QFN-48, $7\times7$\,mm; high-speed bond wires $\le1$\,mm (concept) & \cref{sec:ch14-testchip}\\
-Power & total, per bit & $\approx$216\,mW, 43\,pJ/b$^\dagger$ & \cref{sec:power-budget}\\
+Link & rate, BER, channel & 5\,Gb/s NRZ; BER $\le10^{-12}$ over REF ($-17.4$\,dB at 2.5\,GHz); margin up to 20\,dB & 10\,Gb/s NRZ; BER $\le10^{-12}$ over REF-10 ($-15.3$\,dB at 5\,GHz) & \cref{sec:os-targets,sec:refchannel,sec:ch14-10g}\\
+Serializer & ratio, clocks, jitter & 16:1 from 16\,b at 312.5\,MHz; CMOS 16:4, CML 4:2, half-rate CML 2:1; DCD + DDJ $\le8$\,ps$^\dagger$ & 16\,b at 625\,MHz; CMOS 16:8, CML 8:4, 4:2, half-rate 2:1; DCD + DDJ $\le4$\,ps$^\dagger$ & \cref{sec:serializer}\\
+TX driver & topology, swing & HBT CML, \qty{50}{\ohm} back-termination per side; 0.8--1.0\,Vppd ($I_T$ = 16--20\,mA); every $V_\mathrm{CE}<\mathrm{BV}_\mathrm{CEO}\approx1.6$\,V at all corners & same; 20--80\,\% edges $\le30$\,ps$^\dagger$ & \cref{sec:cml-driver}\\
+TX FFE & taps, range, resolution & $c_{-1}, c_0, c_1$ with $\sum\lvert c_k\rvert=1$; $c_1$ to $-0.25$ (6\,dB), $c_{-1}$ to $-0.1$; 5-bit current cells (steps of 1/32) & same & \cref{sec:ffe-taps,sec:ffe-impl}\\
+Termination, pad & impedance, $C_p$, return loss & \qty{100}{\ohm} diff., $\pm10$\,\% after 3--4-bit trim; $C_p\le0.85$\,pF (0.63\,pF estimated$^\dagger$); RL $\ge10$\,dB at $\fN$ & RL $\ge10$\,dB at 5\,GHz: $C_p\le0.42$\,pF, so the T-coil is required & \cref{sec:termination,sec:esd-pad}\\
+CTLE & peaking, poles, noise & 0--12\,dB programmable; $f_{p1}\approx2.5$\,GHz, $f_{p2}\ge7.5$\,GHz; noise $\le0.25$\,mV rms$^\dagger$ & same peaking; $f_{p1}\approx5$\,GHz, $f_{p2}\ge15$\,GHz & \cref{ch:ctle}\\
+DFE & taps, loop timing & half-rate, 2 taps, direct feedback; $w_1$ up to $0.5\,p_0$, $w_2$ to $\pm0.15\,p_0$; tap-1 loop $\approx$140\,ps$^\dagger$ $<$ 1\,UI; loop unrolling as fallback & tap 1 unrolled (the $\approx$140\,ps loop exceeds the 100\,ps UI); tap 2 direct & \cref{sec:dfe-timing}\\
+Samplers & count, sensitivity, offset & 4 HBT CML master--slave (D0 E0 D1 E1); $V_\mathrm{sens}\approx20$\,mV; offset $\sigma\approx4.9$\,mV raw$^\dagger$, $\pm0.46$\,mV after 5-bit trim; $\tau\le5$\,ps; aperture $\le0.2$\,UI & 6 (two per data phase for the unrolled tap, E0, E1); $\tau\le3$\,ps$^\dagger$; aperture $\le20$\,ps & \cref{sec:sampler,sec:offset}\\
+Deserializer & ratio, output & 1:16 CMOS; 16 data + 16 edge bits at 312.5\,MHz; two extra latches on the edge path; FIFO to the core & one CML 1:2 first, then CMOS to 16 + 16 bits at 625\,MHz & \cref{sec:deserializer,sec:metastability}\\
+PLL & architecture, jitter & integer-N CP-PLL, $f_\mathrm{ref}$ = 50\,MHz, $N$ = 50; LC VCO 2.5\,GHz (4\,nH, $Q$ = 16.8); $\Kvco\approx2\pi\times150$\,MHz/V; $f_u\approx3$\,MHz; RJ $\le1.0$\,ps rms$^\dagger$ & LC VCO at 10\,GHz, $N$ = 200; RJ $\le0.5$\,ps rms$^\dagger$ & \cref{ch:pll}\\
+Quadrature & accuracy & 2-stage polyphase + CML buffers; I/Q error $\le\ang{2}$ (3$\sigma$); duty cycle $50\pm0.5$\,\% with DCC & CML $\div2$ from 10\,GHz gives 5\,GHz I/Q; a second $\div2$ gives the 2.5\,GHz I/Q of the 5\,Gb/s mode; no polyphase & \cref{sec:quadrature}\\
+PI & resolution, linearity & 2 PIs, 64 steps per 400\,ps (6.25\,ps = 0.031\,UI); INL $\le\ang{1}$ & 64 steps per 200\,ps (3.125\,ps = 0.031\,UI); same INL & \cref{sec:picdr}\\
+CDR & loop, tracking & half-rate Alexander BBPD; P+I at 625\,MHz, $K_P$ = 1/8 LSB, $K_P/K_I$ = 128; $\pm300$\,ppm; lock $<1$\,\textmu{}s; wander $\le20$\,ps pp$^\dagger$; JTOL above the USB-style mask & same logic at 625\,MHz, now every 16\,UI; dither $\le8$\,ps pp$^\dagger$ & \cref{sec:bbcdr,sec:jtol}\\
+Timing budget & total jitter & TJ $\le0.3$\,UI (60\,ps) at $10^{-12}$; estimated 58.6\,ps$^\dagger$ & TJ $\le0.3$\,UI (30\,ps): DJ $\le18$\,ps, RJ $\le0.85$\,ps rms; the 5\,Gb/s circuits give 0.46\,UI$^\dagger$ & \cref{sec:jitter-budget,we:ch14-10g}\\
+Voltage budget & margin at the sampler & $\ge50$\,mV after noise, offset and sensitivity; 76\,mV on REF with 2-tap de-emphasis$^\dagger$ & $\ge50$\,mV; worst-case eye 193\,mV on REF-10 (134\,mV at 5\,Gb/s on REF)$^\dagger$ & \cref{sec:noisebudget,sec:ch14-10g}\\
+Test & on-chip & PRBS7/31 generator and checker with error counter; near-end loopback; SPI registers & same, plus a rate-select register and an external clock input & \cref{sec:ch14-testchip,sec:labtest}\\
+Die, package & size, pinout & die about $2\times2$\,mm$^2$ (to be sized); QFN-48, $7\times7$\,mm; high-speed bond wires $\le1$\,mm (concept) & high-speed bond wires $\le0.5$\,mm & \cref{sec:ch14-testchip}\\
+Power & total, per bit & $\approx$216\,mW, 43\,pJ/b$^\dagger$ & $\approx$280\,mW, $\approx$28\,pJ/b$^\dagger$ & \cref{sec:power-budget,sec:ch14-10g}\\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -149,6 +151,44 @@ Power & total, per bit & $\approx$216\,mW, 43\,pJ/b$^\dagger$ & \cref{sec:power-
 \caption{\textbf{Both budgets close, but timing is the tight one.} (a) The 131\,mV statistical eye of REF with 2-tap de-emphasis, minus the terms of \cref{sec:noisebudget}: 76\,mV of margin remains, more than half the eye. (b) One 200\,ps UI minus the deterministic jitter (linear sum) and $2Q$ times the random jitter (RSS): 141\,ps remains, only 1.4\,ps more than the 0.7\,UI target allows.}
 \label{fig:ch14-budget}
 \end{figure}
+
+%% =====================================================================
+\section{Design for 10, guarantee 5}\label{sec:ch14-10g}
+
+Everything so far describes the 5\,Gb/s baseline that the rest of this book derives. Can the same architecture go faster? The transistors are not what stops it: a 100\,ps UI still holds about fifty \sgx{} CML gate delays (\cref{fig:ch1-speed}), while 130\,nm CMOS ran out of margin at 5\,Gb/s. The limits are the channel, the clocks and the timing budget. This section shows that 10\,Gb/s NRZ fits the same architecture with six changes, and sets the project target accordingly: \textbf{design every high-speed block for 10\,Gb/s, and keep 5\,Gb/s over REF as the pass criterion of first silicon.} The 10\,Gb/s column of \cref{tab:specs} collects the resulting numbers.
+
+\paragraph{The equalizer sees decibels, not bits per second} \Cref{fig:ch14-rate}(a) repeats the partition study of \cref{sec:eq-partition} at 5, 8 and 10\,Gb/s NRZ and at 10\,Gb/s PAM4, with the CTLE poles moved to each Nyquist frequency. Over REF, 10\,Gb/s NRZ meets $-30.1$\,dB at 5\,GHz and the worst-case eye closes to 18\,mV. Over half the line, 0.5\,m with the same pads, it opens to \textbf{193\,mV}, more than the 134\,mV of the 5\,Gb/s baseline over REF. We call this channel \textbf{REF-10}: $-15.3$\,dB at 5\,GHz. The rule behind it is simple. The equalizer only sees the loss at Nyquist; two links with the same loss need the same equalizer, whatever their bit rates. PAM4 at 10\,Gb/s keeps the 2.5\,GHz Nyquist frequency of REF but gives up two-thirds of each sub-eye: 14\,mV over REF and 97\,mV over REF-10, below NRZ at both lengths and with three slicers per sample (\cref{sec:pam4}).
+
+\begin{figure}[!tbp]
+\centering
+\includegraphics[width=\linewidth]{ch14_rate}
+\caption{\textbf{The same equalizer carries 10\,Gb/s over half the FR-4; it is the timing budget that must improve.} (a) Worst-case (PDA) eye after the \OS{} partition (3-tap TX FFE within its limits, CTLE 0--12\,dB with poles at $\fN$ and $4\fN$, 2-tap DFE) against the length of the REF line, for 5, 8 and 10\,Gb/s NRZ and 10\,Gb/s PAM4. The shaded band is the eye needed for a 50\,mV margin after the noise, jitter, offset and sensitivity terms of \cref{fig:ch14-budget}. (b) The timing budget of \cref{fig:ch14-budget} as a fraction of the UI: 5\,Gb/s today, the same circuits at 10\,Gb/s, and the 10\,Gb/s targets of \cref{tab:specs}.}
+\label{fig:ch14-rate}
+\end{figure}
+
+\paragraph{Six changes} The block diagram of \cref{fig:arch} stays: half-rate clocking, the CMOS/CML split, FFE + CTLE + DFE, a PI-based bang-bang CDR. Six things change.
+\begin{enumerate}
+  \item \textbf{Clocks at 5\,GHz.} The half-rate clock doubles. A 10\,GHz LC VCO followed by a CML $\div2$ gives I and Q at 5\,GHz, with the quadrature set by the divider rather than by matching (\cref{sec:quadrature}). A second $\div2$ gives the 2.5\,GHz I and Q of the 5\,Gb/s mode, so one register selects the rate and the polyphase filter goes away. The cost: the team's 2.4\,GHz PLL~\cite{smacd2026pll} is reused for its loop and its flow, not for its tank.
+  \item \textbf{The timing budget.} Jitter set in picoseconds does not shrink with the UI. \Cref{we:ch14-10g} shows that the budget closes only if those terms roughly halve; this is the main extra work.
+  \item \textbf{One more CML stage on each side.} CMOS stays at 1.25\,Gb/s per lane or less (\cref{sec:serializer}). The TX becomes CMOS 16:8 on a 625\,MHz word clock, then CML 8:4, 4:2 and the half-rate 2:1; the RX adds one CML 1:2 in front of the CMOS deserializer.
+  \item \textbf{DFE tap 1 is unrolled.} The direct tap-1 loop needs about 140\,ps (\cref{sec:dfe-timing}), more than the 100\,ps UI, so tap 1 becomes speculative, the fallback already listed in \cref{tab:specs}. Each data phase gets two samplers.
+  \item \textbf{Pad and package.} For 10\,dB of return loss at 5\,GHz the pad may carry only half the capacitance, 0.42\,pF, and a bond wire only half the inductance, about 0.5\,mm (\cref{we:ch14-bond}). The T-coil of \cref{sec:esd-pad} stops being a fallback and becomes part of the pad.
+  \item \textbf{Power.} CML draws its tails whatever the rate, so only the additions cost power: the extra CML stages, faster clock buffers, two more samplers and the dividers add about 65\,mW. That gives $\approx$280\,mW, or about \textbf{28\,pJ/b} at 10\,Gb/s against 43\,pJ/b at 5\,Gb/s.
+\end{enumerate}
+
+\begin{example}{Does the timing budget close at 10\,Gb/s?}\label{we:ch14-10g}
+\textbf{Given:} the 5\,Gb/s budget of \cref{sec:jitter-budget}: TX DCD/DDJ 8\,ps, residual ISI 6\,ps, RX clock path 6\,ps, CDR dither 20\,ps; RJ $\sigma$ = 1.32\,ps (RSS of 1.0, 0.7 and 0.5\,ps); $2Q$ = 14.07 at $10^{-12}$; target TJ $\le0.3$\,UI.
+
+\textbf{Same circuits at 10\,Gb/s:} residual ISI and CDR dither scale with the UI (3 and 10\,ps); duty-cycle error, clock-path jitter and RJ are set in picoseconds and stay. DJ = 8 + 3 + 6 + 10 = 27\,ps; $2Q\sigma$ = 18.6\,ps; TJ = 45.6\,ps = 0.46\,UI. The budget fails.
+
+\textbf{Targets:} duty-cycle correction to DCD + DDJ $\le$ 4\,ps, clock path $\le$ 3\,ps, CDR dither $\le$ 8\,ps give DJ = 18\,ps. Then $2Q\sigma \le 30 - 18 = 12$\,ps, so $\sigma\le$ 0.85\,ps rms, for example 0.5\,ps from the PLL, 0.5\,ps from the clock path and 0.45\,ps from the TX (RSS 0.84\,ps).
+
+\textbf{Result:} at 10\,Gb/s every jitter source specified in picoseconds must roughly halve. That is why the PLL row of \cref{tab:specs} asks for 0.5\,ps rms at 10\,GHz, and why \cref{fig:ch14-rate}(b) shows timing, not the eye height, as the 10\,Gb/s problem.
+\end{example}
+
+\begin{insight}[Why not 25\,Gb/s?]
+SiGe BiCMOS of this class has been used for clock recovery at far higher rates. But past about 12\,Gb/s over these channels the architecture changes: a quarter-rate or all-CML datapath with eight calibrated clock phases, more DFE taps with adaptation, clocks below 300\,fs rms, flip-chip or a better package, and channels under about 25\,cm. That is a different chip and a larger team, so it belongs to Phase~4 of \cref{sec:ch14-roadmap}.
+\end{insight}
 
 %% =====================================================================
 \section{From transceiver to test chip}\label{sec:ch14-testchip}
@@ -206,9 +246,10 @@ A QFN package is cheap and easy to solder to a test PCB, but every bond wire is 
   \item 1\,mm, 1\,nH: $x = 2\pi\cdot2.5\,\mathrm{GHz}\cdot1\,\mathrm{nH}/100\,\Omega = 0.157$, so $\lvert S_{11}\rvert = 0.155$ and RL = 16.2\,dB.
   \item 2.5\,mm, 2.5\,nH: $x = 0.393$, so RL = 8.7\,dB. This already misses the goal, before the pad capacitance is added.
   \item 3\,mm, 3\,nH (a corner pad of a large QFN): RL = 7.4\,dB.
+  \item At 5\,GHz, the Nyquist frequency of the 10\,Gb/s target (\cref{sec:ch14-10g}), 1\,mm gives $x = 0.314$ and RL = 10.5\,dB, with nothing left for the pad; 0.5\,mm gives 16.2\,dB again.
 \end{itemize}
 
-\textbf{Result:} keep the high-speed bond wires at or below about 1\,mm. That rule puts the TX and RX pads on the die edge closest to their package pins, and puts those pins in the middle of one package side. If the wires cannot be that short, part of the inductance can be absorbed into the T-coil of \cref{sec:esd-pad}.
+\textbf{Result:} keep the high-speed bond wires at or below about 1\,mm, and about 0.5\,mm for the 10\,Gb/s target. That rule puts the TX and RX pads on the die edge closest to their package pins, and puts those pins in the middle of one package side. If the wires cannot be that short, part of the inductance can be absorbed into the T-coil of \cref{sec:esd-pad}.
 \end{example}
 
 %% =====================================================================
@@ -276,19 +317,19 @@ Digital & CDR loop filter, PRBS gen.\ + checker, SPI & CMOS at 625 and 312.5\,MH
 \label{tab:decisions}
 \footnotesize
 \renewcommand{\arraystretch}{1.12}
-\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{17mm} >{\raggedright\arraybackslash}p{22mm} >{\raggedright\arraybackslash}p{21mm} L >{\raggedright\arraybackslash}p{16mm}@{}}
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{17mm} >{\raggedright\arraybackslash}p{22mm} >{\raggedright\arraybackslash}p{21mm} L >{\raggedright\arraybackslash}p{18.5mm}@{}}
 \toprule
 \textbf{Decision} & \textbf{Chosen} & \textbf{Alternatives} & \textbf{Why} & \textbf{Ch.}\\
 \midrule
-Modulation & NRZ & PAM4 & on REF NRZ wins by 2.6\,dB; PAM4 pays only above about 24\,dB and needs 3 slicers and linear circuits & \cref{sec:pam4}\\
-Clock rate & half rate, 2.5\,GHz & full rate, quarter rate & full rate needs 5\,GHz clocks; quarter rate needs 8 calibrated phases & \cref{sec:serializer,sec:quadrature}\\
+Modulation & NRZ & PAM4 & on REF NRZ wins by 2.6\,dB; PAM4 pays only above about 24\,dB and needs 3 slicers and linear circuits; at 10\,Gb/s NRZ wins at every length & \cref{sec:pam4,sec:ch14-10g}\\
+Clock rate & half rate: 2.5\,GHz at 5\,Gb/s, 5\,GHz at 10\,Gb/s & full rate, quarter rate & full rate doubles every clock; quarter rate needs 8 calibrated phases & \cref{sec:serializer,sec:quadrature}\\
 Fast logic & SiGe HBT CML & CMOS, MOS CML & full switching at 100\,mV, gain 5.8 vs.\ 2; CMOS misses the 8\,FO4 rule at 2.5\,GHz, slow corner & \cref{sec:serializer}\\
 TX driver & CML & SST (voltage mode) & resistor-set impedance, constant current, taps leave the impedance alone; SST ($-44$\,mW) is the upgrade & \cref{sec:cml-driver}\\
 TX FFE & 3 taps & 2 taps, 4+ taps & post-tap does most of the work; pre-tap for $p_{-1}$ on longer channels (on REF, 2 taps win: Lab~3) & \cref{ch:txffe,sec:lab3}\\
-RX equalizer & CTLE 0--12\,dB + 2-tap DFE & CTLE only, more DFE taps, RX FFE & DFE removes $p_1$, $p_2$ without noise; CTLE adds gain, adaptivity and reach above 22\,dB & \cref{sec:eq-partition}\\
-VCO & LC, 4\,nH, $Q$ = 16.8 & ring VCO & 15--30\,dB lower phase noise; reuses the team's proven design & \cref{sec:lcvco}\\
+RX equalizer & CTLE 0--12\,dB + 2-tap DFE & CTLE only, more DFE taps, RX FFE & DFE removes $p_1$, $p_2$ without noise; CTLE adds gain, adaptivity and reach above 22\,dB; tap 1 unrolled at 10\,Gb/s & \cref{sec:eq-partition,sec:dfe-timing}\\
+VCO & LC: 2.5\,GHz baseline, 10\,GHz target & ring VCO & 15--30\,dB lower phase noise; the team's proven 2.4\,GHz design sets the topology and the flow & \cref{sec:lcvco,sec:ch14-10g}\\
 CDR & PI dual loop, digital BB & VCO-based BB, linear (Hogge) & reuses the clean PLL; synthesizable; PVT-independent gain; no false lock & \cref{sec:picdr}\\
-Quadrature & 2-stage polyphase + CML & 5\,GHz VCO + $\div2$, quadrature VCO & keeps the 2.5\,GHz VCO; $\div2$ needs a 5\,GHz VCO with an accurate duty cycle & \cref{sec:quadrature}\\
+Quadrature & baseline: 2-stage polyphase; target: 10\,GHz VCO + CML $\div2$ & quadrature VCO & polyphase keeps the 2.5\,GHz VCO; $\div2$ gives exact I/Q at both rates and a second $\div2$ selects the rate & \cref{sec:quadrature,sec:ch14-10g}\\
 On-chip test & PRBS7/31 + checker, loopback & external BERT only & scope and PC suffice; $10^{-12}$ in 10 minutes; loopback isolates the chip & \cref{sec:labtest}\\
 \bottomrule
 \end{tabularx}
@@ -310,16 +351,16 @@ On-chip test & PRBS7/31 + checker, loopback & external BERT only & scope and PC 
 \textbf{Phase} & \textbf{Work} & \textbf{Exit criterion and release} & \textbf{Chapters}\\
 \midrule
 0 · Feasibility & channel and link model; pick the architecture; freeze block specs & the link, TX and RX rows of \cref{tab:specs} confirmed in simulation; REF replaced by a standard channel; release: model + spec file & \cref{ch:channel,ch:linkanalysis,ch:dfe}\\
-1 · Building blocks & HBT/CML cell library; driver, CTLE, sampler; a test-chip shuttle (Tiny Tapeout IHP or an IHP open MPW) & measured CTLE $H(f)$, driver eye and sampler offset and sensitivity back in the model; release: cell library + block GDS & \cref{ch:ctle,ch:tx,ch:rx}\\
-2 · 5\,Gb/s transceiver & TX + RX + PLL + CDR; on-chip PRBS loopback; full-chip tape-out & post-layout statistical eye meets the pass criteria; full-chip DRC/LVS clean; release: GDSII + RTL & \cref{ch:pll,ch:cdr,ch:flow}\\
-3 · Measure and publish & test PCB; eye and BER; open measurement data; paper (IEEE JSSC or TCAS, SMACD 2027) & BER $\le10^{-12}$ through a real channel, bathtub and JTOL measured; release: data + paper & \cref{sec:labtest,ch:labs}\\
-4 · Beyond & 10\,Gb/s and adaptive DFE; PAM4; multi-lane and chiplet links & a new spec table, starting from the measured Phase-3 data & \cref{sec:pam4,sec:adaptation}\\
+1 · Building blocks & HBT/CML cell library sized for 10\,Gb/s; driver, CTLE, sampler, and the 10\,GHz VCO with its $\div2$; a test-chip shuttle (Tiny Tapeout IHP or an IHP open MPW) & measured CTLE $H(f)$, driver eye, sampler offset and sensitivity, and VCO phase noise back in the model; release: cell library + block GDS & \cref{ch:ctle,ch:tx,ch:rx,ch:pll}\\
+2 · 5/10\,Gb/s transceiver & TX + RX + PLL + CDR with a rate select; on-chip PRBS loopback; full-chip tape-out & post-layout statistical eye meets the pass criteria at 5\,Gb/s over REF (required) and at 10\,Gb/s over REF-10 (target); full-chip DRC/LVS clean; release: GDSII + RTL & \cref{ch:pll,ch:cdr,ch:flow,sec:ch14-10g}\\
+3 · Measure and publish & test PCB; eye and BER in both modes; open measurement data; paper (IEEE JSSC or TCAS, SMACD 2027) & BER $\le10^{-12}$ at 5\,Gb/s through a real channel and at 10\,Gb/s through a short one; bathtub and JTOL measured; release: data + paper & \cref{sec:labtest,ch:labs}\\
+4 · Beyond & 16--25\,Gb/s (quarter-rate or all-CML datapath); adaptive DFE; PAM4 for lossy channels; multi-lane and chiplet links & a new spec table, starting from the measured Phase-3 data & \cref{sec:pam4,sec:adaptation,sec:ch14-10g}\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
 \begin{insight}[Why Phase 1 comes before the full chip]
-Every $^\dagger$ in \cref{tab:specs} is a risk until it is measured. A small shuttle with only the driver, the CTLE and the samplers turns the riskiest estimates (pad capacitance, CTLE peaking, sampler offset) into data a year before the full chip, while the PLL and the CDR logic can rely on the team's existing PLL and on simulation.
+Every $^\dagger$ in \cref{tab:specs} is a risk until it is measured. A small shuttle with only the driver, the CTLE, the samplers and the 10\,GHz VCO turns the riskiest estimates (pad capacitance, CTLE peaking, sampler offset, phase noise at 10\,GHz) into data a year before the full chip, while the PLL loop and the CDR logic can rely on the team's existing PLL and on simulation.
 \end{insight}
 
 %% =====================================================================
@@ -332,7 +373,8 @@ The architecture closes on paper. It can still fail in these places, roughly in 
   \item \textbf{PLL phase noise.} The quoted $-100.8$\,dBc/Hz at 1\,MHz is far worse than Leeson predicts (\cref{sec:lcvco}); the 1\,ps RJ line depends on what it really is.
   \item \textbf{Inductor EM modeling.} The 4\,nH tank and any T-coil must be EM-simulated on TopMetal2 (\cref{sec:layout-hs}) and matched to the team's measured $Q$.
   \item \textbf{Timing loops.} DFE tap 1 uses about 140 of its 200\,ps and the CDR dither 19 of its 20\,ps; both need post-layout confirmation.
-  \item \textbf{Packaging and measurement.} Bond wires longer than about 1\,mm cost return loss (\cref{we:ch14-bond}); the test PCB, a clean reference clock and access to a sampling scope or BERT must be ready before first silicon.
+  \item \textbf{The 10\,GHz clock and the 10\,Gb/s timing budget.} The VCO is a new design, and the budget needs every picosecond term roughly halved (\cref{we:ch14-10g}). Put the VCO and its $\div2$ on the Phase-1 shuttle, and give the test chip an external clock input so that both modes can be measured without the on-chip PLL.
+  \item \textbf{Packaging and measurement.} Bond wires longer than about 1\,mm (0.5\,mm at 10\,Gb/s) cost return loss (\cref{we:ch14-bond}); the test PCB, a clean reference clock and access to a sampling scope or BERT must be ready before first silicon.
   \item \textbf{Area, pads and the channel.} The PLL is 0.347\,mm$^2$~\cite{smacd2026pll}, the MIM capacitors add tenths of a mm$^2$, and the high-speed pads need SMA-grade access; REF must be replaced by measured S-parameters (\cref{sec:ch16-next}).
 \end{itemize}
 
@@ -341,10 +383,11 @@ The architecture closes on paper. It can still fail in these places, roughly in 
   \item \OS{} delivers six things: the GDSII, the RTL and benches, the link model and GUI, an HBT/CML cell library, documentation, and a paper with open data.
   \item \OS{} is a single-lane transceiver: CMOS at 312.5\,MHz in the core, HBT CML at 1.25\,GHz and above, joined by level converters, two supplies and two clock domains.
   \item One 2.5\,GHz LC PLL feeds both sides: the TX divides it; the RX makes four phases and rotates them in 6.25\,ps steps under digital CDR control.
-  \item The block specification table is the contract: every block has a number and a chapter; $^\dagger$ marks estimates awaiting simulation.
+  \item The block specification table is the contract: every block has a 5\,Gb/s and a 10\,Gb/s number and a chapter; $^\dagger$ marks estimates awaiting simulation.
+  \item Design for 10, guarantee 5: the same architecture carries 10\,Gb/s NRZ over 0.5\,m of FR-4 (193\,mV worst-case eye) because the equalizer only sees the loss at Nyquist. The work is in the clocks and the timing budget (RJ $\le0.85$\,ps rms), not in the transistors.
   \item The voltage budget leaves about 76\,mV; the timing budget leaves a 141\,ps eye with 1.4\,ps to spare.
   \item The test chip adds SPI, a PRBS generator and checker with an error counter, and an internal loopback; TX and RX pads share one die edge, and high-speed bond wires stay at or below about 1\,mm.
-  \item Five phases, each with an exit criterion and a tagged release: feasibility, building blocks, the 5\,Gb/s transceiver, measurement, and beyond.
+  \item Five phases, each with an exit criterion and a tagged release: feasibility, building blocks, the 5/10\,Gb/s transceiver, measurement, and beyond.
   \item First-cut power is about 216\,mW (43\,pJ/b), five times less energy per bit than OpenSerDes, dominated by static CML current; the SST driver is the first saving.
 \end{itemize}
 \end{takeaways}
