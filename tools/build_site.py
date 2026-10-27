@@ -634,6 +634,7 @@ def number_things(s, chap_num, refs):
                 _, j = bracket(s, j)
             title, j = brace(s, skip_ws(s, j))
             if cmd == "chapter":
+                title = title.replace("\\newline", "\\\\")   # pandoc drops \newline here, gluing the words
                 if chap_num == "P":
                     out.append("\\chapter{%s}" % title)
                 else:
