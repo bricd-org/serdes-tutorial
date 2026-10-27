@@ -126,6 +126,17 @@ code span.va { color: #19177c; } code span.vs { color: #8a6a1c; }
 // ---------------------------------------------------------------- maths
 .katex { font-size: 1.07em; }
 .katex-display { overflow-x: auto; overflow-y: hidden; padding: 0.15rem 0; }
+// KaTeX pins the equation number to the right edge, so an equation wider than the column
+// (on a phone) runs underneath it. As a flex row with equal spacers either side, the equation
+// stays centred and the number flush right, and a wide equation pushes the number along
+// instead (the display scrolls sideways).
+.katex-display > .katex > .katex-html:has(> .tag) {
+  display: flex; align-items: baseline;
+  &::before { content: ""; flex: 1 1 0; }
+  > .base { flex-shrink: 0; }
+  > .tag { position: static; flex: 1 1 0; text-align: right;
+    &::before { content: ""; display: inline-block; width: 1em; } }  // gap before the number
+}
 
 // ---------------------------------------------------------------- page furniture
 .prev-next {
