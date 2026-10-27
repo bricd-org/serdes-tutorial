@@ -116,13 +116,54 @@ permalink: "/chapters/05-equalization-fundamentals/"
 <div id="tab:ch5-eqcompare">
 
 </div>
-<div class="tabularx">
-<p><span>@l L L L l L@</span> &amp; <strong>Cursors it fixes</strong> &amp; <strong>Frequency view</strong> &amp; <strong>Noise, crosstalk</strong> &amp; <strong>Power</strong> &amp; <strong>Main limit</strong><br />
-TX FFE &amp; pre + post (as many as taps) &amp; lowers LF, Nyquist kept &amp; no RX noise gain; launch swing lost &amp; low &amp; peak swing; not adaptive without a back-channel<br />
-RX CTLE &amp; long tail, some pre-cursor &amp; boosts HF over LF &amp; amplifies HF noise and crosstalk &amp; low &amp; peaking range and linearity<br />
-RX FFE &amp; pre + post &amp; like a CTLE, discrete taps &amp; amplifies noise &amp; high &amp; analog delays or ADC power<br />
-DFE &amp; post only (one per tap) &amp; nonlinear (no <span class="math inline">\(H(f)\)</span>) &amp; no noise gain &amp; medium &amp; tap-1 timing, error propagation<br />
-</p>
+<div>
+<table>
+<caption><span class="capnum">Table 5.1.</span> <strong>Four equalizers, four sets of costs.</strong> Power and complexity are relative, for a 5 Gb/s link.</caption>
+<thead>
+<tr class="header">
+<th style="text-align: left;"></th>
+<th style="text-align: left;"><strong>Cursors it fixes</strong></th>
+<th style="text-align: left;"><strong>Frequency view</strong></th>
+<th style="text-align: left;"><strong>Noise, crosstalk</strong></th>
+<th style="text-align: left;"><strong>Power</strong></th>
+<th style="text-align: left;"><strong>Main limit</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">TX FFE</td>
+<td style="text-align: left;">pre + post (as many as taps)</td>
+<td style="text-align: left;">lowers LF, Nyquist kept</td>
+<td style="text-align: left;">no RX noise gain; launch swing lost</td>
+<td style="text-align: left;">low</td>
+<td style="text-align: left;">peak swing; not adaptive without a back-channel</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">RX CTLE</td>
+<td style="text-align: left;">long tail, some pre-cursor</td>
+<td style="text-align: left;">boosts HF over LF</td>
+<td style="text-align: left;">amplifies HF noise and crosstalk</td>
+<td style="text-align: left;">low</td>
+<td style="text-align: left;">peaking range and linearity</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">RX FFE</td>
+<td style="text-align: left;">pre + post</td>
+<td style="text-align: left;">like a CTLE, discrete taps</td>
+<td style="text-align: left;">amplifies noise</td>
+<td style="text-align: left;">high</td>
+<td style="text-align: left;">analog delays or ADC power</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">DFE</td>
+<td style="text-align: left;">post only (one per tap)</td>
+<td style="text-align: left;">nonlinear (no <span class="math inline">\(H(f)\)</span>)</td>
+<td style="text-align: left;">no noise gain</td>
+<td style="text-align: left;">medium</td>
+<td style="text-align: left;">tap-1 timing, error propagation</td>
+</tr>
+</tbody>
+</table>
 </div>
 <h2 id="sec:ch5-preview"><span class="secnum">5.4</span>Preview: who does how much?</h2>
 <p>None of the four is free: the TX FFE costs swing, the CTLE noise and linearity, the DFE timing margin and loop power. The design question is how to <em>split</em> the work of undoing 17.4 dB between them. Chapters <a href="{% endraw %}{{ '/chapters/06-transmit-ffe/' | relative_url }}{% raw %}">6</a>–<a href="{% endraw %}{{ '/chapters/08-decision-feedback-equalization-and-adaptation/' | relative_url }}{% raw %}#ch:dfe">8</a> build each equalizer, and <a href="{% endraw %}{{ '/chapters/08-decision-feedback-equalization-and-adaptation/' | relative_url }}{% raw %}#sec:eq-partition">Section 8.5</a> answers the split with numbers for REF and for 5–30 dB channels.</p>

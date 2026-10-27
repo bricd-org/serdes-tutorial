@@ -174,21 +174,79 @@ permalink: "/appendices/b-tables-and-constants/"
 <div id="tab:app-const">
 
 </div>
-<div class="tabularx">
-<p><span>@l l L@</span> <strong>Quantity</strong> &amp; <strong>Value</strong> &amp; <strong>Use</strong><br />
-Boltzmann constant <span class="math inline">\(k\)</span> &amp; <span class="math inline">\(1.381\times10^{-23}\)</span> J/K &amp; noise<br />
-Elementary charge <span class="math inline">\(q\)</span> &amp; <span class="math inline">\(1.602\times10^{-19}\)</span> C &amp; shot noise, <span class="math inline">\(V_T\)</span><br />
-Thermal voltage <span class="math inline">\(kT/q\)</span> &amp; 25.85 mV &amp; HBT <span class="math inline">\(g_\mathrm{m}=I_C/V_T\)</span>: 38.7 mS per mA<br />
-<span class="math inline">\(kT\)</span> &amp; <span class="math inline">\(4.14\times10^{-21}\)</span> J = <span class="math inline">\(-173.8\)</span> dBm/Hz &amp; noise floors<br />
-<span class="math inline">\(\sqrt{4kTR}\)</span>, <span class="math inline">\(R=50\,\Omega\)</span> &amp; 0.91 nV/<span class="math inline">\(\sqrt{\mathrm{Hz}}\)</span> &amp; termination noise<br />
-<span class="math inline">\(\sqrt{kT/C}\)</span>, <span class="math inline">\(C=50\)</span> fF &amp; 0.29 mV &amp; sampled noise<br />
-Vacuum permittivity <span class="math inline">\(\varepsilon_0\)</span> &amp; <span class="math inline">\(8.854\times10^{-12}\)</span> F/m &amp; capacitance<br />
-Speed of light <span class="math inline">\(c\)</span> &amp; <span class="math inline">\(2.998\times10^8\)</span> m/s &amp; line delay<br />
-FR-4 (<span class="math inline">\(\varepsilon_r=4\)</span>): <span class="math inline">\(v=c/2\)</span> &amp; <span class="math inline">\(1.50\times10^8\)</span> m/s = 6.67 ps/mm = 169 ps/in &amp; reflections, flight time<br />
-1 UI at 5 Gb/s &amp; 200 ps &amp; everything<br />
-1 degree of the 2.5 GHz clock &amp; 1.11 ps &amp; I/Q and PI errors<br />
-1 PI step &amp; 6.25 ps = 0.031 UI &amp; CDR<br />
-</p>
+<div>
+<table>
+<caption><span class="capnum">Table B.3.</span> <strong>Handy constants and Open-SERDES conversions</strong> (at <span class="math inline">\(T=300\)</span> K where it matters).</caption>
+<thead>
+<tr class="header">
+<th style="text-align: left;"><strong>Quantity</strong></th>
+<th style="text-align: left;"><strong>Value</strong></th>
+<th style="text-align: left;"><strong>Use</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Boltzmann constant <span class="math inline">\(k\)</span></td>
+<td style="text-align: left;"><span class="math inline">\(1.381\times10^{-23}\)</span> J/K</td>
+<td style="text-align: left;">noise</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Elementary charge <span class="math inline">\(q\)</span></td>
+<td style="text-align: left;"><span class="math inline">\(1.602\times10^{-19}\)</span> C</td>
+<td style="text-align: left;">shot noise, <span class="math inline">\(V_T\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Thermal voltage <span class="math inline">\(kT/q\)</span></td>
+<td style="text-align: left;">25.85 mV</td>
+<td style="text-align: left;">HBT <span class="math inline">\(g_\mathrm{m}=I_C/V_T\)</span>: 38.7 mS per mA</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><span class="math inline">\(kT\)</span></td>
+<td style="text-align: left;"><span class="math inline">\(4.14\times10^{-21}\)</span> J = <span class="math inline">\(-173.8\)</span> dBm/Hz</td>
+<td style="text-align: left;">noise floors</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><span class="math inline">\(\sqrt{4kTR}\)</span>, <span class="math inline">\(R=50\,\Omega\)</span></td>
+<td style="text-align: left;">0.91 nV/<span class="math inline">\(\sqrt{\mathrm{Hz}}\)</span></td>
+<td style="text-align: left;">termination noise</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><span class="math inline">\(\sqrt{kT/C}\)</span>, <span class="math inline">\(C=50\)</span> fF</td>
+<td style="text-align: left;">0.29 mV</td>
+<td style="text-align: left;">sampled noise</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Vacuum permittivity <span class="math inline">\(\varepsilon_0\)</span></td>
+<td style="text-align: left;"><span class="math inline">\(8.854\times10^{-12}\)</span> F/m</td>
+<td style="text-align: left;">capacitance</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Speed of light <span class="math inline">\(c\)</span></td>
+<td style="text-align: left;"><span class="math inline">\(2.998\times10^8\)</span> m/s</td>
+<td style="text-align: left;">line delay</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">FR-4 (<span class="math inline">\(\varepsilon_r=4\)</span>): <span class="math inline">\(v=c/2\)</span></td>
+<td style="text-align: left;"><span class="math inline">\(1.50\times10^8\)</span> m/s = 6.67 ps/mm = 169 ps/in</td>
+<td style="text-align: left;">reflections, flight time</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">1 UI at 5 Gb/s</td>
+<td style="text-align: left;">200 ps</td>
+<td style="text-align: left;">everything</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">1 degree of the 2.5 GHz clock</td>
+<td style="text-align: left;">1.11 ps</td>
+<td style="text-align: left;">I/Q and PI errors</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">1 PI step</td>
+<td style="text-align: left;">6.25 ps = 0.031 UI</td>
+<td style="text-align: left;">CDR</td>
+</tr>
+</tbody>
+</table>
 </div>
 
 <nav class="prev-next" aria-label="Chapter navigation"><a class="pn-link prev" href="{% endraw %}{{ '/appendices/a-formula-sheet/' | relative_url }}{% raw %}"><small>← Previous</small>Formula Sheet</a><a class="pn-link next" href="{% endraw %}{{ '/appendices/c-design-review-checklists/' | relative_url }}{% raw %}"><small>Next →</small>Design-Review Checklists</a></nav>

@@ -268,21 +268,63 @@ permalink: "/chapters/10-receiver-front-end-and-samplers/"
 <h5 id="crossing-into-the-core-clock">Crossing into the core clock</h5>
 <p>The recovered 312.5 MHz clock and the core’s 312.5 MHz clock, which comes from the local PLL, have the same frequency in near-end loopback, or when both ends share a reference, but an unknown and wandering phase. A small asynchronous FIFO, 4–8 words deep with Gray-coded pointers, absorbs that. If the far end has its own reference (<span class="math inline">\(\pm100\,\mathrm{ppm}\)</span> each), the frequencies differ by up to 200 ppm: one word slips every 5000 words, or every 16 µs. That needs an elastic buffer with skip and insert symbols, which is a protocol feature. For bring-up, run the PRBS checker directly in the recovered domain, before the FIFO, so a BER measurement needs no clock crossing at all.</p>
 <h2 id="sec:ch10-checklist"><span class="secnum">10.7</span>RX design checklist</h2>
-<p><a href="#tab:ch10-check">Table 10.1</a> collects the RX checks and a first-cut power estimate of about 70 mW, without the PLL, phase interpolator and CDR logic (<a href="{% endraw %}{{ '/chapters/14-the-open-serdes-architecture/' | relative_url }}{% raw %}#sec:power-budget">Section 14.3</a>).</p>
+<p><a href="#tab:ch10-check">Table 10.1</a> collects the RX checks and a first-cut power estimate of about 70 mW, without the PLL, phase interpolator and CDR logic (<a href="{% endraw %}{{ '/chapters/14-the-open-serdes-architecture/' | relative_url }}{% raw %}#sec:power-budget">Section 14.5</a>).</p>
 <div id="tab:ch10-check">
 
 </div>
-<div class="tabularx">
-<p><span>@l L r@</span> Block &amp; Check before layout &amp; Power<br />
-Termination, ESD, pad &amp; 100 Ω diff., AC-grounded center tap; <span class="math inline">\(C_p&lt;0.85\)</span> pF; RL <span class="math inline">\(\ge10\)</span> dB at <span class="math inline">\(f_\mathrm{N}\)</span> &amp; –<br />
-CTLE and buffer &amp; linear range for the long-run level; 0–12 dB peaking (2 mA + 3 mA) &amp; 12.5 mW<br />
-DFE summers (<span class="math inline">\(\times2\)</span>), taps &amp; settles within the tap-1 budget; offset DAC injection (6 mA) &amp; 15 mW<br />
-4 CML samplers (M–S) &amp; <span class="math inline">\(\tau\le5\)</span> ps; <span class="math inline">\(t_\mathrm{CK\to Q}\le35\)</span> ps; same type for data and edge (12 mA) &amp; 30 mW<br />
-I/Q clock buffers &amp; sharp edges (<span class="math inline">\(w_{80}\le0.2\)</span> UI); phase error <span class="math inline">\(\le5^{\circ}\)</span> (5.6 ps) &amp; 10 mW<br />
-Offset DACs (<span class="math inline">\(\times4\)</span>) &amp; 5 bits, <span class="math inline">\(\pm3\sigma\)</span> range, LSB 0.91 mV &amp; 0.6 mW<br />
-Deserializer (1.2 V) &amp; two extra latch stages behind <span class="math inline">\(E_0\)</span>/<span class="math inline">\(E_1\)</span>; FIFO or in-domain PRBS checker &amp; 5 mW<br />
-<strong>Total RX</strong> &amp; 27 mA from 2.5 V, 4 mA from 1.2 V &amp; <strong><span class="math inline">\(\approx\)</span>73 mW</strong><br />
-</p>
+<div>
+<table>
+<caption><span class="capnum">Table 10.1.</span> <strong>RX checklist and first-cut power.</strong> CML currents from the worked examples here and in Chapters <a href="{% endraw %}{{ '/chapters/07-continuous-time-linear-equalizer/' | relative_url }}{% raw %}">7</a> and <a href="{% endraw %}{{ '/chapters/08-decision-feedback-equalization-and-adaptation/' | relative_url }}{% raw %}#ch:dfe">8</a>. Confirm every line in <strong>ngspice</strong> with extracted parasitics.</caption>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Block</th>
+<th style="text-align: left;">Check before layout</th>
+<th style="text-align: right;">Power</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Termination, ESD, pad</td>
+<td style="text-align: left;">100 Ω diff., AC-grounded center tap; <span class="math inline">\(C_p&lt;0.85\)</span> pF; RL <span class="math inline">\(\ge10\)</span> dB at <span class="math inline">\(f_\mathrm{N}\)</span></td>
+<td style="text-align: right;">–</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">CTLE and buffer</td>
+<td style="text-align: left;">linear range for the long-run level; 0–12 dB peaking (2 mA + 3 mA)</td>
+<td style="text-align: right;">12.5 mW</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">DFE summers (<span class="math inline">\(\times2\)</span>), taps</td>
+<td style="text-align: left;">settles within the tap-1 budget; offset DAC injection (6 mA)</td>
+<td style="text-align: right;">15 mW</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">4 CML samplers (M–S)</td>
+<td style="text-align: left;"><span class="math inline">\(\tau\le5\)</span> ps; <span class="math inline">\(t_\mathrm{CK\to Q}\le35\)</span> ps; same type for data and edge (12 mA)</td>
+<td style="text-align: right;">30 mW</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">I/Q clock buffers</td>
+<td style="text-align: left;">sharp edges (<span class="math inline">\(w_{80}\le0.2\)</span> UI); phase error <span class="math inline">\(\le5^{\circ}\)</span> (5.6 ps)</td>
+<td style="text-align: right;">10 mW</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Offset DACs (<span class="math inline">\(\times4\)</span>)</td>
+<td style="text-align: left;">5 bits, <span class="math inline">\(\pm3\sigma\)</span> range, LSB 0.91 mV</td>
+<td style="text-align: right;">0.6 mW</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Deserializer (1.2 V)</td>
+<td style="text-align: left;">two extra latch stages behind <span class="math inline">\(E_0\)</span>/<span class="math inline">\(E_1\)</span>; FIFO or in-domain PRBS checker</td>
+<td style="text-align: right;">5 mW</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Total RX</strong></td>
+<td style="text-align: left;">27 mA from 2.5 V, 4 mA from 1.2 V</td>
+<td style="text-align: right;"><strong><span class="math inline">\(\approx\)</span>73 mW</strong></td>
+</tr>
+</tbody>
+</table>
 </div>
 <div class="tbox tbox-takeaways">
 <div class="tbox-title">

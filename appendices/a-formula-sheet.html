@@ -7,53 +7,200 @@ permalink: "/appendices/a-formula-sheet/"
 {% raw %}
 <h1 id="app:formulas"><span class="chapnum">Appendix A</span>Formula Sheet</h1>
 <p>The equations of this tutorial on two pages, in the notation of <a href="{% endraw %}{{ '/chapters/01-why-serial-links/' | relative_url }}{% raw %}">Chapter 1</a>: <span class="math inline">\(T_\mathrm{b}\)</span> = 1 UI = 200 ps, <span class="math inline">\(f_\mathrm{N}=2.5\)</span> GHz, symbols <span class="math inline">\(a_k=\pm1\)</span>, TX levels <span class="math inline">\(\pm A\)</span> with <span class="math inline">\(A=0.5\)</span> V, cursors <span class="math inline">\(p_k\)</span> of a 1 V, 1-UI pulse.</p>
-<div class="tabularx">
-<p><span>@&gt;p<span>0.47</span> L@</span> <strong>Formula</strong> &amp; <strong>Meaning</strong><br />
-<span class="math inline">\(f_\mathrm{b}=1/T_\mathrm{b},\quad f_\mathrm{N}=1/(2T_\mathrm{b})\)</span> &amp; bit rate and Nyquist frequency: 5 Gb/s, 2.5 GHz<br />
-<span class="math inline">\(y(t)=A\sum_n a_n\,p(t-nT_\mathrm{b})+n(t)\)</span> &amp; received signal: superposition of shifted pulse responses<br />
-<span class="math inline">\(p_k=p(t_\mathrm{s}+kT_\mathrm{b})\)</span> &amp; cursors: <span class="math inline">\(p_0\)</span> main, <span class="math inline">\(k&lt;0\)</span> pre-, <span class="math inline">\(k&gt;0\)</span> post-cursors<br />
-<span class="math inline">\(\mathrm{EH}=2A\big(p_0-\sum_{k\neq0}\lvert p_k\rvert\big)\)</span> &amp; peak-distortion (worst-case) inner eye height<br />
-<span class="math inline">\(\mathrm{BER}=Q\!\left(\mathrm{EH}/2\sigma_\mathrm{n}\right),\ Q(x)=\tfrac12\operatorname{erfc}(x/\sqrt2)\)</span> &amp; BER for Gaussian noise of rms <span class="math inline">\(\sigma_\mathrm{n}\)</span> at the slicer<br />
-<span class="math inline">\(\mathrm{EH}\ge2Q\sigma_\mathrm{n}=14.07\,\sigma_\mathrm{n}\)</span> &amp; eye needed for <span class="math inline">\(10^{-12}\)</span> (<span class="math inline">\(Q=7.03\)</span>)<br />
-<span class="math inline">\(S(f)=A^2T_\mathrm{b}\,\mathrm{sinc}^2(fT_\mathrm{b})\)</span> &amp; NRZ power spectral density; first null at <span class="math inline">\(f_\mathrm{b}\)</span><br />
-<span class="math inline">\(M=\mathrm{EH}_\mathrm{ISI}-2Q\sigma_\mathrm{n}-\Delta V_\mathrm{jit}-2V_\mathrm{os}-V_\mathrm{sens}\)</span> &amp; linear voltage margin at the sampler<br />
-<span class="math inline">\(v=c/\sqrt{\varepsilon_r},\quad t_d=\ell/v\)</span> &amp; propagation speed and delay; FR-4: 6.67 ps/mm<br />
-<span class="math inline">\(\Gamma=\frac{Z_L-Z_0}{Z_L+Z_0},\quad \mathrm{RL}=-20\log_{10}\lvert S_{11}\rvert\)</span> &amp; reflection coefficient and return loss<br />
-<span class="math inline">\(\alpha_D\approx\pi f\sqrt{\varepsilon_r}\tan\delta/c\)</span> &amp; dielectric loss (Np/m), grows as <span class="math inline">\(f\)</span>; skin loss grows as <span class="math inline">\(\sqrt f\)</span><br />
-<span class="math inline">\(\lvert S_{11}\rvert=x/\sqrt{4+x^2},\ x=\omega Z_0C_p\)</span> &amp; pad capacitance on a doubly terminated node<br />
-<span class="math inline">\(f_\mathrm{3dB}=1/(\pi Z_0C_p)\)</span> &amp; pad pole (node sees <span class="math inline">\(Z_0/2\)</span>)<br />
-<span class="math inline">\(\mathrm{IL}(f_\mathrm{N})-\mathrm{IL}(f_\mathrm{N}/2)&gt;9.54\)</span> dB &amp; PAM4 can win over NRZ only above this octave loss<br />
-<span class="math inline">\(y_n=\sum_k c_k x_{n-k},\quad\sum_k\lvert c_k\rvert=1\)</span> &amp; TX FFE under the peak-swing constraint<br />
-<span class="math inline">\(\mathrm{DE}=20\log_{10}\frac{\lvert c_0\rvert+\lvert c_1\rvert}{\lvert c_0\rvert-\lvert c_1\rvert}\)</span> &amp; de-emphasis of a 2-tap FFE (<span class="math inline">\(c_1=-0.25\)</span>: 6 dB)<br />
-<span class="math inline">\(H_\mathrm{CTLE}(s)=\frac{1}{A}\frac{1+s/\omega_z}{(1+s/\omega_{p1})(1+s/\omega_{p2})}\)</span> &amp; CTLE model, peaking <span class="math inline">\(A=\omega_{p1}/\omega_z\)</span><br />
-<span class="math inline">\(A=1+g_\mathrm{m}R_S/2,\ \omega_z=\frac{1}{R_SC_S},\ \omega_{p2}=\frac{1}{R_DC_\mathrm{L}}\)</span> &amp; degenerated differential pair<br />
-<span class="math inline">\(z_n=y_n-\sum_k w_k\hat d_{n-k},\quad w_k=A\,p_k\)</span> &amp; DFE; zero-forcing taps equal the post-cursors<br />
-<span class="math inline">\(t_\mathrm{CK\to Q}+t_\mathrm{settle}+t_\mathrm{setup}\le T_\mathrm{b}\)</span> &amp; DFE tap-1 timing (direct feedback)<br />
-<span class="math inline">\(w_k\leftarrow w_k+\mu\,\operatorname{sgn}(e_n)\,\operatorname{sgn}(\hat d_{n-k})\)</span> &amp; sign-sign LMS adaptation<br />
-</p>
-</div>
-<div class="tabularx">
-<p><span>@&gt;p<span>0.47</span> L@</span> <strong>Formula</strong> &amp; <strong>Meaning</strong><br />
-<span class="math inline">\(\Delta V=I_TR_\mathrm{L},\ \tau=R_\mathrm{L}C_\mathrm{L},\ P=V_\mathrm{CC}I_T\)</span> &amp; CML gate: swing, time constant, static power<br />
-<span class="math inline">\(V_{d,\mathrm{pp}}=I_TZ_0\)</span> (CML), <span class="math inline">\(I=V_{d,\mathrm{pp}}/4Z_0\)</span> (SST) &amp; driver current, doubly terminated<br />
-<span class="math inline">\(g_\mathrm{m}=I_C/V_T\)</span>; full switching at <span class="math inline">\(\approx4V_T\)</span> &amp; HBT pair: 38.7 mS/mA, about 100 mV<br />
-<span class="math inline">\(\tau=C/g_\mathrm{m}\)</span> (StrongARM), <span class="math inline">\(\tau=\frac{R_\mathrm{L}C}{g_\mathrm{m}R_\mathrm{L}-1}\)</span> (CML) &amp; latch regeneration time constant<br />
-<span class="math inline">\(P_\mathrm{meta}=\frac{2V_L}{A\,\Delta V}\,e^{-T/\tau}\)</span> &amp; metastability probability per decision<br />
-<span class="math inline">\(\sigma_{\Delta V_t}=A_{VT}/\sqrt{WL}\)</span> &amp; Pelgrom mismatch (offset)<br />
-<span class="math inline">\(V_\mathrm{sens}\approx2Q\sigma_s+V_\mathrm{min}+2\lvert V_\mathrm{os,res}\rvert\)</span> &amp; sampler sensitivity<br />
-<span class="math inline">\(\overline{v_n^2}=4kTR\,\Delta f,\quad v_{n,\mathrm{rms}}=\sqrt{kT/C}\)</span> &amp; resistor and sampled (<span class="math inline">\(kT/C\)</span>) noise<br />
-<span class="math inline">\(\mathrm{TJ}=\mathrm{DJ}_{\delta\delta}+2Q\,\sigma_\mathrm{RJ}\)</span> &amp; total jitter at a BER (dual-Dirac)<br />
-<span class="math inline">\(\sigma_\phi^2=2\!\int\!\mathcal{L}(f)\,df,\quad\sigma_t=\sigma_\phi/(2\pi f_0)\)</span> &amp; phase noise to rms jitter<br />
-<span class="math inline">\(\omega_n=\sqrt{\frac{I_\mathrm{CP}K_\mathrm{VCO}}{2\pi NC_1}},\ \zeta=\frac{R}{2}\sqrt{\frac{I_\mathrm{CP}K_\mathrm{VCO}C_1}{2\pi N}}\)</span> &amp; CP-PLL natural frequency and damping<br />
-<span class="math inline">\(f_0=\frac{1}{2\pi\sqrt{LC}},\ R_p=Q\omega_0L,\ g_\mathrm{m}R_p/2\ge1\)</span> &amp; LC tank and start-up<br />
-<span class="math inline">\(K_\mathrm{BB}=\mathrm{TD}\sqrt{2/\pi}/\sigma_\mathrm{j}\)</span> &amp; bang-bang gain, linearized by jitter<br />
-<span class="math inline">\(S=K_P\cdot\mathrm{LSB}/T_\mathrm{upd},\ \mathrm{JTOL}\approx\mathrm{TM}+2S/\omega\)</span> &amp; BB-CDR slew rate and slew-limited JTOL<br />
-<span class="math inline">\(\Delta t_\mathrm{PI}=T_\mathrm{clk}/N_\mathrm{steps},\ \text{dither}\approx2S\,T_\mathrm{lat}\)</span> &amp; PI step (6.25 ps) and limit-cycle dither<br />
-<span class="math inline">\(E_b=P/f_\mathrm{b}\)</span> &amp; energy per bit (216 mW <span class="math inline">\(\to\)</span> 43 pJ/b)<br />
-<span class="math inline">\(N_\mathrm{bits}\ge3/\mathrm{BER}\)</span> &amp; error-free bits for a BER claim at 95 % confidence<br />
-<span class="math inline">\(N\ge10\,\ell f_\mathrm{max}/v,\quad\Delta\hat\sigma/\sigma\approx1/\sqrt{2N}\)</span> &amp; lumped-line sections; Monte Carlo accuracy<br />
-</p>
-</div>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;"><strong>Formula</strong></th>
+<th style="text-align: left;"><strong>Meaning</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td colspan="2" style="text-align: left;"><strong>Signals and BER (Chapters <a href="{% endraw %}{{ '/chapters/02-signals-systems-and-the-language-of-links/' | relative_url }}{% raw %}">2</a> and <a href="{% endraw %}{{ '/chapters/04-link-budgets-and-statistical-analysis/' | relative_url }}{% raw %}">4</a>)</strong></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><span class="math inline">\(f_\mathrm{b}=1/T_\mathrm{b},\quad f_\mathrm{N}=1/(2T_\mathrm{b})\)</span></td>
+<td style="text-align: left;">bit rate and Nyquist frequency: 5 Gb/s, 2.5 GHz</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><span class="math inline">\(y(t)=A\sum_n a_n\,p(t-nT_\mathrm{b})+n(t)\)</span></td>
+<td style="text-align: left;">received signal: superposition of shifted pulse responses</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><span class="math inline">\(p_k=p(t_\mathrm{s}+kT_\mathrm{b})\)</span></td>
+<td style="text-align: left;">cursors: <span class="math inline">\(p_0\)</span> main, <span class="math inline">\(k&lt;0\)</span> pre-, <span class="math inline">\(k&gt;0\)</span> post-cursors</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><span class="math inline">\(\mathrm{EH}=2A\big(p_0-\sum_{k\neq0}\lvert p_k\rvert\big)\)</span></td>
+<td style="text-align: left;">peak-distortion (worst-case) inner eye height</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><span class="math inline">\(\mathrm{BER}=Q\!\left(\mathrm{EH}/2\sigma_\mathrm{n}\right),\ Q(x)=\tfrac12\operatorname{erfc}(x/\sqrt2)\)</span></td>
+<td style="text-align: left;">BER for Gaussian noise of rms <span class="math inline">\(\sigma_\mathrm{n}\)</span> at the slicer</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><span class="math inline">\(\mathrm{EH}\ge2Q\sigma_\mathrm{n}=14.07\,\sigma_\mathrm{n}\)</span></td>
+<td style="text-align: left;">eye needed for <span class="math inline">\(10^{-12}\)</span> (<span class="math inline">\(Q=7.03\)</span>)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><span class="math inline">\(S(f)=A^2T_\mathrm{b}\,\mathrm{sinc}^2(fT_\mathrm{b})\)</span></td>
+<td style="text-align: left;">NRZ power spectral density; first null at <span class="math inline">\(f_\mathrm{b}\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><span class="math inline">\(M=\mathrm{EH}_\mathrm{ISI}-2Q\sigma_\mathrm{n}-\Delta V_\mathrm{jit}-2V_\mathrm{os}-V_\mathrm{sens}\)</span></td>
+<td style="text-align: left;">linear voltage margin at the sampler</td>
+</tr>
+<tr class="even">
+<td colspan="2" style="text-align: left;"><strong>Channel (<a href="{% endraw %}{{ '/chapters/03-the-channel/' | relative_url }}{% raw %}">Chapter 3</a>)</strong></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><span class="math inline">\(v=c/\sqrt{\varepsilon_r},\quad t_d=\ell/v\)</span></td>
+<td style="text-align: left;">propagation speed and delay; FR-4: 6.67 ps/mm</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><span class="math inline">\(\Gamma=\frac{Z_L-Z_0}{Z_L+Z_0},\quad \mathrm{RL}=-20\log_{10}\lvert S_{11}\rvert\)</span></td>
+<td style="text-align: left;">reflection coefficient and return loss</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><span class="math inline">\(\alpha_D\approx\pi f\sqrt{\varepsilon_r}\tan\delta/c\)</span></td>
+<td style="text-align: left;">dielectric loss (Np/m), grows as <span class="math inline">\(f\)</span>; skin loss grows as <span class="math inline">\(\sqrt f\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><span class="math inline">\(\lvert S_{11}\rvert=x/\sqrt{4+x^2},\ x=\omega Z_0C_p\)</span></td>
+<td style="text-align: left;">pad capacitance on a doubly terminated node</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><span class="math inline">\(f_\mathrm{3dB}=1/(\pi Z_0C_p)\)</span></td>
+<td style="text-align: left;">pad pole (node sees <span class="math inline">\(Z_0/2\)</span>)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><span class="math inline">\(\mathrm{IL}(f_\mathrm{N})-\mathrm{IL}(f_\mathrm{N}/2)&gt;9.54\)</span> dB</td>
+<td style="text-align: left;">PAM4 can win over NRZ only above this octave loss</td>
+</tr>
+<tr class="odd">
+<td colspan="2" style="text-align: left;"><strong>Equalization (Chapters <a href="{% endraw %}{{ '/chapters/06-transmit-ffe/' | relative_url }}{% raw %}">6</a>, <a href="{% endraw %}{{ '/chapters/07-continuous-time-linear-equalizer/' | relative_url }}{% raw %}">7</a> and <a href="{% endraw %}{{ '/chapters/08-decision-feedback-equalization-and-adaptation/' | relative_url }}{% raw %}#ch:dfe">8</a>)</strong></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><span class="math inline">\(y_n=\sum_k c_k x_{n-k},\quad\sum_k\lvert c_k\rvert=1\)</span></td>
+<td style="text-align: left;">TX FFE under the peak-swing constraint</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><span class="math inline">\(\mathrm{DE}=20\log_{10}\frac{\lvert c_0\rvert+\lvert c_1\rvert}{\lvert c_0\rvert-\lvert c_1\rvert}\)</span></td>
+<td style="text-align: left;">de-emphasis of a 2-tap FFE (<span class="math inline">\(c_1=-0.25\)</span>: 6 dB)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><span class="math inline">\(H_\mathrm{CTLE}(s)=\frac{1}{A}\frac{1+s/\omega_z}{(1+s/\omega_{p1})(1+s/\omega_{p2})}\)</span></td>
+<td style="text-align: left;">CTLE model, peaking <span class="math inline">\(A=\omega_{p1}/\omega_z\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><span class="math inline">\(A=1+g_\mathrm{m}R_S/2,\ \omega_z=\frac{1}{R_SC_S},\ \omega_{p2}=\frac{1}{R_DC_\mathrm{L}}\)</span></td>
+<td style="text-align: left;">degenerated differential pair</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><span class="math inline">\(z_n=y_n-\sum_k w_k\hat d_{n-k},\quad w_k=A\,p_k\)</span></td>
+<td style="text-align: left;">DFE; zero-forcing taps equal the post-cursors</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><span class="math inline">\(t_\mathrm{CK\to Q}+t_\mathrm{settle}+t_\mathrm{setup}\le T_\mathrm{b}\)</span></td>
+<td style="text-align: left;">DFE tap-1 timing (direct feedback)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><span class="math inline">\(w_k\leftarrow w_k+\mu\,\operatorname{sgn}(e_n)\,\operatorname{sgn}(\hat d_{n-k})\)</span></td>
+<td style="text-align: left;">sign-sign LMS adaptation</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;"><strong>Formula</strong></th>
+<th style="text-align: left;"><strong>Meaning</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td colspan="2" style="text-align: left;"><strong>Circuits (Chapters <a href="{% endraw %}{{ '/chapters/09-the-transmitter/' | relative_url }}{% raw %}">9</a> and <a href="{% endraw %}{{ '/chapters/10-receiver-front-end-and-samplers/' | relative_url }}{% raw %}">10</a>)</strong></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><span class="math inline">\(\Delta V=I_TR_\mathrm{L},\ \tau=R_\mathrm{L}C_\mathrm{L},\ P=V_\mathrm{CC}I_T\)</span></td>
+<td style="text-align: left;">CML gate: swing, time constant, static power</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><span class="math inline">\(V_{d,\mathrm{pp}}=I_TZ_0\)</span> (CML), <span class="math inline">\(I=V_{d,\mathrm{pp}}/4Z_0\)</span> (SST)</td>
+<td style="text-align: left;">driver current, doubly terminated</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><span class="math inline">\(g_\mathrm{m}=I_C/V_T\)</span>; full switching at <span class="math inline">\(\approx4V_T\)</span></td>
+<td style="text-align: left;">HBT pair: 38.7 mS/mA, about 100 mV</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><span class="math inline">\(\tau=C/g_\mathrm{m}\)</span> (StrongARM), <span class="math inline">\(\tau=\frac{R_\mathrm{L}C}{g_\mathrm{m}R_\mathrm{L}-1}\)</span> (CML)</td>
+<td style="text-align: left;">latch regeneration time constant</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><span class="math inline">\(P_\mathrm{meta}=\frac{2V_L}{A\,\Delta V}\,e^{-T/\tau}\)</span></td>
+<td style="text-align: left;">metastability probability per decision</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><span class="math inline">\(\sigma_{\Delta V_t}=A_{VT}/\sqrt{WL}\)</span></td>
+<td style="text-align: left;">Pelgrom mismatch (offset)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><span class="math inline">\(V_\mathrm{sens}\approx2Q\sigma_s+V_\mathrm{min}+2\lvert V_\mathrm{os,res}\rvert\)</span></td>
+<td style="text-align: left;">sampler sensitivity</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><span class="math inline">\(\overline{v_n^2}=4kTR\,\Delta f,\quad v_{n,\mathrm{rms}}=\sqrt{kT/C}\)</span></td>
+<td style="text-align: left;">resistor and sampled (<span class="math inline">\(kT/C\)</span>) noise</td>
+</tr>
+<tr class="even">
+<td colspan="2" style="text-align: left;"><strong>Jitter, PLL and CDR (Chapters <a href="{% endraw %}{{ '/chapters/11-jitter/' | relative_url }}{% raw %}">11</a>, <a href="{% endraw %}{{ '/chapters/12-clock-generation-the-phase-locked-loop/' | relative_url }}{% raw %}#ch:pll">12</a> and <a href="{% endraw %}{{ '/chapters/13-clock-and-data-recovery/' | relative_url }}{% raw %}">13</a>)</strong></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><span class="math inline">\(\mathrm{TJ}=\mathrm{DJ}_{\delta\delta}+2Q\,\sigma_\mathrm{RJ}\)</span></td>
+<td style="text-align: left;">total jitter at a BER (dual-Dirac)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><span class="math inline">\(\sigma_\phi^2=2\!\int\!\mathcal{L}(f)\,df,\quad\sigma_t=\sigma_\phi/(2\pi f_0)\)</span></td>
+<td style="text-align: left;">phase noise to rms jitter</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><span class="math inline">\(\omega_n=\sqrt{\frac{I_\mathrm{CP}K_\mathrm{VCO}}{2\pi NC_1}},\ \zeta=\frac{R}{2}\sqrt{\frac{I_\mathrm{CP}K_\mathrm{VCO}C_1}{2\pi N}}\)</span></td>
+<td style="text-align: left;">CP-PLL natural frequency and damping</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><span class="math inline">\(f_0=\frac{1}{2\pi\sqrt{LC}},\ R_p=Q\omega_0L,\ g_\mathrm{m}R_p/2\ge1\)</span></td>
+<td style="text-align: left;">LC tank and start-up</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><span class="math inline">\(K_\mathrm{BB}=\mathrm{TD}\sqrt{2/\pi}/\sigma_\mathrm{j}\)</span></td>
+<td style="text-align: left;">bang-bang gain, linearized by jitter</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><span class="math inline">\(S=K_P\cdot\mathrm{LSB}/T_\mathrm{upd},\ \mathrm{JTOL}\approx\mathrm{TM}+2S/\omega\)</span></td>
+<td style="text-align: left;">BB-CDR slew rate and slew-limited JTOL</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><span class="math inline">\(\Delta t_\mathrm{PI}=T_\mathrm{clk}/N_\mathrm{steps},\ \text{dither}\approx2S\,T_\mathrm{lat}\)</span></td>
+<td style="text-align: left;">PI step (6.25 ps) and limit-cycle dither</td>
+</tr>
+<tr class="even">
+<td colspan="2" style="text-align: left;"><strong>Flow and test (Chapters <a href="{% endraw %}{{ '/chapters/14-the-open-serdes-architecture/' | relative_url }}{% raw %}">14</a> and <a href="{% endraw %}{{ '/chapters/15-design-and-verification-flow-with-open-tools/' | relative_url }}{% raw %}">15</a>)</strong></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><span class="math inline">\(E_b=P/f_\mathrm{b}\)</span></td>
+<td style="text-align: left;">energy per bit (216 mW <span class="math inline">\(\to\)</span> 43 pJ/b)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><span class="math inline">\(N_\mathrm{bits}\ge3/\mathrm{BER}\)</span></td>
+<td style="text-align: left;">error-free bits for a BER claim at 95 % confidence</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><span class="math inline">\(N\ge10\,\ell f_\mathrm{max}/v,\quad\Delta\hat\sigma/\sigma\approx1/\sqrt{2N}\)</span></td>
+<td style="text-align: left;">lumped-line sections; Monte Carlo accuracy</td>
+</tr>
+</tbody>
+</table>
 
 <nav class="prev-next" aria-label="Chapter navigation"><a class="pn-link prev" href="{% endraw %}{{ '/chapters/16-hands-on-labs-with-serdespy/' | relative_url }}{% raw %}"><small>← Previous</small>Hands-on Labs with serdespy</a><a class="pn-link next" href="{% endraw %}{{ '/appendices/b-tables-and-constants/' | relative_url }}{% raw %}"><small>Next →</small>Tables and Constants</a></nav>
 <p class="page-source">Generated from <a href="https://github.com/bricd-org/serdes-tutorial/blob/main/book/tutorial/chapters/A_appendices.tex">book/tutorial/chapters/A_appendices.tex</a>. Figure, table and equation numbers match the <a href="{% endraw %}{{ '/assets/pdf/Open-SERDES_Tutorial.pdf' | relative_url }}{% raw %}">PDF edition</a>.</p>

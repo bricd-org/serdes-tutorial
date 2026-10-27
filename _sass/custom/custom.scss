@@ -265,3 +265,24 @@ ol.references li::before { color: $navy; font-weight: 700; }
     p { color: $d-caption; } .card-label { color: $d-gold; } }
   .key-numbers div { background: #1b2a52; border: 1px solid #2c3f70; }
 }
+
+// ---------------------------------------------------------------- intro slides gallery (slides.md)
+.slides-intro h1 { border: none; margin-top: 0.2rem; }
+.slide-index { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 0.15rem 1rem;
+  margin: 1rem 0 2rem; padding: 0.8rem 1rem; background: $bgpale; border-top: 3px solid $gold; border-radius: 4px;
+  font-size: 0.86rem;
+  a { text-decoration: none; padding: 0.12rem 0; } b { display: inline-block; min-width: 1.6rem; color: $gold-d; } }
+.main-content figure.slide { margin: 2.2rem auto 0.4rem; scroll-margin-top: 4rem;
+  img { width: 100%; border: 1px solid $line; border-radius: 4px; box-shadow: 0 4px 18px rgba(27, 42, 82, 0.12); }
+  figcaption { max-width: none; font-size: 0.95rem; color: $navy; font-weight: 600; } }
+.slide-related { float: right; font-weight: 600; font-size: 0.85rem; }
+.slide-notes { margin: 0.4rem 0 1.4rem; padding: 0.5rem 0.9rem; background: $bgpale; border-left: 3px solid $slate;
+  border-radius: 0 4px 4px 0;
+  summary { cursor: pointer; font-weight: 600; color: $slate; font-size: 0.88rem; }
+  p { font-size: 0.93rem; margin: 0.5rem 0 0.3rem; } }
+@if $color-scheme == dark {
+  .slide-index { background: #1a2439; b { color: #c7a24a; } }
+  .main-content figure.slide img { background: none; padding: 0; border-color: #28334c; box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45); }
+  .main-content figure.slide figcaption { color: #e6ecf7; }
+  .slide-notes { background: #1a2439; border-left-color: #6e7fa6; summary { color: #b9c5dc; } }
+}

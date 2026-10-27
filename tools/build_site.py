@@ -504,7 +504,10 @@ def preprocess(src, chap_num, refs, tikz_names, page_labels, tikz_start=0):
     s = s.replace("\\tikzset{", "\\ignoredarg{")
     # local helper macros
     s = s.replace("\\providecommand", "\\newcommand")
-    s = re.sub(r"\\appGrp\{([^}]*)\}", r"\\multicolumn{2}{l}{\\textbf{\1}}\\\\", s)
+    while "\\appGrp{" in s:                      # balanced braces: the argument holds \cref{..}
+        k = s.index("\\appGrp{")
+        arg, j = brace(s, k + len("\\appGrp"))
+        s = s[:k] + "\\multicolumn{2}{l}{\\textbf{" + arg + "}}\\\\" + s[j:]
     s = re.sub(r"\\newcommand\{\\appGrp\}\[1\]\{.*\n", "\n", s)
     s = re.sub(r"\\rowcolor\{[^}]*\}", "", s)
     s = re.sub(r"\\renewcommand\{\\(arraystretch|topfraction|bottomfraction|textfraction|floatpagefraction|thewexample)\}\{[^}]*\}", "", s)
@@ -568,6 +571,26 @@ def preprocess(src, chap_num, refs, tikz_names, page_labels, tikz_start=0):
     s = re.sub(r"\\end\{minipage\}", lambda m: "\\end{mpcolW%s}" % next(widths), s)
     # center env -> plain
     s = s.replace("\\begin{center}", "").replace("\\end{center}", "")
+    # table column specs: pandoc 3.1 does not know the style's custom L/C columns, and >{..}, <{..},
+    # @{..}, !{..} decorations make it give up on the whole table -> reduce to plain l/c/r/p/X columns
+    def colspec(m):
+        head, spec_start = m.group(0), m.end()
+        spec, j = brace(s_ref[0], spec_start - 1)
+        spec2 = re.sub(r"[<>@!]\{(?:[^{}]|\{[^{}]*\})*\}", "", spec)
+        # p{..}/X/L/C -> l: pandoc 3.1.3 mis-parses p{..} columns when a page has two such tables,
+        # and the browser sizes HTML table columns from their content anyway
+        spec2 = re.sub(r"[pmb]\{[^{}]*\}", "l", spec2)
+        spec2 = re.sub(r"\b[LCX]\b", "l", spec2)
+        spec2 = re.sub(r"\s+", " ", spec2).strip()
+        return head[:-1] + "{" + spec2 + "}", j
+    s_ref = [s]
+    out, i = [], 0
+    for m in re.finditer(r"\\begin\{tabularx\}\{[^}]*\}\{|\\begin\{tabular\*?\}(?:\[[^]]*\])?\{", s):
+        if m.start() < i:
+            continue
+        rep, j = colspec(m)
+        out.append(s[i:m.start()]); out.append(rep); i = j
+    out.append(s[i:]); s = "".join(out)
     # tables: pandoc does not always keep the label as an id -> add explicit anchors
     def tab_targets(m):
         labs = re.findall(r"\\label\{([^}]*)\}", m.group(0))
@@ -739,7 +762,8 @@ def convert_figures(names):
     for nm in sorted(names):
         base = nm.split("/")[-1]
         cands = [SRC / "tikzext" / (base + ".pdf")] if nm.startswith("tikzext/") else \
-                [SRC / "figs" / (base + ".pdf"), SRC / "figs" / (base + ".png"), SRC / "canva" / (base + ".png")]
+                [SRC / "figs" / (base + ".pdf"), SRC / "figs" / (base + ".png"), SRC / "canva" / (base + ".png"),
+                 SRC / "slides" / (base + ".png")]
         src = next((c for c in cands if c.exists()), None)
         if src is None:
             warn(f"figure not found: {nm}"); continue
@@ -753,7 +777,7 @@ def convert_figures(names):
             with open(src, "rb") as f:
                 head = f.read(24)
             w = unpack(">I", head[16:20])[0]
-            width_px = 800 if w > 800 else w
+            width_px = min(800, round(w / 2))       # PNG sources are drawn at about 2x
         else:
             pi = subprocess.run(["pdfinfo", str(src)], capture_output=True, text=True).stdout
             mm = re.search(r"Page size:\s*([\d.]+) x ([\d.]+)", pi)

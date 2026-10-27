@@ -34,16 +34,70 @@ permalink: "/chapters/16-hands-on-labs-with-serdespy/"
 <div id="tab:ch16-labs">
 
 </div>
-<div class="tabularx">
-<p><span>@c l L l r@</span> <strong>Lab</strong> &amp; <strong>Script</strong> &amp; <strong>What it shows (key number)</strong> &amp; <strong>Theory</strong> &amp; <strong>Time</strong><br />
-&amp; <code>lab1_channel.py</code> &amp; REF <span class="math inline">\(S_{21}\)</span>, <span class="math inline">\(h(t)\)</span>, <span class="math inline">\(p(t)\)</span>, cursors (<span class="math inline">\(-17.38\)</span> dB; PDA <span class="math inline">\(-0.161\)</span> V) &amp; Sections <a href="{% endraw %}{{ '/chapters/02-signals-systems-and-the-language-of-links/' | relative_url }}{% raw %}#sec:pulse-response">2.4</a> and <a href="{% endraw %}{{ '/chapters/03-the-channel/' | relative_url }}{% raw %}#sec:refchannel">3.7</a> &amp; 3 s<br />
-2 &amp; <code>lab2_prbs_eye.py</code> &amp; PRBS7 eye before and after REF (<span class="math inline">\(-77.8\)</span> mV) &amp; <a href="{% endraw %}{{ '/chapters/02-signals-systems-and-the-language-of-links/' | relative_url }}{% raw %}#sec:eye">Section 2.6</a> &amp; 2 s<br />
-3 &amp; <code>lab3_tx_ffe.py</code> &amp; zero-forcing TX FFE (2-tap 162.7 mV, 3-tap 144.8 mV) &amp; <a href="{% endraw %}{{ '/chapters/06-transmit-ffe/' | relative_url }}{% raw %}">Chapter 6</a> &amp; 3 s<br />
-4 &amp; <code>lab4_ctle.py</code> &amp; CTLE peaking sweep (113.3 mV at 14 dB) &amp; <a href="{% endraw %}{{ '/chapters/07-continuous-time-linear-equalizer/' | relative_url }}{% raw %}">Chapter 7</a> &amp; 4 s<br />
-5 &amp; <code>lab5_dfe.py</code> &amp; DFE taps and BER (<span class="math inline">\(3.2\times10^{-14}\)</span> at 10 mV) &amp; <a href="{% endraw %}{{ '/chapters/08-decision-feedback-equalization-and-adaptation/' | relative_url }}{% raw %}#ch:dfe">Chapter 8</a> &amp; 3 s<br />
-6 &amp; <code>lab6_jitter_ber.py</code> &amp; counted vs. estimated BER, bathtub (0.45 UI) &amp; <a href="{% endraw %}{{ '/chapters/11-jitter/' | relative_url }}{% raw %}">Chapter 11</a> &amp; 21 s<br />
-7 &amp; <code>lab7_bbcdr.py</code> &amp; bang-bang PI-CDR (lock in 0.13 s, 0 errors) &amp; <a href="{% endraw %}{{ '/chapters/13-clock-and-data-recovery/' | relative_url }}{% raw %}">Chapter 13</a> &amp; 7 s<br />
-</p>
+<div>
+<table>
+<caption><span class="capnum">Table 16.1.</span> <strong>The labs.</strong> Run times on a laptop; every script is self-contained apart from <code>common.py</code>.</caption>
+<thead>
+<tr class="header">
+<th style="text-align: center;"><strong>Lab</strong></th>
+<th style="text-align: left;"><strong>Script</strong></th>
+<th style="text-align: left;"><strong>What it shows (key number)</strong></th>
+<th style="text-align: left;"><strong>Theory</strong></th>
+<th style="text-align: right;"><strong>Time</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">1</td>
+<td style="text-align: left;"><code>lab1_channel.py</code></td>
+<td style="text-align: left;">REF <span class="math inline">\(S_{21}\)</span>, <span class="math inline">\(h(t)\)</span>, <span class="math inline">\(p(t)\)</span>, cursors (<span class="math inline">\(-17.38\)</span> dB; PDA <span class="math inline">\(-0.161\)</span> V)</td>
+<td style="text-align: left;">Sections <a href="{% endraw %}{{ '/chapters/02-signals-systems-and-the-language-of-links/' | relative_url }}{% raw %}#sec:pulse-response">2.4</a> and <a href="{% endraw %}{{ '/chapters/03-the-channel/' | relative_url }}{% raw %}#sec:refchannel">3.7</a></td>
+<td style="text-align: right;">3 s</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">2</td>
+<td style="text-align: left;"><code>lab2_prbs_eye.py</code></td>
+<td style="text-align: left;">PRBS7 eye before and after REF (<span class="math inline">\(-77.8\)</span> mV)</td>
+<td style="text-align: left;"><a href="{% endraw %}{{ '/chapters/02-signals-systems-and-the-language-of-links/' | relative_url }}{% raw %}#sec:eye">Section 2.6</a></td>
+<td style="text-align: right;">2 s</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">3</td>
+<td style="text-align: left;"><code>lab3_tx_ffe.py</code></td>
+<td style="text-align: left;">zero-forcing TX FFE (2-tap 162.7 mV, 3-tap 144.8 mV)</td>
+<td style="text-align: left;"><a href="{% endraw %}{{ '/chapters/06-transmit-ffe/' | relative_url }}{% raw %}">Chapter 6</a></td>
+<td style="text-align: right;">3 s</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">4</td>
+<td style="text-align: left;"><code>lab4_ctle.py</code></td>
+<td style="text-align: left;">CTLE peaking sweep (113.3 mV at 14 dB)</td>
+<td style="text-align: left;"><a href="{% endraw %}{{ '/chapters/07-continuous-time-linear-equalizer/' | relative_url }}{% raw %}">Chapter 7</a></td>
+<td style="text-align: right;">4 s</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">5</td>
+<td style="text-align: left;"><code>lab5_dfe.py</code></td>
+<td style="text-align: left;">DFE taps and BER (<span class="math inline">\(3.2\times10^{-14}\)</span> at 10 mV)</td>
+<td style="text-align: left;"><a href="{% endraw %}{{ '/chapters/08-decision-feedback-equalization-and-adaptation/' | relative_url }}{% raw %}#ch:dfe">Chapter 8</a></td>
+<td style="text-align: right;">3 s</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">6</td>
+<td style="text-align: left;"><code>lab6_jitter_ber.py</code></td>
+<td style="text-align: left;">counted vs. estimated BER, bathtub (0.45 UI)</td>
+<td style="text-align: left;"><a href="{% endraw %}{{ '/chapters/11-jitter/' | relative_url }}{% raw %}">Chapter 11</a></td>
+<td style="text-align: right;">21 s</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">7</td>
+<td style="text-align: left;"><code>lab7_bbcdr.py</code></td>
+<td style="text-align: left;">bang-bang PI-CDR (lock in 0.13 s, 0 errors)</td>
+<td style="text-align: left;"><a href="{% endraw %}{{ '/chapters/13-clock-and-data-recovery/' | relative_url }}{% raw %}">Chapter 13</a></td>
+<td style="text-align: right;">7 s</td>
+</tr>
+</tbody>
+</table>
 </div>
 <div class="tbox tbox-pitfall">
 <div class="tbox-title">

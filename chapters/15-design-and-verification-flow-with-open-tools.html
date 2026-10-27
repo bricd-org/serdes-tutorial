@@ -42,21 +42,79 @@ permalink: "/chapters/15-design-and-verification-flow-with-open-tools/"
 <div id="tab:ch15-tools">
 
 </div>
-<div class="tabularx">
-<p><span>@&gt;p<span>40mm</span> L l@</span> <strong>Tool</strong> &amp; <strong>Purpose in Open-SERDES</strong> &amp; <strong>Stage</strong><br />
-<strong>serdespy</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-serdespy">3</a>], <strong>PyBERT</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-pybert">36</a>] &amp; link models, eyes, BER (<a href="{% endraw %}{{ '/chapters/16-hands-on-labs-with-serdespy/' | relative_url }}{% raw %}">Chapter 16</a>); PyBERT adds a GUI and IBIS-AMI &amp; system model<br />
-<strong>scikit-rf</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p2:skrf2022">18</a>] &amp; Touchstone files, mixed-mode S-parameters, de-embedding &amp; model, EM, lab<br />
-<strong>Xschem</strong> &amp; schematics, symbols, testbench netlists for every simulator &amp; schematic<br />
-<strong>ngspice</strong> &amp; <code>.op</code>, <code>.ac</code>, <code>.noise</code>, <code>.tran</code>, transient noise, Verilog-A via OSDI &amp; simulation<br />
-<strong>Xyce</strong>, <strong>VACASK</strong> &amp; parallel SPICE for large post-layout runs; Verilog-A simulator with PSS and HB &amp; simulation<br />
-<strong>CACE</strong> &amp; YAML datasheet: runs testbenches over corners, checks min/typ/max limits &amp; characterization<br />
-<strong>KLayout</strong>, <strong>Magic</strong> &amp; layout editing; IHP DRC and LVS decks; RC extraction (<strong>Magic</strong>) &amp; layout, sign-off<br />
-<strong>Netgen</strong>, <strong>KLayout-PEX</strong> &amp; LVS comparison; parasitic extraction for SG13G2 &amp; sign-off, extraction<br />
-<strong>openEMS</strong>, <strong>Palace</strong> &amp; FDTD and FEM field solvers for inductors, pads and package &amp; EM<br />
-<strong>Verilator</strong>, <strong>Icarus</strong>, <strong>cocotb</strong> &amp; Verilog simulation and lint; Python testbenches for PRBS, CDR, SPI &amp; RTL<br />
-<strong>Yosys</strong>, <strong>LibreLane</strong> &amp; synthesis to SG13G2 cells; RTL-to-GDS flow (successor of OpenLane 2) &amp; digital<br />
-<strong>OpenROAD</strong>, <strong>OpenSTA</strong> &amp; placement, clock tree, routing; static timing (inside <strong>LibreLane</strong>) &amp; digital<br />
-</p>
+<div>
+<table>
+<caption><span class="capnum">Table 15.1.</span> <strong>Open tools in the Open-SERDES flow.</strong> All are in the IIC-OSIC-TOOLS image except serdespy, PyBERT and scikit-rf, which install with <code>pip</code>.</caption>
+<thead>
+<tr class="header">
+<th style="text-align: left;"><strong>Tool</strong></th>
+<th style="text-align: left;"><strong>Purpose in Open-SERDES</strong></th>
+<th style="text-align: left;"><strong>Stage</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>serdespy</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-serdespy">3</a>], <strong>PyBERT</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-pybert">36</a>]</td>
+<td style="text-align: left;">link models, eyes, BER (<a href="{% endraw %}{{ '/chapters/16-hands-on-labs-with-serdespy/' | relative_url }}{% raw %}">Chapter 16</a>); PyBERT adds a GUI and IBIS-AMI</td>
+<td style="text-align: left;">system model</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>scikit-rf</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p2:skrf2022">18</a>]</td>
+<td style="text-align: left;">Touchstone files, mixed-mode S-parameters, de-embedding</td>
+<td style="text-align: left;">model, EM, lab</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Xschem</strong></td>
+<td style="text-align: left;">schematics, symbols, testbench netlists for every simulator</td>
+<td style="text-align: left;">schematic</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>ngspice</strong></td>
+<td style="text-align: left;"><code>.op</code>, <code>.ac</code>, <code>.noise</code>, <code>.tran</code>, transient noise, Verilog-A via OSDI</td>
+<td style="text-align: left;">simulation</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Xyce</strong>, <strong>VACASK</strong></td>
+<td style="text-align: left;">parallel SPICE for large post-layout runs; Verilog-A simulator with PSS and HB</td>
+<td style="text-align: left;">simulation</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>CACE</strong></td>
+<td style="text-align: left;">YAML datasheet: runs testbenches over corners, checks min/typ/max limits</td>
+<td style="text-align: left;">characterization</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>KLayout</strong>, <strong>Magic</strong></td>
+<td style="text-align: left;">layout editing; IHP DRC and LVS decks; RC extraction (<strong>Magic</strong>)</td>
+<td style="text-align: left;">layout, sign-off</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Netgen</strong>, <strong>KLayout-PEX</strong></td>
+<td style="text-align: left;">LVS comparison; parasitic extraction for SG13G2</td>
+<td style="text-align: left;">sign-off, extraction</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>openEMS</strong>, <strong>Palace</strong></td>
+<td style="text-align: left;">FDTD and FEM field solvers for inductors, pads and package</td>
+<td style="text-align: left;">EM</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Verilator</strong>, <strong>Icarus</strong>, <strong>cocotb</strong></td>
+<td style="text-align: left;">Verilog simulation and lint; Python testbenches for PRBS, CDR, SPI</td>
+<td style="text-align: left;">RTL</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Yosys</strong>, <strong>LibreLane</strong></td>
+<td style="text-align: left;">synthesis to SG13G2 cells; RTL-to-GDS flow (successor of OpenLane 2)</td>
+<td style="text-align: left;">digital</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>OpenROAD</strong>, <strong>OpenSTA</strong></td>
+<td style="text-align: left;">placement, clock tree, routing; static timing (inside <strong>LibreLane</strong>)</td>
+<td style="text-align: left;">digital</td>
+</tr>
+</tbody>
+</table>
 </div>
 <h2 id="sec:model-loop"><span class="secnum">15.2</span>The model–circuit loop</h2>
 <p>The labs of <a href="{% endraw %}{{ '/chapters/16-hands-on-labs-with-serdespy/' | relative_url }}{% raw %}">Chapter 16</a> describe each block by an ideal transfer function. The circuits will not match those ideals, and the only way to know whether the difference matters is to put the circuit’s real response back into the model (<a href="#fig:ch15-loop">Figure 15.3</a>). Because the link is linear up to the sampler, each simulated block becomes one more factor in the cascade:</p>
@@ -102,22 +160,78 @@ permalink: "/chapters/15-design-and-verification-flow-with-open-tools/"
 <p><strong>A realistic circuit:</strong> suppose the extracted CTLE has its output pole at <span class="math inline">\(f_{p2}=6\)</span> GHz instead of the 10 GHz of the model, because the four samplers load it more than planned. The 12 dB eye drops from 104.0 to 98.0 mV and the 14 dB eye from 113.3 to 107.4 mV, about 6 %. At 5 GHz the loss is 9 %. That is affordable against 76 mV of margin, but it is exactly the kind of number that only the loop reveals.</p>
 </div>
 <h2 id="sec:testbenches"><span class="secnum">15.3</span>Testbenches</h2>
-<p>Every specification in <a href="{% endraw %}{{ '/chapters/14-the-open-serdes-architecture/' | relative_url }}{% raw %}#tab:specs">Table 14.1</a> needs a testbench that measures it and a pass/fail limit. <a href="#tab:ch15-tb">Table 15.2</a> lists the key ones and <a href="#fig:ch15-tb">Figure 15.4</a> sketches two of them.</p>
+<p>Every specification in <a href="{% endraw %}{{ '/chapters/14-the-open-serdes-architecture/' | relative_url }}{% raw %}#tab:specs">Table 14.2</a> needs a testbench that measures it and a pass/fail limit. <a href="#tab:ch15-tb">Table 15.2</a> lists the key ones and <a href="#fig:ch15-tb">Figure 15.4</a> sketches two of them.</p>
 <div id="tab:ch15-tb">
 
 </div>
-<div class="tabularx">
-<p><span>@&gt;p<span>19mm</span> &gt;p<span>36mm</span> L &gt;p<span>30mm</span>@</span> <strong>Block</strong> &amp; <strong>Testbench</strong> &amp; <strong>Measure</strong> &amp; <strong>Pass</strong><br />
-TX serializer + driver &amp; <code>.tran</code>, PRBS7 into 100 Ω + <span class="math inline">\(C_p\)</span>; then through the channel model &amp; swing, edges, DCD, eye, every <span class="math inline">\(V_\mathrm{CE}\)</span> &amp; 0.8–1.0 Vppd; DCD + DDJ <span class="math inline">\(\le8\)</span> ps; <span class="math inline">\(V_\mathrm{CE}&lt;\mathrm{BV}_\mathrm{CEO}\)</span><br />
-Termination, pad &amp; <code>.ac</code> or <code>.sp</code> with ESD and pad parasitics &amp; <span class="math inline">\(S_{11}\)</span>, <span class="math inline">\(C_p\)</span> &amp; RL <span class="math inline">\(\ge10\)</span> dB at 2.5 GHz<br />
-CTLE &amp; <code>.ac</code> at every code; <code>.noise</code>; large-signal <code>.tran</code> &amp; peaking, <span class="math inline">\(f_z\)</span>, <span class="math inline">\(f_{p2}\)</span>, noise, linearity &amp; 0–12 dB; <span class="math inline">\(f_{p2}\ge7.5\)</span> GHz; <span class="math inline">\(\le0.25\)</span> mV<br />
-DFE summer &amp; <code>.tran</code> with tap 1 toggling every UI &amp; settling inside the tap-1 loop &amp; <span class="math inline">\(t_\mathrm{CK\to Q}+t_\mathrm{settle}+t_\mathrm{setup}\le\)</span> 1 UI<br />
-Sampler &amp; DC-step sweep counting <span class="math inline">\(P(1)\)</span>, Monte Carlo; tiny-input sweep; transient noise &amp; <span class="math inline">\(V_\mathrm{os}\)</span>, <span class="math inline">\(\sigma\)</span>, <span class="math inline">\(\tau\)</span> &amp; <span class="math inline">\(\sigma\le1\)</span> mV, <span class="math inline">\(\tau\le5\)</span> ps, trim range <span class="math inline">\(\ge\pm3\sigma\)</span><br />
-PLL &amp; lock transient; VCO phase noise (transient noise, or PSS/pnoise in <strong>VACASK</strong>); Python loop model &amp; lock time, <span class="math inline">\(\mathcal{L}(f)\)</span>, RJ &amp; RJ <span class="math inline">\(\le1\)</span> ps rms<br />
-PPF + PI &amp; <code>.tran</code> at all 64 codes &amp; phase vs. code, amplitude &amp; I/Q <span class="math inline">\(\le2^{\circ}\)</span>, INL <span class="math inline">\(\le1^{\circ}\)</span><br />
-CDR logic &amp; <strong>cocotb</strong> with a Python phase model driving the early/late inputs &amp; lock, ppm range, dither &amp; <span class="math inline">\(\pm300\)</span> ppm; <span class="math inline">\(\le20\)</span> ps pp<br />
-PRBS, SPI &amp; <strong>cocotb</strong> on <strong>Verilator</strong> or <strong>Icarus</strong>; error injection &amp; error count, resync &amp; exact counts<br />
-</p>
+<div>
+<table>
+<caption><span class="capnum">Table 15.2.</span> <strong>Key Open-SERDES testbenches.</strong> Limits from <a href="{% endraw %}{{ '/chapters/14-the-open-serdes-architecture/' | relative_url }}{% raw %}#tab:specs">Table 14.2</a>; every analog row runs at all PVT corners, and the mismatch-sensitive rows also run Monte Carlo.</caption>
+<thead>
+<tr class="header">
+<th style="text-align: left;"><strong>Block</strong></th>
+<th style="text-align: left;"><strong>Testbench</strong></th>
+<th style="text-align: left;"><strong>Measure</strong></th>
+<th style="text-align: left;"><strong>Pass</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">TX serializer + driver</td>
+<td style="text-align: left;"><code>.tran</code>, PRBS7 into 100 Ω + <span class="math inline">\(C_p\)</span>; then through the channel model</td>
+<td style="text-align: left;">swing, edges, DCD, eye, every <span class="math inline">\(V_\mathrm{CE}\)</span></td>
+<td style="text-align: left;">0.8–1.0 Vppd; DCD + DDJ <span class="math inline">\(\le8\)</span> ps; <span class="math inline">\(V_\mathrm{CE}&lt;\mathrm{BV}_\mathrm{CEO}\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Termination, pad</td>
+<td style="text-align: left;"><code>.ac</code> or <code>.sp</code> with ESD and pad parasitics</td>
+<td style="text-align: left;"><span class="math inline">\(S_{11}\)</span>, <span class="math inline">\(C_p\)</span></td>
+<td style="text-align: left;">RL <span class="math inline">\(\ge10\)</span> dB at 2.5 GHz</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">CTLE</td>
+<td style="text-align: left;"><code>.ac</code> at every code; <code>.noise</code>; large-signal <code>.tran</code></td>
+<td style="text-align: left;">peaking, <span class="math inline">\(f_z\)</span>, <span class="math inline">\(f_{p2}\)</span>, noise, linearity</td>
+<td style="text-align: left;">0–12 dB; <span class="math inline">\(f_{p2}\ge7.5\)</span> GHz; <span class="math inline">\(\le0.25\)</span> mV</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">DFE summer</td>
+<td style="text-align: left;"><code>.tran</code> with tap 1 toggling every UI</td>
+<td style="text-align: left;">settling inside the tap-1 loop</td>
+<td style="text-align: left;"><span class="math inline">\(t_\mathrm{CK\to Q}+t_\mathrm{settle}+t_\mathrm{setup}\le\)</span> 1 UI</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Sampler</td>
+<td style="text-align: left;">DC-step sweep counting <span class="math inline">\(P(1)\)</span>, Monte Carlo; tiny-input sweep; transient noise</td>
+<td style="text-align: left;"><span class="math inline">\(V_\mathrm{os}\)</span>, <span class="math inline">\(\sigma\)</span>, <span class="math inline">\(\tau\)</span></td>
+<td style="text-align: left;"><span class="math inline">\(\sigma\le1\)</span> mV, <span class="math inline">\(\tau\le5\)</span> ps, trim range <span class="math inline">\(\ge\pm3\sigma\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">PLL</td>
+<td style="text-align: left;">lock transient; VCO phase noise (transient noise, or PSS/pnoise in <strong>VACASK</strong>); Python loop model</td>
+<td style="text-align: left;">lock time, <span class="math inline">\(\mathcal{L}(f)\)</span>, RJ</td>
+<td style="text-align: left;">RJ <span class="math inline">\(\le1\)</span> ps rms</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">PPF + PI</td>
+<td style="text-align: left;"><code>.tran</code> at all 64 codes</td>
+<td style="text-align: left;">phase vs. code, amplitude</td>
+<td style="text-align: left;">I/Q <span class="math inline">\(\le2^{\circ}\)</span>, INL <span class="math inline">\(\le1^{\circ}\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">CDR logic</td>
+<td style="text-align: left;"><strong>cocotb</strong> with a Python phase model driving the early/late inputs</td>
+<td style="text-align: left;">lock, ppm range, dither</td>
+<td style="text-align: left;"><span class="math inline">\(\pm300\)</span> ppm; <span class="math inline">\(\le20\)</span> ps pp</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">PRBS, SPI</td>
+<td style="text-align: left;"><strong>cocotb</strong> on <strong>Verilator</strong> or <strong>Icarus</strong>; error injection</td>
+<td style="text-align: left;">error count, resync</td>
+<td style="text-align: left;">exact counts</td>
+</tr>
+</tbody>
+</table>
 </div>
 <div id="fig:ch15-tb">
 
@@ -150,7 +264,7 @@ PRBS, SPI &amp; <strong>cocotb</strong> on <strong>Verilator</strong> or <strong
 </div>
 <p><span class="math display">\[\frac{\Delta\hat\sigma}{\sigma}\approx\frac{1}{\sqrt{2N}} \tag{15.3}\]</span></p>
 </div>
-<p>Fifty runs know <span class="math inline">\(\sigma\)</span> to about 10 %, 200 runs to 5 % (for the sampler, <span class="math inline">\(4.9\pm0.25\)</span> mV). <strong>CACE</strong> turns all of this into a datasheet: a YAML file per block lists each parameter with its minimum, typical and maximum limits, the testbench that measures it and the conditions to sweep; <strong>CACE</strong> runs every combination and reports pass or fail, so <a href="{% endraw %}{{ '/chapters/14-the-open-serdes-architecture/' | relative_url }}{% raw %}#tab:specs">Table 14.1</a> becomes an executable checklist.</p>
+<p>Fifty runs know <span class="math inline">\(\sigma\)</span> to about 10 %, 200 runs to 5 % (for the sampler, <span class="math inline">\(4.9\pm0.25\)</span> mV). <strong>CACE</strong> turns all of this into a datasheet: a YAML file per block lists each parameter with its minimum, typical and maximum limits, the testbench that measures it and the conditions to sweep; <strong>CACE</strong> runs every combination and reports pass or fail, so <a href="{% endraw %}{{ '/chapters/14-the-open-serdes-architecture/' | relative_url }}{% raw %}#tab:specs">Table 14.2</a> becomes an executable checklist.</p>
 <h2 id="sec:layout-hs"><span class="secnum">15.4</span>Layout for high speed</h2>
 <p>At 5 Gb/s a layout can lose the margin that the schematic won. Six habits keep it.</p>
 <h5 id="symmetry">Symmetry</h5>
@@ -202,7 +316,7 @@ PRBS, SPI &amp; <strong>cocotb</strong> on <strong>Verilator</strong> or <strong
 <figcaption><span class="capnum">Figure 15.5.</span> <strong>The chip tests itself; the instruments check that it tells the truth.</strong> The baseline loop needs only a reference generator, supplies, a PC and a channel board: the on-chip PRBS generator drives TX, the channel board brings the signal back to RX, and the on-chip checker counts errors. A sampling scope on TX (eye and jitter), a BERT into RX (stressed eye, sinusoidal jitter for JTOL) and a phase-noise analyzer on the clock monitor are added when available.</figcaption>
 </figure>
 <h5 id="bring-up-order">Bring-up order</h5>
-<p>(1) Supplies and currents against <a href="{% endraw %}{{ '/chapters/14-the-open-serdes-architecture/' | relative_url }}{% raw %}#tab:ch14-power">Table 14.2</a>. (2) SPI read-back of every register. (3) PLL lock, seen on the clock monitor. (4) TX eye with PRBS7 on a scope. (5) Near-end loopback with the on-chip checker: this tests the chip without the board. (6) The external loop through the channel board, sweeping FFE presets and CTLE codes. (7) Freeze the CDR, step the PI code through the override register and count errors at each step: an on-chip bathtub, with the offset DACs giving the vertical scan.</p>
+<p>(1) Supplies and currents against <a href="{% endraw %}{{ '/chapters/14-the-open-serdes-architecture/' | relative_url }}{% raw %}#tab:ch14-power">Table 14.3</a>. (2) SPI read-back of every register. (3) PLL lock, seen on the clock monitor. (4) TX eye with PRBS7 on a scope. (5) Near-end loopback with the on-chip checker: this tests the chip without the board. (6) The external loop through the channel board, sweeping FFE presets and CTLE codes. (7) Freeze the CDR, step the PI code through the override register and count errors at each step: an on-chip bathtub, with the offset DACs giving the vertical scan.</p>
 <div class="tbox tbox-keyeq">
 <div class="tbox-title">
 <p>Key equation · Bits needed to claim a BER</p>
@@ -216,16 +330,54 @@ PRBS, SPI &amp; <strong>cocotb</strong> on <strong>Verilator</strong> or <strong
 <div id="tab:ch15-meas">
 
 </div>
-<div class="tabularx">
-<p><span>@&gt;p<span>24mm</span> L &gt;p<span>40mm</span>@</span> <strong>Measurement</strong> &amp; <strong>Setup</strong> &amp; <strong>Target or comparison</strong><br />
-TX eye and jitter &amp; PRBS7, sampling scope at the TX SMAs &amp; 0.8–1.0 Vppd; edges, DCD vs. simulation<br />
-BER and bathtub &amp; loopback or channel board; on-chip checker; PI-code sweep &amp; BER <span class="math inline">\(\le10^{-12}\)</span> (10 min); bathtub vs. Lab 6<br />
-Equalizer sweep &amp; FFE presets <span class="math inline">\(\times\)</span> CTLE codes <span class="math inline">\(\times\)</span> DFE on/off &amp; best setting vs. <a href="{% endraw %}{{ '/chapters/08-decision-feedback-equalization-and-adaptation/' | relative_url }}{% raw %}#sec:eq-partition">Section 8.5</a><br />
-Jitter tolerance &amp; BERT with sinusoidal jitter into RX &amp; above the mask of <a href="{% endraw %}{{ '/chapters/13-clock-and-data-recovery/' | relative_url }}{% raw %}#sec:jtol">Section 13.5</a><br />
-PLL phase noise &amp; clock monitor into a phase-noise analyzer &amp; <span class="math inline">\(\mathcal{L}(1\,\mathrm{MHz})\)</span>; RJ <span class="math inline">\(\le1\)</span> ps rms<br />
-Return loss &amp; VNA at the RX SMAs, de-embedded &amp; RL <span class="math inline">\(\ge10\)</span> dB at 2.5 GHz<br />
-Power &amp; current per supply rail in each mode &amp; vs. <a href="{% endraw %}{{ '/chapters/14-the-open-serdes-architecture/' | relative_url }}{% raw %}#tab:ch14-power">Table 14.2</a><br />
-</p>
+<div>
+<table>
+<caption><span class="capnum">Table 15.3.</span> <strong>Measurement plan: each silicon measurement and the model result it is compared with.</strong></caption>
+<thead>
+<tr class="header">
+<th style="text-align: left;"><strong>Measurement</strong></th>
+<th style="text-align: left;"><strong>Setup</strong></th>
+<th style="text-align: left;"><strong>Target or comparison</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">TX eye and jitter</td>
+<td style="text-align: left;">PRBS7, sampling scope at the TX SMAs</td>
+<td style="text-align: left;">0.8–1.0 Vppd; edges, DCD vs. simulation</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">BER and bathtub</td>
+<td style="text-align: left;">loopback or channel board; on-chip checker; PI-code sweep</td>
+<td style="text-align: left;">BER <span class="math inline">\(\le10^{-12}\)</span> (10 min); bathtub vs. Lab 6</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Equalizer sweep</td>
+<td style="text-align: left;">FFE presets <span class="math inline">\(\times\)</span> CTLE codes <span class="math inline">\(\times\)</span> DFE on/off</td>
+<td style="text-align: left;">best setting vs. <a href="{% endraw %}{{ '/chapters/08-decision-feedback-equalization-and-adaptation/' | relative_url }}{% raw %}#sec:eq-partition">Section 8.5</a></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Jitter tolerance</td>
+<td style="text-align: left;">BERT with sinusoidal jitter into RX</td>
+<td style="text-align: left;">above the mask of <a href="{% endraw %}{{ '/chapters/13-clock-and-data-recovery/' | relative_url }}{% raw %}#sec:jtol">Section 13.5</a></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">PLL phase noise</td>
+<td style="text-align: left;">clock monitor into a phase-noise analyzer</td>
+<td style="text-align: left;"><span class="math inline">\(\mathcal{L}(1\,\mathrm{MHz})\)</span>; RJ <span class="math inline">\(\le1\)</span> ps rms</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Return loss</td>
+<td style="text-align: left;">VNA at the RX SMAs, de-embedded</td>
+<td style="text-align: left;">RL <span class="math inline">\(\ge10\)</span> dB at 2.5 GHz</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Power</td>
+<td style="text-align: left;">current per supply rail in each mode</td>
+<td style="text-align: left;">vs. <a href="{% endraw %}{{ '/chapters/14-the-open-serdes-architecture/' | relative_url }}{% raw %}#tab:ch14-power">Table 14.3</a></td>
+</tr>
+</tbody>
+</table>
 </div>
 <p><a href="#tab:ch15-meas">Table 15.3</a> is the measurement plan. Each row ends in a comparison with a model number, which closes the last loop of the flow: when silicon and model disagree, the model is updated first, and the next design starts from it.</p>
 <div class="tbox tbox-takeaways">

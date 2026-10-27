@@ -105,7 +105,7 @@ permalink: "/chapters/01-why-serial-links/"
 
 </div>
 <figure>
-<img src="{% endraw %}{{ '/assets/figs/canva_glance.png' | relative_url }}{% raw %}" style="width:800px" alt="A SerDes link at a glance." loading="lazy" />
+<img src="{% endraw %}{{ '/assets/figs/canva_glance.png' | relative_url }}{% raw %}" style="width:723px" alt="A SerDes link at a glance." loading="lazy" />
 <figcaption><span class="capnum">Figure 1.3.</span> <strong>A SerDes link at a glance.</strong> The transmitter (serializer, FFE driver), the channel (package, PCB, connector) and the receiver (CTLE, DFE, samplers, deserializer), held together by the PLL and the CDR. Keep the four key numbers in mind: 5 Gb/s, a 200 ps UI, a 2.5 GHz Nyquist frequency and a target BER of <span class="math inline">\(10^{-12}\)</span>.</figcaption>
 </figure>
 <h2 id="sec:ch1-standards"><span class="secnum">1.3</span>Where SerDes are used</h2>
@@ -113,21 +113,92 @@ permalink: "/chapters/01-why-serial-links/"
 <div id="tab:ch1-standards">
 
 </div>
-<div class="tabularx">
-<p><span>@l l L r@</span> Standard (year) &amp; Rate per lane &amp; Modulation and coding &amp; <span class="math inline">\(f_\mathrm{N}\)</span> (GHz)<br />
-PCIe 1.0a / 2.0 (2003 / 2007) &amp; 2.5 / 5 GT/s &amp; NRZ, 8b/10b &amp; 1.25 / 2.5<br />
-PCIe 3.0 / 4.0 / 5.0 (2010–19) &amp; 8 / 16 / 32 GT/s &amp; NRZ, 128b/130b &amp; 4 / 8 / 16<br />
-PCIe 6.0 (2022) &amp; 64 GT/s &amp; PAM4, 32 GBd, FEC &amp; 16<br />
-USB 3.2 Gen 1 / Gen 2 (2008 / 2013) &amp; 5 / 10 Gb/s &amp; NRZ, 8b/10b / 128b/132b &amp; 2.5 / 5<br />
-USB4 v2 (2022) &amp; 40 Gb/s &amp; PAM3, 25.6 GBd &amp; 12.8<br />
-SATA I / II / III (2003–09) &amp; 1.5 / 3 / 6 Gb/s &amp; NRZ, 8b/10b &amp; 0.75 / 1.5 / 3<br />
-2.5GBASE-KX (802.3cb, 2018) &amp; 3.125 Gb/s &amp; NRZ, 8b/10b &amp; 1.56<br />
-5GBASE-KR (802.3cb, 2018) &amp; 5.156 Gb/s &amp; NRZ, 64b/66b &amp; 2.58<br />
-10GBASE-KR (802.3ap, 2007) &amp; 10.3125 Gb/s &amp; NRZ, 64b/66b &amp; 5.16<br />
-100GBASE-KR4 (802.3bj, 2014) &amp; 25.78 Gb/s &amp; NRZ, RS-FEC &amp; 12.9<br />
-400GBASE-KR4 (802.3ck, 2022) &amp; 106.25 Gb/s &amp; PAM4, 53.1 GBd, FEC &amp; 26.6<br />
-UCIe 1.0–3.0 (2022–25) &amp; 4–64 GT/s &amp; NRZ, single-ended, fwd. clock &amp; <span class="math inline">\(\le\)</span> 32<br />
-</p>
+<div>
+<table>
+<caption><span class="capnum">Table 1.1.</span> <strong>Per-lane line rates of common serial standards.</strong> The Nyquist frequency is half the symbol rate. Open-SERDES, at 5 Gb/s NRZ with <span class="math inline">\(f_\mathrm{N}= 2.5\,\mathrm{GHz}\)</span>, sits next to PCIe 2.0, USB 3.2 Gen 1 and 5GBASE-KR.</caption>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Standard (year)</th>
+<th style="text-align: left;">Rate per lane</th>
+<th style="text-align: left;">Modulation and coding</th>
+<th style="text-align: right;"><span class="math inline">\(f_\mathrm{N}\)</span> (GHz)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">PCIe 1.0a / 2.0 (2003 / 2007)</td>
+<td style="text-align: left;">2.5 / 5 GT/s</td>
+<td style="text-align: left;">NRZ, 8b/10b</td>
+<td style="text-align: right;">1.25 / 2.5</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">PCIe 3.0 / 4.0 / 5.0 (2010–19)</td>
+<td style="text-align: left;">8 / 16 / 32 GT/s</td>
+<td style="text-align: left;">NRZ, 128b/130b</td>
+<td style="text-align: right;">4 / 8 / 16</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">PCIe 6.0 (2022)</td>
+<td style="text-align: left;">64 GT/s</td>
+<td style="text-align: left;">PAM4, 32 GBd, FEC</td>
+<td style="text-align: right;">16</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">USB 3.2 Gen 1 / Gen 2 (2008 / 2013)</td>
+<td style="text-align: left;">5 / 10 Gb/s</td>
+<td style="text-align: left;">NRZ, 8b/10b / 128b/132b</td>
+<td style="text-align: right;">2.5 / 5</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">USB4 v2 (2022)</td>
+<td style="text-align: left;">40 Gb/s</td>
+<td style="text-align: left;">PAM3, 25.6 GBd</td>
+<td style="text-align: right;">12.8</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">SATA I / II / III (2003–09)</td>
+<td style="text-align: left;">1.5 / 3 / 6 Gb/s</td>
+<td style="text-align: left;">NRZ, 8b/10b</td>
+<td style="text-align: right;">0.75 / 1.5 / 3</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">2.5GBASE-KX (802.3cb, 2018)</td>
+<td style="text-align: left;">3.125 Gb/s</td>
+<td style="text-align: left;">NRZ, 8b/10b</td>
+<td style="text-align: right;">1.56</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">5GBASE-KR (802.3cb, 2018)</td>
+<td style="text-align: left;">5.156 Gb/s</td>
+<td style="text-align: left;">NRZ, 64b/66b</td>
+<td style="text-align: right;">2.58</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">10GBASE-KR (802.3ap, 2007)</td>
+<td style="text-align: left;">10.3125 Gb/s</td>
+<td style="text-align: left;">NRZ, 64b/66b</td>
+<td style="text-align: right;">5.16</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">100GBASE-KR4 (802.3bj, 2014)</td>
+<td style="text-align: left;">25.78 Gb/s</td>
+<td style="text-align: left;">NRZ, RS-FEC</td>
+<td style="text-align: right;">12.9</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">400GBASE-KR4 (802.3ck, 2022)</td>
+<td style="text-align: left;">106.25 Gb/s</td>
+<td style="text-align: left;">PAM4, 53.1 GBd, FEC</td>
+<td style="text-align: right;">26.6</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">UCIe 1.0–3.0 (2022–25)</td>
+<td style="text-align: left;">4–64 GT/s</td>
+<td style="text-align: left;">NRZ, single-ended, fwd. clock</td>
+<td style="text-align: right;"><span class="math inline">\(\le\)</span> 32</td>
+</tr>
+</tbody>
+</table>
 </div>
 <p>The last row is a useful counterexample: UCIe links chiplets millimeters apart in one package, where thousands of short, matched wires are cheap, so the parallel bus with a forwarded clock wins again. Serial links win when the wire is long, lossy and expensive, which is the situation Open-SERDES targets.</p>
 <p><a href="#fig:ch1-rate-year">Figure 1.4</a> shows per-lane rates doubling roughly every three to four years. Around 50 Gb/s the industry moved to PAM4, because the loss at the NRZ Nyquist frequency became too high.</p>
@@ -144,16 +215,38 @@ UCIe 1.0–3.0 (2022–25) &amp; 4–64 GT/s &amp; NRZ, single-ended, fwd. cl
 <div class="tbox-title">
 <p>Open-SERDES target (reference design)</p>
 </div>
-<div class="tabularx">
-<p><span>@l L@</span> Data rate &amp; 5 Gb/s NRZ, <span class="math inline">\(T_\mathrm{b}= 1\,\mathrm{UI}= 200\,\mathrm{ps}\)</span>, <span class="math inline">\(f_\mathrm{N}= 2.5\,\mathrm{GHz}\)</span><br />
-Target BER &amp; <span class="math inline">\(\le 10^{-12}\)</span> (<span class="math inline">\(Q = 7.03\)</span>); PRBS7 for bring-up, PRBS31 for compliance<br />
-Channel &amp; REF: 1 m FR-4 stripline + 300 fF pads, −17.4 dB at 2.5 GHz<br />
-TX &amp; 16:1 serializer (half-rate 2:1 CML mux), HBT CML driver, 3-tap FFE, 1 V<span class="math inline">\(_\mathrm{ppd}\)</span>, 100 Ω diff.<br />
-RX &amp; 100 Ω termination + ESD, HBT CTLE (0–12 dB), half-rate 2-tap DFE, 4 samplers, 1:16 deserializer<br />
-Clocking &amp; integer-<span class="math inline">\(N\)</span> CP-PLL, LC VCO at 2.5 GHz (<span class="math inline">\(f_\mathrm{ref}\)</span> = 50 MHz, <span class="math inline">\(N\)</span> = 50); PI-based bang-bang CDR, 64 PI steps per 2 UI<br />
-Test &amp; on-chip PRBS7/31 generator and checker, near-end loopback<br />
-</p>
-</div>
+<table>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Data rate</td>
+<td style="text-align: left;">5 Gb/s NRZ, <span class="math inline">\(T_\mathrm{b}= 1\,\mathrm{UI}= 200\,\mathrm{ps}\)</span>, <span class="math inline">\(f_\mathrm{N}= 2.5\,\mathrm{GHz}\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Target BER</td>
+<td style="text-align: left;"><span class="math inline">\(\le 10^{-12}\)</span> (<span class="math inline">\(Q = 7.03\)</span>); PRBS7 for bring-up, PRBS31 for compliance</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Channel</td>
+<td style="text-align: left;">REF: 1 m FR-4 stripline + 300 fF pads, −17.4 dB at 2.5 GHz</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">TX</td>
+<td style="text-align: left;">16:1 serializer (half-rate 2:1 CML mux), HBT CML driver, 3-tap FFE, 1 V<span class="math inline">\(_\mathrm{ppd}\)</span>, 100 Ω diff.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">RX</td>
+<td style="text-align: left;">100 Ω termination + ESD, HBT CTLE (0–12 dB), half-rate 2-tap DFE, 4 samplers, 1:16 deserializer</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Clocking</td>
+<td style="text-align: left;">integer-<span class="math inline">\(N\)</span> CP-PLL, LC VCO at 2.5 GHz (<span class="math inline">\(f_\mathrm{ref}\)</span> = 50 MHz, <span class="math inline">\(N\)</span> = 50); PI-based bang-bang CDR, 64 PI steps per 2 UI</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Test</td>
+<td style="text-align: left;">on-chip PRBS7/31 generator and checker, near-end loopback</td>
+</tr>
+</tbody>
+</table>
 </div>
 <h5 id="why-5-gbs-nrz-is-the-right-first-target">Why 5 Gb/s NRZ is the right first target</h5>
 <ul>

@@ -6,17 +6,59 @@
 
 \chapter{The Open-SERDES Architecture}\label{ch:arch}
 
-\chapterlead{Every decision of the last thirteen chapters on a few pages: the blocks, the clocks, the number each block must meet, and what it all costs in power.}
+\chapterlead{Every decision of the last thirteen chapters on a few pages: what the project delivers, the blocks and clocks, the number each block must meet, the test chip around them, and the plan to get there.}
 
 \begin{objectives}
 \begin{itemize}
+  \item Say what the project delivers, and which chapter feeds each deliverable.
   \item Read the complete \OS{} block diagram and follow a bit from the 16-bit TX word to the 16-bit RX word.
   \item Trace every clock in the chip from the 50\,MHz reference to the last divider, with its frequency and phase.
   \item Use the block specification table to find the target, and the chapter that derives it, for any block you design.
   \item Build a first-cut power budget from tail currents and convert it to energy per bit.
-  \item Defend the ten main architecture decisions and name the risks that remain open.
+  \item Place the transceiver on a test chip: its test logic, its floorplan and its package.
+  \item Defend the ten main architecture decisions, and map the five project phases to what each must prove.
 \end{itemize}
 \end{objectives}
+
+%% =====================================================================
+\section{What Open-SERDES delivers}\label{sec:ch14-deliver}
+
+Before the block diagram, the goal. \OS{} is not only a chip: it is a chip, the flow that produced it and the data that proves it, all in one public repository. The project's own summary has five highlights:
+
+\begin{specnote}[Project highlights]
+\begin{enumerate}
+  \item The first open multi-Gb/s mixed-signal SerDes on an open PDK.
+  \item A 5\,Gb/s NRZ transceiver, with TX, RX, PLL and CDR, in \sgx{}.
+  \item One reproducible flow from the channel model to GDS (\cref{ch:flow}).
+  \item A link model calibrated against post-layout simulation and, later, silicon (\cref{sec:model-loop}).
+  \item Everything public: design files, models and lab data.
+\end{enumerate}
+\end{specnote}
+
+\Cref{tab:ch14-deliverables} turns the highlights into six things anyone will be able to download, and points to the chapters that produce the numbers inside each one.
+
+\begin{table}[!tbp]
+\centering
+\caption{\textbf{The six \OS{} deliverables.} The phase is the roadmap phase of \cref{sec:ch14-roadmap} in which the deliverable is first released.}
+\label{tab:ch14-deliverables}
+\footnotesize
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{23mm} L >{\raggedright\arraybackslash}p{11mm} >{\raggedright\arraybackslash}p{26mm}@{}}
+\toprule
+\textbf{Deliverable} & \textbf{What it is} & \textbf{Phase} & \textbf{Built in}\\
+\midrule
+GDSII & the tape-out-ready 5\,Gb/s transceiver test chip of \cref{sec:ch14-testchip} & 2 & \cref{ch:tx,ch:rx,ch:pll,ch:cdr,ch:flow}\\
+RTL + testbenches & serializer, deserializer, PRBS generator and checker, CDR loop logic, and their benches & 1--2 & \cref{sec:serializer,sec:deserializer,sec:picdr,sec:testbenches}\\
+Link model & the Python link simulator, statistical eye and GUI, driven by one spec file & 0 & \cref{ch:linkanalysis,ch:labs}\\
+Cell library & reusable HBT/CML drivers, latches, muxes and CTLE cells for \sgx{} & 1 & \cref{ch:ctle,ch:tx,ch:rx}\\
+Documentation & the GitHub repository and this tutorial & all & every chapter\\
+Paper + data & a journal or conference paper (IEEE JSSC or TCAS, SMACD 2027) with open measurement data & 3 & \cref{sec:labtest}\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{insight}[The test of success]
+Clone the repository, run \code{make all}, and reproduce the chip, the models and the measurements. Every design choice in this chapter should make that sentence easier to keep, not harder.
+\end{insight}
 
 %% =====================================================================
 \section{The complete transceiver}\label{sec:arch-block}
@@ -92,7 +134,8 @@ PI & resolution, linearity & 2 PIs, 64 steps per 400\,ps (6.25\,ps = 0.031\,UI);
 CDR & loop, tracking & half-rate Alexander BBPD; P+I at 625\,MHz, $K_P$ = 1/8 LSB, $K_P/K_I$ = 128; $\pm300$\,ppm; lock $<1$\,\textmu{}s; wander $\le20$\,ps pp$^\dagger$; JTOL above the USB-style mask & \cref{sec:bbcdr,sec:jtol}\\
 Timing budget & total jitter & TJ $\le0.3$\,UI (60\,ps) at $10^{-12}$; estimated 58.6\,ps$^\dagger$ & \cref{sec:jitter-budget}\\
 Voltage budget & margin at the sampler & $\ge50$\,mV after noise, offset and sensitivity; 76\,mV on REF with 2-tap de-emphasis$^\dagger$ & \cref{sec:noisebudget}\\
-Test & on-chip & PRBS7/31 generator and checker; near-end loopback; SPI registers & \cref{sec:labtest}\\
+Test & on-chip & PRBS7/31 generator and checker with error counter; near-end loopback; SPI registers & \cref{sec:ch14-testchip,sec:labtest}\\
+Die, package & size, pinout & die about $2\times2$\,mm$^2$ (to be sized); QFN-48, $7\times7$\,mm; high-speed bond wires $\le1$\,mm (concept) & \cref{sec:ch14-testchip}\\
 Power & total, per bit & $\approx$216\,mW, 43\,pJ/b$^\dagger$ & \cref{sec:power-budget}\\
 \bottomrule
 \end{tabularx}
@@ -106,6 +149,67 @@ Power & total, per bit & $\approx$216\,mW, 43\,pJ/b$^\dagger$ & \cref{sec:power-
 \caption{\textbf{Both budgets close, but timing is the tight one.} (a) The 131\,mV statistical eye of REF with 2-tap de-emphasis, minus the terms of \cref{sec:noisebudget}: 76\,mV of margin remains, more than half the eye. (b) One 200\,ps UI minus the deterministic jitter (linear sum) and $2Q$ times the random jitter (RSS): 141\,ps remains, only 1.4\,ps more than the 0.7\,UI target allows.}
 \label{fig:ch14-budget}
 \end{figure}
+
+%% =====================================================================
+\section{From transceiver to test chip}\label{sec:ch14-testchip}
+
+\Cref{fig:arch} is the transceiver. To measure it, the transceiver must sit on a die with test logic around it, a floorplan that respects its three boundaries, and a package that does not ruin its 2.5\,GHz signals. This section shows the concept for each. The details will change as the blocks are designed, but the rules behind them will not.
+
+\subsection{The test chip}
+
+\Cref{fig:ch14-testchip} is the chip-level view of \cref{fig:arch}, with the test logic made explicit. Digital blocks sit on the left: SPI configuration registers that reach every block, a PRBS7/31 generator for the TX, and a PRBS checker with an error counter for the RX. The TX row runs across the top (serializer, 3-tap FFE, CML driver), and the RX row runs back along the bottom (CTLE, sampler with DFE, deserializer). The LC-PLL takes an external reference and clocks the TX; the CDR steers the sampling phase from the data itself. Two paths close the loop. The internal loopback sends the driver output straight to the RX input, which tests the whole chip with no board at all. The external path goes through a test PCB, SMA cables and trace coupons, which adds a real channel.
+
+\begin{figure}[!tbp]
+\centering
+\includegraphics[width=\linewidth]{ch14_slide21}
+\caption{\textbf{The \OS{} test chip (concept): the transceiver of \cref{fig:arch} plus everything needed to test it without a BERT.} Blue blocks are TX, gold blocks are RX and clocking, and dashed lines are configuration and test paths. Only five signals leave the chip besides supplies: TX$\pm$, RX$\pm$, the reference clock, the SPI bus and an error flag. From the \OS{} introduction slides.}
+\label{fig:ch14-testchip}
+\end{figure}
+
+The error counter is what makes a cheap lab possible. With PRBS31 running and the counter at zero, a BER below $10^{-12}$ is shown at 95\,\% confidence after $3/\mathrm{BER} = 3\times10^{12}$ bits, which takes 10 minutes at 5\,Gb/s (\cref{sec:labtest}). An oscilloscope then only has to show the eye, not count errors.
+
+\subsection{Floorplan}
+
+\Cref{fig:ch14-floorplan} is a first floorplan. Each placement follows from a number in an earlier chapter:
+\begin{itemize}
+  \item \textbf{TX and RX pads on one edge,} so the high-speed bond wires are the shortest on the die (\cref{we:ch14-bond}).
+  \item \textbf{The LC-PLL in its own corner,} with a guard ring and its own supply, away from the switching digital core. The 4\,nH inductor needs keep-out space on TopMetal2 (\cref{sec:layout-hs}).
+  \item \textbf{TX and RX next to their pads, with the CDR between them,} because the I/Q clocks and the PI outputs must reach four samplers with matched delays (\cref{sec:quadrature}).
+  \item \textbf{Three supply domains:} AVDD at about 2.5\,V for the HBT CML, DVDD at 1.2\,V for CMOS, and VDDIO at 3.3\,V for the pads. This is the supply boundary of \cref{sec:arch-block}, drawn on silicon.
+  \item \textbf{A digital core hardened with LibreLane,} and the seal ring, fill and logo taken from the JKU template flow~\cite{jkutemplate}.
+\end{itemize}
+The die is about $2\times2$\,mm$^2$ for now. The PLL alone is 0.347\,mm$^2$~\cite{smacd2026pll}, and the final size waits for the block layouts.
+
+\begin{figure}[!tbp]
+\centering
+\includegraphics[width=0.62\linewidth]{ch14_slide22}
+\caption{\textbf{Floorplan concept: the high-speed blocks hug one edge, the PLL gets a corner to itself.} TX (top right) and RX (bottom right) sit beside their pads (gold); the CDR sits between them, so the four sampling clocks travel short and equal distances. The LC-PLL (dashed, with its guard ring) and the LibreLane digital core fill the left half. Sizes and positions are placeholders. From the \OS{} introduction slides.}
+\label{fig:ch14-floorplan}
+\end{figure}
+
+\subsection{Package and pinout}
+
+A QFN package is cheap and easy to solder to a test PCB, but every bond wire is a series inductor of about 1\,nH per millimeter (\cref{we:ch3-bond}). \Cref{fig:ch14-package} shows a QFN-48 concept: the four high-speed pins on one side, with ground pins between them (GSSG), and the clock, SPI, supply and status pins grouped around the rest. As in the JKU template, the bonding plan is generated from a configuration file, so a pin change is one edit.
+
+\begin{figure}[!tbp]
+\centering
+\includegraphics[width=\linewidth]{ch14_slide25}
+\caption{\textbf{Package and pinout concept: QFN-48, 7\,mm $\times$ 7\,mm.} Left: the shortest bond wires go to TX$\pm$ and RX$\pm$. Right: the pin groups, with high-speed pins in a GSSG arrangement, a differential reference clock, SPI for configuration and BER readout, separate supply domains and three status pins. From the \OS{} introduction slides.}
+\label{fig:ch14-package}
+\end{figure}
+
+\begin{example}{How long may a high-speed bond wire be?}\label{we:ch14-bond}
+\textbf{Given:} a bond wire of $L \approx 1$\,nH per mm in series between two \qty{50}{\ohm} environments; a return-loss goal of 10\,dB at $\fN = 2.5$\,GHz, the same goal as for the pad in \cref{tab:specs}.
+
+\textbf{Return loss of a series inductor:} with $x = \omega L/(2\Zo)$, $\lvert S_{11}\rvert = x/\sqrt{1+x^2}$ (\cref{we:ch3-bond}).
+\begin{itemize}
+  \item 1\,mm, 1\,nH: $x = 2\pi\cdot2.5\,\mathrm{GHz}\cdot1\,\mathrm{nH}/100\,\Omega = 0.157$, so $\lvert S_{11}\rvert = 0.155$ and RL = 16.2\,dB.
+  \item 2.5\,mm, 2.5\,nH: $x = 0.393$, so RL = 8.7\,dB. This already misses the goal, before the pad capacitance is added.
+  \item 3\,mm, 3\,nH (a corner pad of a large QFN): RL = 7.4\,dB.
+\end{itemize}
+
+\textbf{Result:} keep the high-speed bond wires at or below about 1\,mm. That rule puts the TX and RX pads on the die edge closest to their package pins, and puts those pins in the middle of one package side. If the wires cannot be that short, part of the inductance can be absorbed into the T-coil of \cref{sec:esd-pad}.
+\end{example}
 
 %% =====================================================================
 \section{Power budget}\label{sec:power-budget}
@@ -191,6 +295,34 @@ On-chip test & PRBS7/31 + checker, loopback & external BERT only & scope and PC 
 \end{table}
 
 %% =====================================================================
+\section{Roadmap: from blocks to silicon}\label{sec:ch14-roadmap}
+
+\OS{} is built in five phases (\cref{fig:ch1-phases}). Each phase ends with a tagged release of design files, models and data, and each must prove something specific before the next one starts. \Cref{tab:ch14-roadmap} states what that is.
+
+\begin{table}[!tbp]
+\centering
+\caption{\textbf{The five \OS{} phases and what each must prove.} Exit criteria use the numbers of \cref{tab:specs}; the dates are still to be agreed.}
+\label{tab:ch14-roadmap}
+\footnotesize
+\renewcommand{\arraystretch}{1.12}
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{19mm} >{\raggedright\arraybackslash}p{34mm} L >{\raggedright\arraybackslash}p{17mm}@{}}
+\toprule
+\textbf{Phase} & \textbf{Work} & \textbf{Exit criterion and release} & \textbf{Chapters}\\
+\midrule
+0 · Feasibility & channel and link model; pick the architecture; freeze block specs & the link, TX and RX rows of \cref{tab:specs} confirmed in simulation; REF replaced by a standard channel; release: model + spec file & \cref{ch:channel,ch:linkanalysis,ch:dfe}\\
+1 · Building blocks & HBT/CML cell library; driver, CTLE, sampler; a test-chip shuttle (Tiny Tapeout IHP or an IHP open MPW) & measured CTLE $H(f)$, driver eye and sampler offset and sensitivity back in the model; release: cell library + block GDS & \cref{ch:ctle,ch:tx,ch:rx}\\
+2 · 5\,Gb/s transceiver & TX + RX + PLL + CDR; on-chip PRBS loopback; full-chip tape-out & post-layout statistical eye meets the pass criteria; full-chip DRC/LVS clean; release: GDSII + RTL & \cref{ch:pll,ch:cdr,ch:flow}\\
+3 · Measure and publish & test PCB; eye and BER; open measurement data; paper (IEEE JSSC or TCAS, SMACD 2027) & BER $\le10^{-12}$ through a real channel, bathtub and JTOL measured; release: data + paper & \cref{sec:labtest,ch:labs}\\
+4 · Beyond & 10\,Gb/s and adaptive DFE; PAM4; multi-lane and chiplet links & a new spec table, starting from the measured Phase-3 data & \cref{sec:pam4,sec:adaptation}\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{insight}[Why Phase 1 comes before the full chip]
+Every $^\dagger$ in \cref{tab:specs} is a risk until it is measured. A small shuttle with only the driver, the CTLE and the samplers turns the riskiest estimates (pad capacitance, CTLE peaking, sampler offset) into data a year before the full chip, while the PLL and the CDR logic can rely on the team's existing PLL and on simulation.
+\end{insight}
+
+%% =====================================================================
 \section{Risks and open questions}\label{sec:ch14-risks}
 
 The architecture closes on paper. It can still fail in these places, roughly in order of the cost of a late fix:
@@ -200,15 +332,19 @@ The architecture closes on paper. It can still fail in these places, roughly in 
   \item \textbf{PLL phase noise.} The quoted $-100.8$\,dBc/Hz at 1\,MHz is far worse than Leeson predicts (\cref{sec:lcvco}); the 1\,ps RJ line depends on what it really is.
   \item \textbf{Inductor EM modeling.} The 4\,nH tank and any T-coil must be EM-simulated on TopMetal2 (\cref{sec:layout-hs}) and matched to the team's measured $Q$.
   \item \textbf{Timing loops.} DFE tap 1 uses about 140 of its 200\,ps and the CDR dither 19 of its 20\,ps; both need post-layout confirmation.
+  \item \textbf{Packaging and measurement.} Bond wires longer than about 1\,mm cost return loss (\cref{we:ch14-bond}); the test PCB, a clean reference clock and access to a sampling scope or BERT must be ready before first silicon.
   \item \textbf{Area, pads and the channel.} The PLL is 0.347\,mm$^2$~\cite{smacd2026pll}, the MIM capacitors add tenths of a mm$^2$, and the high-speed pads need SMA-grade access; REF must be replaced by measured S-parameters (\cref{sec:ch16-next}).
 \end{itemize}
 
 \begin{takeaways}
 \begin{itemize}
+  \item \OS{} delivers six things: the GDSII, the RTL and benches, the link model and GUI, an HBT/CML cell library, documentation, and a paper with open data.
   \item \OS{} is a single-lane transceiver: CMOS at 312.5\,MHz in the core, HBT CML at 1.25\,GHz and above, joined by level converters, two supplies and two clock domains.
   \item One 2.5\,GHz LC PLL feeds both sides: the TX divides it; the RX makes four phases and rotates them in 6.25\,ps steps under digital CDR control.
   \item The block specification table is the contract: every block has a number and a chapter; $^\dagger$ marks estimates awaiting simulation.
   \item The voltage budget leaves about 76\,mV; the timing budget leaves a 141\,ps eye with 1.4\,ps to spare.
+  \item The test chip adds SPI, a PRBS generator and checker with an error counter, and an internal loopback; TX and RX pads share one die edge, and high-speed bond wires stay at or below about 1\,mm.
+  \item Five phases, each with an exit criterion and a tagged release: feasibility, building blocks, the 5\,Gb/s transceiver, measurement, and beyond.
   \item First-cut power is about 216\,mW (43\,pJ/b), five times less energy per bit than OpenSerDes, dominated by static CML current; the SST driver is the first saving.
 \end{itemize}
 \end{takeaways}

@@ -152,17 +152,68 @@ permalink: "/chapters/11-jitter/"
 <div id="tab:ch11-budget">
 
 </div>
-<div class="tabularx">
-<p><span>L r r l</span> Contributor &amp; DJ<span class="math inline">\(_{\delta\delta}\)</span> (ps) &amp; RJ (ps rms) &amp; Owner<br />
-TX: half-rate mux DCD, driver data-dependent jitter &amp; 8 &amp; – &amp; <a href="{% endraw %}{{ '/chapters/09-the-transmitter/' | relative_url }}{% raw %}">Chapter 9</a><br />
-Channel: residual ISI after equalization (DDJ) &amp; 6 &amp; – &amp; <a href="{% endraw %}{{ '/chapters/08-decision-feedback-equalization-and-adaptation/' | relative_url }}{% raw %}#ch:dfe">Chapter 8</a><br />
-RX clock path: I/Q error, duty cycle, PI nonlinearity &amp; 6 &amp; – &amp; <a href="{% endraw %}{{ '/chapters/12-clock-generation-the-phase-locked-loop/' | relative_url }}{% raw %}#sec:quadrature">Section 12.5</a><br />
-CDR: PI quantization and bang-bang dither &amp; 20 &amp; – &amp; <a href="{% endraw %}{{ '/chapters/13-clock-and-data-recovery/' | relative_url }}{% raw %}#sec:picdr">Section 13.6</a><br />
-TX clock: PLL plus buffers, not tracked by the CDR &amp; – &amp; 1.0 &amp; <a href="{% endraw %}{{ '/chapters/12-clock-generation-the-phase-locked-loop/' | relative_url }}{% raw %}#ch:pll">Chapter 12</a><br />
-RX clock: PLL, PI and buffers, not tracked &amp; – &amp; 0.7 &amp; <a href="{% endraw %}{{ '/chapters/12-clock-generation-the-phase-locked-loop/' | relative_url }}{% raw %}#ch:pll">Chapter 12</a><br />
-Samplers: aperture and noise &amp; – &amp; 0.5 &amp; <a href="{% endraw %}{{ '/chapters/10-receiver-front-end-and-samplers/' | relative_url }}{% raw %}#sec:sampler">Section 10.2</a><br />
-Total &amp; <strong>40</strong> &amp; <strong>1.32</strong> (RSS) &amp;<br />
-</p>
+<div>
+<table>
+<caption><span class="capnum">Table 11.1.</span> The Open-SERDES jitter budget at <span class="math inline">\(10^{-12}\)</span>. DJ terms are dual-Dirac values; RJ terms are rms.</caption>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Contributor</th>
+<th style="text-align: right;">DJ<span class="math inline">\(_{\delta\delta}\)</span> (ps)</th>
+<th style="text-align: right;">RJ (ps rms)</th>
+<th style="text-align: left;">Owner</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">TX: half-rate mux DCD, driver data-dependent jitter</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">–</td>
+<td style="text-align: left;"><a href="{% endraw %}{{ '/chapters/09-the-transmitter/' | relative_url }}{% raw %}">Chapter 9</a></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Channel: residual ISI after equalization (DDJ)</td>
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">–</td>
+<td style="text-align: left;"><a href="{% endraw %}{{ '/chapters/08-decision-feedback-equalization-and-adaptation/' | relative_url }}{% raw %}#ch:dfe">Chapter 8</a></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">RX clock path: I/Q error, duty cycle, PI nonlinearity</td>
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">–</td>
+<td style="text-align: left;"><a href="{% endraw %}{{ '/chapters/12-clock-generation-the-phase-locked-loop/' | relative_url }}{% raw %}#sec:quadrature">Section 12.5</a></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">CDR: PI quantization and bang-bang dither</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">–</td>
+<td style="text-align: left;"><a href="{% endraw %}{{ '/chapters/13-clock-and-data-recovery/' | relative_url }}{% raw %}#sec:picdr">Section 13.6</a></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">TX clock: PLL plus buffers, not tracked by the CDR</td>
+<td style="text-align: right;">–</td>
+<td style="text-align: right;">1.0</td>
+<td style="text-align: left;"><a href="{% endraw %}{{ '/chapters/12-clock-generation-the-phase-locked-loop/' | relative_url }}{% raw %}#ch:pll">Chapter 12</a></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">RX clock: PLL, PI and buffers, not tracked</td>
+<td style="text-align: right;">–</td>
+<td style="text-align: right;">0.7</td>
+<td style="text-align: left;"><a href="{% endraw %}{{ '/chapters/12-clock-generation-the-phase-locked-loop/' | relative_url }}{% raw %}#ch:pll">Chapter 12</a></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Samplers: aperture and noise</td>
+<td style="text-align: right;">–</td>
+<td style="text-align: right;">0.5</td>
+<td style="text-align: left;"><a href="{% endraw %}{{ '/chapters/10-receiver-front-end-and-samplers/' | relative_url }}{% raw %}#sec:sampler">Section 10.2</a></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Total</td>
+<td style="text-align: right;"><strong>40</strong></td>
+<td style="text-align: right;"><strong>1.32</strong> (RSS)</td>
+<td style="text-align: left;"></td>
+</tr>
+</tbody>
+</table>
 </div>
 <div id="fig:ch11-budget">
 
