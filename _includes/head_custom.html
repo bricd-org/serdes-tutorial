@@ -1,3 +1,16 @@
+<!-- Dark mode: apply the reader's saved choice (or else their system setting) before the page is drawn.
+     The button in header_custom.html switches it; jtd.setTheme swaps in just-the-docs-bricd-dark.css. -->
+<script>
+  (function () {
+    var theme = null;
+    try { theme = localStorage.getItem('bricd-theme'); } catch (e) {}
+    if (theme !== 'dark' && theme !== 'light')
+      theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', theme);
+    if (theme === 'dark') jtd.setTheme('bricd-dark');
+  })();
+</script>
+
 <!-- BRICD fonts (same families as www.thebricd.org) -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

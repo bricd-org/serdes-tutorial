@@ -160,3 +160,96 @@ ol.references li::before { color: $navy; font-weight: 700; }
   div { flex: 1 1 8rem; background: $navy; color: #fff; border-radius: 4px; padding: 0.65rem 0.8rem; }
   b { display: block; font-family: $heading-font; font-size: 1.35rem; color: $gold-l; }
   span { font-size: 0.8rem; color: #cfd8ea; } }
+
+// ---------------------------------------------------------------- dark mode button (header_custom.html)
+// In the header row it sits just left of the aux links. On narrow screens the header stacks
+// (search, then the links), so the button floats into the empty right end of the links row.
+.theme-toggle {
+  display: flex; align-items: center; justify-content: center;
+  float: right; width: 2.1rem; height: 2.1rem; margin: 0.25rem 1rem 0 0.5rem; padding: 0;
+  border: 1px solid $border-color; border-radius: 50%; background: transparent; color: $body-text-color;
+  cursor: pointer;
+  @include mq(md) { flex-shrink: 0; align-self: center; margin: 0 0.5rem 0 0; }
+  svg { width: 1.1rem; height: 1.1rem; }
+  &:hover { color: $link-color; border-color: $link-color; }
+  &:focus-visible { outline: 2px solid $link-color; outline-offset: 2px; }
+  &[aria-pressed="true"] .icon-moon, &:not([aria-pressed="true"]) .icon-sun { display: none; }
+}
+
+// ---------------------------------------------------------------- dark mode
+// Only compiled into the dark stylesheet (color_schemes/bricd-dark.scss). The rules above
+// are written for a white page; these repaint everything that would be dark on dark.
+@if $color-scheme == dark {
+  $d-navy: #24386a;
+  $d-rule: #4a63a0;
+  $d-gold: #c7a24a;
+  $d-lead: #b9c5dc;
+  $d-caption: #a9b4c8;
+  $d-muted: #98a5bb;
+  $d-strong: #f1f4fa;
+  $d-surface: #161f33;
+  $d-pale: #1a2439;
+
+  html { color-scheme: dark; }
+  .site-logo { background-image: url("../images/bricd-logo-dark.png"); }
+
+  .main-content {
+    h1, h2, h3, h4, h5, h6 { color: $body-heading-color; }
+    h2 { border-top-color: $border-color; }
+    strong { color: $d-strong; }
+  }
+  .chapnum { background: $d-navy; }
+  .secnum, .main-content .tbox li::before { color: $d-gold; }
+  .chapterlead p, .part-blurb { color: $d-lead; }
+
+  .tbox-keyeq > .tbox-title, .tbox-insight > .tbox-title { background: $d-navy; }
+  .tbox-keyeq { background: #182544; border-left-color: $d-rule; }
+  .tbox-example { background: #262114; }
+  .tbox-insight { background: $d-surface; border-color: $d-rule; }
+  .tbox-pitfall { background: #2e1b1d; border-left-color: #c85a4c; > .tbox-title { background: #a8443a; } }
+  .tbox-tryit { background: $d-pale; border-left-color: #6e7fa6; > .tbox-title { background: #45557c; } }
+  .tbox-derivation { background: $d-surface; border-color: #3a4a6e;
+    > .tbox-title { background: $d-pale; color: $d-lead; border-color: #3a4a6e; } }
+  .tbox-specnote { background: #26200f; }
+  .tbox-objectives { background: $d-pale; > .tbox-title { color: $d-gold; } }
+  .tbox-takeaways { background: #1b2a52; border: 1px solid #2c3f70; }
+
+  // the figures are drawn for paper (black text, transparent background), so give them a white card
+  .main-content figure {
+    img { background: #fff; padding: 0.4rem; border-radius: 4px; }
+    figcaption { color: $d-caption; }
+  }
+  .capnum, ol.references li::before { color: $body-heading-color; }
+  .captionblock p, .main-content table caption, .lstcaption p { color: $d-caption; }
+  .figcredit, .figcredit p, .page-source { color: $d-muted; }
+  .main-content table {
+    border-top-color: $d-rule; border-bottom-color: $d-rule;
+    th { background: $d-pale; color: $body-heading-color; border-bottom-color: $d-rule; }
+    td { border-bottom-color: $border-color; }
+  }
+
+  div.sourceCode, .main-content pre { background: $code-background-color; border-left-color: #3f6db5; }
+  code span.al, code span.er { color: #ff6b6b; } code span.an, code span.cv { color: #7fc4d4; }
+  code span.at { color: #b5c76a; } code span.bn, code span.dv, code span.fl { color: #7fcf9f; }
+  code span.bu, code span.ot { color: #6cc28a; } code span.cf, code span.im, code span.kw { color: #8fb4ff; }
+  code span.ch, code span.sc, code span.st, code span.vs { color: #d6b25e; } code span.cn { color: #f07178; }
+  code span.co { color: #8592a8; } code span.do { color: #e07a7a; } code span.dt { color: #e88a5c; }
+  code span.fu { color: #82b1ea; } code span.op { color: #a0a8b8; } code span.pp { color: #e0a040; }
+  code span.ss { color: #e08fb0; } code span.va { color: #c3a6ff; }
+
+  .prev-next {
+    border-top-color: $border-color;
+    .pn-link { border-color: $border-color; color: $body-heading-color;
+      small { color: $d-gold; }
+      &:hover { border-color: $gold; background: $d-pale; } }
+  }
+  .part-label { color: $d-gold; }
+
+  .hero {
+    .hero-cover img { box-shadow: 0 6px 22px rgba(0, 0, 0, 0.5); }
+    .eyebrow { color: $d-gold; }
+  }
+  .card { border-color: $border-color; border-top-color: $gold; background: $d-surface;
+    p { color: $d-caption; } .card-label { color: $d-gold; } }
+  .key-numbers div { background: #1b2a52; border: 1px solid #2c3f70; }
+}
