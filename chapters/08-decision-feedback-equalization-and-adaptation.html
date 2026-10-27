@@ -1,0 +1,387 @@
+---
+title: "8. Decision-Feedback Equalization and Adaptation"
+parent: "Part II · Equalization"
+nav_order: 8
+permalink: "/chapters/08-decision-feedback-equalization-and-adaptation/"
+---
+{% raw %}
+<h1 id="ch:dfe"><span class="chapnum">Chapter 8</span>Decision-Feedback Equalizationand Adaptation</h1>
+<div class="chapterlead">
+<p>A DFE removes post-cursor ISI by subtracting what the past decisions predict. It equalizes without amplifying noise, and it can learn its own taps.</p>
+</div>
+<div class="tbox tbox-objectives">
+<div class="tbox-title">
+<p>In this chapter you will learn</p>
+</div>
+<ul>
+<li><p>Derive the DFE from a linear IIR equalizer, and explain why the slicer in the loop removes noise enhancement.</p></li>
+<li><p>Compute DFE taps from a pulse response and combine a DFE with a TX pre-tap.</p></li>
+<li><p>Budget the tap-1 timing loop, and choose between direct feedback, half-rate and loop unrolling.</p></li>
+<li><p>Write the LMS and sign-sign LMS updates, and recognize when adaptation wanders.</p></li>
+<li><p>Split the equalization work between TX FFE, CTLE and DFE for Open-SERDES, with numbers.</p></li>
+</ul>
+</div>
+<h2 id="sec:ch8-principle"><span class="secnum">8.1</span>The DFE principle</h2>
+<h5 id="from-iir-filter-to-dfe">From IIR filter to DFE</h5>
+<p>Liu starts from a one-tap <em>linear</em> feedback equalizer [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-liuEq">5</a>], <span class="math inline">\(y(t)=x(t)-\alpha_1y(t-T_\mathrm{b})\)</span>. Its transfer function is <span class="math inline">\(H(z)=1/(1+\alpha_1z^{-1})\)</span>, with <span id="eq:ch8-iir"></span><span class="math display">\[\lvert H\rvert=\frac{1}{\sqrt{1+\alpha_1^2+2\alpha_1\cos\omega T_\mathrm{b}}} . \tag{8.1}\]</span> (The notes repeat the typo of <a href="{% endraw %}{{ '/chapters/06-transmit-ffe/' | relative_url }}{% raw %}#sec:ffe-taps">Section 6.2</a>.) For <span class="math inline">\(0&lt;\alpha_1&lt;1\)</span> it rises from <span class="math inline">\(1/(1+\alpha_1)\)</span> at DC to <span class="math inline">\(1/(1-\alpha_1)\)</span> at <span class="math inline">\(f_\mathrm{N}\)</span>, so it could equalize, but it boosts noise like any linear equalizer and is unstable for <span class="math inline">\(\lvert\alpha_1\rvert\ge1\)</span>.</p>
+<p>Liu’s key step is to put a <strong>slicer</strong> <em>inside</em> the loop. The fed-back value is then a clean decision <span class="math inline">\(\hat a_{n-1}\in\{-1,+1\}\)</span>, the noise on <span class="math inline">\(y\)</span> is never recirculated, and the DFE adds no noise. With <span class="math inline">\(N\)</span> taps (<a href="#fig:ch8-dfe">Figure 8.1</a>):</p>
+<div class="tbox tbox-keyeq">
+<div class="tbox-title">
+<p>Key equation · <span class="math inline">\(N\)</span>-tap DFE</p>
+</div>
+<div id="eq:ch8-dfe">
+
+</div>
+<p><span class="math display">\[z_n=y_n-\sum_{k=1}^{N}w_k\,\hat a_{n-k},\qquad \hat a_n=\operatorname{sgn}(z_n),\qquad
+  w_k=A\,p_{k} \tag{8.2}\]</span></p>
+</div>
+<p>Here <span class="math inline">\(y_n\)</span> is the summer input in volts and the slicer threshold is 0. In Liu’s words, “DFE coefficients = post-cursors”: the ideal <span class="math inline">\(w_k\)</span> is the post-cursor <em>at the DFE input</em> (after TX FFE and CTLE) times <span class="math inline">\(A\)</span>.</p>
+<div id="fig:ch8-dfe">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/tikz/08_dfe-0.svg' | relative_url }}{% raw %}" style="width:624px" alt="A 2-tap DFE." loading="lazy" />
+<figcaption><span class="capnum">Figure 8.1.</span> <strong>A 2-tap DFE.</strong> The slicer decision <span class="math inline">\(\hat a_n\)</span> is delayed by flip-flops, weighted by <span class="math inline">\(w_1\)</span> and <span class="math inline">\(w_2\)</span>, and subtracted from the next samples at the summer. The fed-back values are clean <span class="math inline">\(\pm1\)</span> decisions, so noise is not recirculated. Tap 1 closes a loop that must settle within one UI (<a href="#sec:dfe-timing">Section 8.2</a>).</figcaption>
+</figure>
+<h5 id="post-cursors-only">Post-cursors only</h5>
+<p>The DFE cancels only the ISI of bits already decided: the pre-cursor of bit <span class="math inline">\(n+1\)</span> hits <span class="math inline">\(y_n\)</span> before <span class="math inline">\(\hat a_{n+1}\)</span> exists. <a href="#fig:ch8-cancel">Figure 8.2</a> shows the feedback staircase on the REF pulse after an 8 dB CTLE. It matches the pulse at <span class="math inline">\(k=1,2\)</span> and leaves the pre-cursor and the tail untouched.</p>
+<div id="fig:ch8-cancel">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch08_cancel.svg' | relative_url }}{% raw %}" style="width:753px" alt="A DFE subtracts the post-cursors at the sampling instants." loading="lazy" />
+<figcaption><span class="capnum">Figure 8.2.</span> <strong>A DFE subtracts the post-cursors at the sampling instants.</strong> REF + 8 dB CTLE (the Lab 5 setup). (a) Pulse at the DFE input, the 2-tap feedback held for one UI per tap, and the result. Only the sampling instants (dots) matter: <span class="math inline">\(h_1\)</span> and <span class="math inline">\(h_2\)</span> become zero, while the pre-cursor and the tail beyond <span class="math inline">\(k=2\)</span> remain. (b) Cursors before and after the 2-tap DFE. The main cursor is unchanged, which is the advantage over linear equalization.</figcaption>
+</figure>
+<h5 id="error-propagation">Error propagation</h5>
+<p>Liu’s warning that a DFE “may be subject to instability” applies to the linear prototype only. With a slicer in the loop the output is bounded, and the real risk is <strong>error propagation</strong>: a wrong decision adds <span class="math inline">\(2w_1\)</span> of error to the next sample instead of removing <span class="math inline">\(w_1\)</span>. In the Lab 5 setup (<span class="math inline">\(w_1=27.6\,\mathrm{mV}\)</span>, half-eye 64.7 mV after two taps) that leaves only 9.5 mV of margin on the next bit. At a BER near <span class="math inline">\(10^{-12}\)</span> first errors are so rare that this at most doubles the BER [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-palermo720eq">22</a>]. Keep <span class="math inline">\(p_{1}/p_{0}\lesssim0.5\)</span> at the DFE input.</p>
+<div class="tbox tbox-example">
+<div class="tbox-title">
+<p>Worked Example 8.1 · Liu’s DFE, and a DFE with a TX pre-tap</p>
+</div>
+<p><span id="we:ch8-liu"></span> Liu’s pulse is <span class="math inline">\(x_{-1}=0.2\)</span>, <span class="math inline">\(x_0=0.85\)</span>, <span class="math inline">\(x_1=-0.2\)</span>, <span class="math inline">\(x_2=0.1\)</span>, <span class="math inline">\(x_3=0.05\)</span>. Forcing the decision sequence <span class="math inline">\(\hat y=\{\dots,0,1,0,0,\dots\}\)</span> at <span class="math inline">\(t=T_\mathrm{b},2T_\mathrm{b},3T_\mathrm{b}\)</span> gives <span class="math inline">\(-\alpha_k+x_k=0\)</span>, so the taps are the post-cursors: <span class="math inline">\(\alpha=[-0.2,\ 0.1,\ 0.05]\)</span>. With <span class="math inline">\(2A=1\)</span> (so <span class="math inline">\(w_k=x_k/2\)</span> in volts), the PDA eye becomes <span class="math inline">\(0.85-0.2=0.65\)</span>. Only the pre-cursor remains.</p>
+<p>Now add a TX pre-tap with <span class="math inline">\(c_{-1}/c_0=-0.2/0.85\)</span>, normalized to <span class="math inline">\(c=[-0.190,\,0.810]\)</span>. By <a href="{% endraw %}{{ '/chapters/06-transmit-ffe/' | relative_url }}{% raw %}#eq:ch6-conv">Equation (6.2)</a> the cursors for <span class="math inline">\(k=-2..3\)</span> become <span class="math inline">\(-0.038\)</span>, 0, 0.726, <span class="math inline">\(-0.181\)</span>, 0.071 and 0.041. The DFE re-adapts to the last three, and the eye is <span class="math inline">\(0.726-0.038=\mathbf{0.688}\)</span>. That beats both the 3-tap ZF FFE alone (0.519, <a href="{% endraw %}{{ '/chapters/06-transmit-ffe/' | relative_url }}{% raw %}#we:ch6-liu">Worked Example 6.2</a>) and the DFE alone (0.65). This is the canonical split: the TX takes the pre-cursor and the DFE takes the post-cursors.</p>
+</div>
+<h2 id="sec:dfe-timing"><span class="secnum">8.2</span>The tap-1 timing loop</h2>
+<p>Decision <span class="math inline">\(\hat a_{n-1}\)</span> must be resolved, weighted and subtracted, and the summer settled, before <span class="math inline">\(z_n\)</span> is sampled one UI later:</p>
+<div class="tbox tbox-keyeq">
+<div class="tbox-title">
+<p>Key equation · DFE tap-1 critical path</p>
+</div>
+<div id="eq:ch8-timing">
+
+</div>
+<p><span class="math display">\[t_\mathrm{CK\to Q}+t_\mathrm{tap}+t_\mathrm{settle}+t_\mathrm{setup}\le T_\mathrm{b}=200\,\mathrm{ps} \tag{8.3}\]</span></p>
+</div>
+<p>Taps 2 and higher have one or more extra UIs, so tap 1 sets the speed limit.</p>
+<h5 id="half-rate">Half rate</h5>
+<p>Open-SERDES slices even bits on the rising and odd bits on the falling edge of the 2.5 GHz clock, so each latch has 2 UI to regenerate. Half rate does <em>not</em> relax <a href="#eq:ch8-timing">Equation (8.3)</a>: the even decision must correct the odd sample one UI later, so the tap-1 path crosses between the halves and still has 1 UI.</p>
+<h5 id="loop-unrolling">Loop unrolling</h5>
+<p><strong>Loop unrolling</strong> (<strong>speculation</strong>) removes the summer from the tap-1 path. Two comparators per half precompute both answers, against <span class="math inline">\(+w_1\)</span> and <span class="math inline">\(-w_1\)</span>, and a multiplexer selected by the previous decision picks one [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-palermo720eq">22</a>]: <span id="eq:ch8-unroll"></span><span class="math display">\[\hat a_n=\begin{cases}\operatorname{sgn}(y_n-w_1), &amp; \hat a_{n-1}=+1\\ \operatorname{sgn}(y_n+w_1), &amp; \hat a_{n-1}=-1\end{cases}
+  \qquad\Rightarrow\qquad t_\mathrm{CK\to Q}+t_\mathrm{mux}+t_\mathrm{setup}\le T_\mathrm{b}. \tag{8.4}\]</span> <a href="#fig:ch8-unroll">Figure 8.3</a> shows the half-rate version. The cost is <span class="math inline">\(2^N\)</span> comparators for <span class="math inline">\(N\)</span> unrolled taps, twice the load on the CTLE, and taps that live in comparator thresholds.</p>
+<div id="fig:ch8-unroll">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/tikz/08_dfe-1.svg' | relative_url }}{% raw %}" style="width:664px" alt="Half-rate DFE with tap 1 unrolled." loading="lazy" />
+<figcaption><span class="capnum">Figure 8.3.</span> <strong>Half-rate DFE with tap 1 unrolled.</strong> Each half has two comparators with thresholds <span class="math inline">\(\pm w_1\)</span> and a multiplexer. The multiplexer is selected by the latest decision of the <em>other</em> half (gold paths). These cross-coupled selects are the critical path and still have only 1 UI, but there is no summer to settle. Tap 2 and higher would still be subtracted at a summer before the comparators.</figcaption>
+</figure>
+<div class="tbox tbox-example">
+<div class="tbox-title">
+<p>Worked Example 8.2 · Tap-1 timing budget at 5 Gb/s</p>
+</div>
+<p><span id="we:ch8-timing"></span> Use illustrative SG13G2 CML numbers, to be confirmed post-layout: latch <span class="math inline">\(t_\mathrm{CK\to Q}=25\text{–}35\,\mathrm{ps}\)</span>; tap switch about 10 ps; summer with <span class="math inline">\(R_L=250\,\Omega\)</span> and <span class="math inline">\(C=80\,\mathrm{fF}\)</span>, so <span class="math inline">\(\tau=20\,\mathrm{ps}\)</span> and 95 % settling takes <span class="math inline">\(3\tau=60\,\mathrm{ps}\)</span>; setup and aperture about 20 ps; skew and PVT margin about 20 ps. The total is about 135–145 ps, which is below 200 ps. Direct feedback works at 5 Gb/s, including in the half-rate cross-coupled form, with 55–65 ps to spare (<a href="#fig:ch8-timing">Figure 8.4</a>).</p>
+<p>It does <em>not</em> meet the 100 ps half-UI budget that would apply if the <span class="math inline">\(90^\circ\)</span>/<span class="math inline">\(270^\circ\)</span> edge samplers also had to see a fully corrected signal. In Open-SERDES the edge samplers therefore see a partly settled correction, which works because TX and CTLE keep the pre-DFE eye open (<a href="#sec:eq-partition">Section 8.5</a>). If post-layout corners push the direct path past about 0.7 UI, unroll tap 1: with an assumed 15 ps mux the unrolled path is 85 ps. Halving <span class="math inline">\(C\)</span> (fewer taps) or an integrating summer saves about 30 ps.</p>
+</div>
+<div id="fig:ch8-timing">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/tikz/08_dfe-2.svg' | relative_url }}{% raw %}" style="width:607px" alt="The tap-1 budget fits in one UI with direct feedback." loading="lazy" />
+<figcaption><span class="capnum">Figure 8.4.</span> <strong>The tap-1 budget fits in one UI with direct feedback.</strong> Numbers from <a href="#we:ch8-timing">Worked Example 8.2</a>. Direct feedback (140 ps) meets the 1 UI deadline but not the half-UI one. Unrolling removes the summer settling and fits both.</figcaption>
+</figure>
+<h2 id="sec:adaptation"><span class="secnum">8.3</span>Adapting the taps</h2>
+<p>The ideal taps depend on channel, temperature and supply, so the receiver should find them itself. Define the slicer error <span class="math inline">\(e_n=z_n-d_\mathrm{lev}\,\hat a_n\)</span>, where <span class="math inline">\(d_\mathrm{lev}\)</span> is the expected signal level (ideally <span class="math inline">\(Ap_{0}\)</span>). Since <span class="math inline">\(\partial E[e_n^2]/\partial w_k=-2E[e_n\hat a_{n-k}]\)</span>, stepping against the gradient gives the <strong>LMS</strong> update. Hardware prefers the <strong>sign-sign</strong> form (SS-LMS), which needs only signs [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-palermo720eq">22</a>, <a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-stojanovic2005">23</a>]:</p>
+<div class="tbox tbox-keyeq">
+<div class="tbox-title">
+<p>Key equation · LMS and sign-sign LMS</p>
+</div>
+<div id="eq:ch8-sslms">
+
+</div>
+<p><span class="math display">\[\begin{gathered}
+  \text{LMS:}\quad w_k\leftarrow w_k+\mu\,e_n\,\hat a_{n-k}\\[2pt]
+  \text{SS-LMS:}\quad w_k\leftarrow w_k+\mu\,\operatorname{sgn}(e_n)\,\hat a_{n-k},\qquad
+  d_\mathrm{lev}\leftarrow d_\mathrm{lev}+\mu\,\operatorname{sgn}(e_n)\,\hat a_n
+  \end{gathered} \tag{8.5}\]</span></p>
+</div>
+<p><span class="math inline">\(\operatorname{sgn}(e_n)\)</span> comes from one extra comparator, the <strong>error sampler</strong>, with threshold <span class="math inline">\(\pm d_\mathrm{lev}\)</span> chosen by <span class="math inline">\(\hat a_n\)</span>. The updates are digital counters decimated to the deserialized rate: slow compared with the data, fast compared with temperature drift.</p>
+<div class="tbox tbox-example">
+<div class="tbox-title">
+<p>Worked Example 8.3 · Sign-sign LMS on the REF channel</p>
+</div>
+<p><span id="we:ch8-sslms"></span> Simulate the Lab 5 setup (REF + 8 dB CTLE) with PRBS13, 4 mV rms noise and a 2-tap DFE adapted by <a href="#eq:ch8-sslms">Equation (8.5)</a> with <span class="math inline">\(\mu=0.25\,\mathrm{mV}\)</span>, starting from <span class="math inline">\(w=0\)</span> and <span class="math inline">\(d_\mathrm{lev}=50\,\mathrm{mV}\)</span>. The pre-DFE eye is open (60 mV), so decisions are correct from the first bit. <span class="math inline">\(w_1\)</span> comes within 2 mV of <span class="math inline">\(Ap_{1}=27.6\,\mathrm{mV}\)</span> after about 310 UI and <span class="math inline">\(w_2\)</span> reaches <span class="math inline">\(Ap_{2}=11.8\,\mathrm{mV}\)</span> after about 170 UI (<a href="#fig:ch8-sslms">Figure 8.5</a>a). Both then dither by a few <span class="math inline">\(\mu\)</span>; after 6000 UI they read 29.8 and 11.5 mV, with <span class="math inline">\(d_\mathrm{lev}=94.0\,\mathrm{mV}\)</span> (target 91.6). A larger <span class="math inline">\(\mu\)</span> converges faster but dithers more, and dither is a tap error that costs eye.</p>
+</div>
+<div id="fig:ch8-sslms">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch08_sslms.svg' | relative_url }}{% raw %}" style="width:753px" alt="Sign-sign LMS finds the taps, unless a pre-cursor is left in." loading="lazy" />
+<figcaption><span class="capnum">Figure 8.5.</span> <strong>Sign-sign LMS finds the taps, unless a pre-cursor is left in.</strong> (a) REF + 8 dB CTLE, 2-tap DFE (<span class="math inline">\(\mu=0.25\,\mathrm{mV}\)</span>, 4 mV noise). The taps and the data level settle within a few hundred UI onto their zero-forcing values (dashed: 91.6, 27.6 and 11.8 mV). (b) Liu’s pulse with a 3-tap DFE (<span class="math inline">\(\mu=2\,\mathrm{mV}\)</span>, 10 mV noise). With its 0.2 pre-cursor removed, <span class="math inline">\(w_2\)</span> stays within 36–62 mV of its 50 mV target. With the pre-cursor left in, it wanders between <span class="math inline">\(-6\)</span> and 92 mV.</figcaption>
+</figure>
+<div class="tbox tbox-pitfall">
+<div class="tbox-title">
+<p>An uncancelled pre-cursor makes SS-LMS wander</p>
+</div>
+<p>Liu’s pre-cursor puts <span class="math inline">\(\pm Ax_{-1}=\pm100\,\mathrm{mV}\)</span> into every error sample. Once the tap errors are smaller than that, <span class="math inline">\(\operatorname{sgn}(e_n)\)</span> is set by <span class="math inline">\(Ax_{-1}\hat a_{n+1}\)</span> alone, which is uncorrelated with <span class="math inline">\(\hat a_{n-k}\)</span>: the average update vanishes and the taps random-walk (<a href="#fig:ch8-sslms">Figure 8.5</a>b). Cancel the pre-cursor first (TX pre-tap or CTLE), or use a smaller <span class="math inline">\(\mu\)</span> and average.</p>
+</div>
+<h2 id="sec:ch8-ref"><span class="secnum">8.4</span>The DFE on the REF channel</h2>
+<p>Lab 5 adds DFE taps one at a time after an 8 dB CTLE (<a href="#fig:ch8-taps">Figure 8.6</a>). The taps are the post-cursors at the DFE input, 0.0552, 0.0235 and 0.0160, so <span class="math inline">\(w_k=27.6\)</span>, 11.8 and 8.0 mV. The first tap lifts the PRBS7 eye from 60.0 to 110.7 mV, the second adds 19 and the third 13.5 mV. Beyond four taps nothing more is gained (153.6, 152.1 and 156.4 mV for 4, 5 and 8 taps). At 10 mV rms slicer noise the estimated BER is <span class="math inline">\(3.2\times10^{-14}\)</span> with three taps and <span class="math inline">\(4.5\times10^{-12}\)</span> with two.</p>
+<div id="fig:ch8-taps">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch08_taps.svg' | relative_url }}{% raw %}" style="width:753px" alt="The first DFE taps do most of the work." loading="lazy" />
+<figcaption><span class="capnum">Figure 8.6.</span> <strong>The first DFE taps do most of the work.</strong> REF + 8 dB CTLE, PRBS7 (Lab 5). (a) Eye height against the number of ideal DFE taps. The first two taps add 70 mV, and beyond four taps the gain is lost in the simulation’s resolution. (b, c) Summer output before and after a 2-tap DFE. The feedback switches half a UI after each decision, so the eye shows steps at <span class="math inline">\(\pm0.5\)</span> UI. Only the sampling instant at 0 UI matters.</figcaption>
+</figure>
+<div class="tbox tbox-tryit">
+<div class="tbox-title">
+<p>Lab 5: DFE</p>
+</div>
+<p><code>lab5_dfe.py</code> reads the taps off the pulse response, runs <code>sdp.Receiver.nrz_DFE</code> with 0–8 taps and estimates the BER. Then try a <span class="math inline">\(-6\)</span> dB TX preset with 2 taps (<a href="{% endraw %}{{ '/chapters/16-hands-on-labs-with-serdespy/' | relative_url }}{% raw %}#sec:lab5">Section 16.6</a>).</p>
+</div>
+<h2 id="sec:eq-partition"><span class="secnum">8.5</span>Splitting the work</h2>
+<p>How should Open-SERDES divide the work between TX FFE, CTLE and DFE (<a href="{% endraw %}{{ '/chapters/05-equalization-fundamentals/' | relative_url }}{% raw %}#sec:ch5-preview">Section 5.4</a>)? <a href="#tab:eq-partition">Table 8.1</a> and <a href="#fig:ch8-partition">Figure 8.7</a> compare seven strategies on the <code>link.py</code> channel family.</p>
+<h5 id="method">Method</h5>
+<p>Channels are <code>channel(LOSS_FAMILY[d])</code> for 5–30 dB at <span class="math inline">\(f_\mathrm{N}\)</span>, plus REF. The CTLE is <code>ctle(pk)</code>, 0–20 dB in 1 dB steps. The TX FFE is a grid search over <span class="math inline">\(c_{-1}\in[-0.2,0]\)</span> and <span class="math inline">\(c_1\in[-0.5,0]\)</span> (step 0.02) with <span class="math inline">\(c_0=1-\lvert c_{-1}\rvert-\lvert c_1\rvert\)</span>. The DFE is ideal: it removes the first <span class="math inline">\(N\)</span> post-cursors exactly. Each strategy is scored by its PDA eye over <span class="math inline">\(k=-4..40\)</span>, maximized over sampling phase and free settings, and also normalized to <span class="math inline">\(2Ap_{0}\)</span> of the <em>unequalized</em> pulse, which exposes the swing cost of TX equalization. The “Open-SERDES limits” rows add <span class="math inline">\(\lvert c_1\rvert\le0.25\)</span> (6 dB post-tap de-emphasis), <span class="math inline">\(\lvert c_{-1}\rvert\le0.1\)</span>, CTLE <span class="math inline">\(\le12\)</span> dB, and an eye open <em>before</em> the DFE (for start-up adaptation and the edge samplers). Because the tail is summed to 40 UI, the unequalized REF eye is <span class="math inline">\(-0.23\)</span> V rather than the 13-cursor <span class="math inline">\(-0.161\)</span> V of <a href="{% endraw %}{{ '/chapters/03-the-channel/' | relative_url }}{% raw %}#tab:ref-cursors">Table 3.2</a>.</p>
+<div id="tab:eq-partition">
+
+</div>
+<div>
+<table>
+<caption><span class="capnum">Table 8.1.</span> <strong>PDA eye height (mV) and eye normalized to the unequalized main cursor, by strategy and channel loss.</strong> Regenerated with <code>link.py</code>; method in the text. <span class="math inline">\(^\ast\)</span>Open-SERDES limits: <span class="math inline">\(\lvert c_1\rvert\le0.25\)</span>, <span class="math inline">\(\lvert c_{-1}\rvert\le0.1\)</span>, CTLE <span class="math inline">\(\le12\)</span> dB, open pre-DFE eye.</caption>
+<thead>
+<tr class="header">
+<th style="text-align: left;"></th>
+<th colspan="2" style="text-align: center;"><strong>10 dB</strong></th>
+<th colspan="2" style="text-align: center;"><strong>15 dB</strong></th>
+<th colspan="2" style="text-align: center;"><strong>REF 17.4 dB</strong></th>
+<th colspan="2" style="text-align: center;"><strong>20 dB</strong></th>
+<th colspan="2" style="text-align: center;"><strong>25 dB</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><span>2-3</span>(lr)<span>4-5</span>(lr)<span>6-7</span>(lr)<span>8-9</span>(l)<span>10-11</span> <strong>Strategy</strong></td>
+<td style="text-align: right;">mV</td>
+<td style="text-align: right;">norm</td>
+<td style="text-align: right;">mV</td>
+<td style="text-align: right;">norm</td>
+<td style="text-align: right;">mV</td>
+<td style="text-align: right;">norm</td>
+<td style="text-align: right;">mV</td>
+<td style="text-align: right;">norm</td>
+<td style="text-align: right;">mV</td>
+<td style="text-align: right;">norm</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">No equalization</td>
+<td style="text-align: right;">165</td>
+<td style="text-align: right;">0.30</td>
+<td colspan="2" style="text-align: center;">closed</td>
+<td colspan="2" style="text-align: center;">closed</td>
+<td colspan="2" style="text-align: center;">closed</td>
+<td colspan="2" style="text-align: center;">closed</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">TX 2-tap FFE</td>
+<td style="text-align: right;">341</td>
+<td style="text-align: right;">0.61</td>
+<td style="text-align: right;">189</td>
+<td style="text-align: right;">0.48</td>
+<td style="text-align: right;">141</td>
+<td style="text-align: right;">0.42</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">0.34</td>
+<td style="text-align: right;">44</td>
+<td style="text-align: right;">0.20</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">CTLE (0–20 dB)</td>
+<td style="text-align: right;">236</td>
+<td style="text-align: right;">0.42</td>
+<td style="text-align: right;">132</td>
+<td style="text-align: right;">0.33</td>
+<td style="text-align: right;">99</td>
+<td style="text-align: right;">0.29</td>
+<td style="text-align: right;">70</td>
+<td style="text-align: right;">0.24</td>
+<td style="text-align: right;">32</td>
+<td style="text-align: right;">0.15</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">CTLE + 2-tap DFE</td>
+<td style="text-align: right;">395</td>
+<td style="text-align: right;">0.71</td>
+<td style="text-align: right;">146</td>
+<td style="text-align: right;">0.37</td>
+<td style="text-align: right;">110</td>
+<td style="text-align: right;">0.32</td>
+<td style="text-align: right;">84</td>
+<td style="text-align: right;">0.29</td>
+<td style="text-align: right;">51</td>
+<td style="text-align: right;">0.23</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">TX 3-tap + CTLE + 2-tap DFE</td>
+<td style="text-align: right;">396</td>
+<td style="text-align: right;">0.71</td>
+<td style="text-align: right;">204</td>
+<td style="text-align: right;">0.52</td>
+<td style="text-align: right;">160</td>
+<td style="text-align: right;">0.47</td>
+<td style="text-align: right;">123</td>
+<td style="text-align: right;">0.42</td>
+<td style="text-align: right;">75</td>
+<td style="text-align: right;">0.34</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Open-SERDES limits, 2-tap DFE<span class="math inline">\(^\ast\)</span></td>
+<td style="text-align: right;">396</td>
+<td style="text-align: right;">0.71</td>
+<td style="text-align: right;">190</td>
+<td style="text-align: right;">0.48</td>
+<td style="text-align: right;">134</td>
+<td style="text-align: right;">0.40</td>
+<td style="text-align: right;">87</td>
+<td style="text-align: right;">0.30</td>
+<td style="text-align: right;">35</td>
+<td style="text-align: right;">0.16</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Open-SERDES limits, 5-tap DFE<span class="math inline">\(^\ast\)</span></td>
+<td style="text-align: right;">467</td>
+<td style="text-align: right;">0.84</td>
+<td style="text-align: right;">239</td>
+<td style="text-align: right;">0.60</td>
+<td style="text-align: right;">170</td>
+<td style="text-align: right;">0.50</td>
+<td style="text-align: right;">120</td>
+<td style="text-align: right;">0.41</td>
+<td style="text-align: right;">43</td>
+<td style="text-align: right;">0.19</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h5 id="what-the-numbers-say">What the numbers say</h5>
+<ul>
+<li><p><strong>No single equalizer is enough at REF.</strong> The TX FFE alone reaches 141 mV but needs 12 dB of de-emphasis; the CTLE alone needs 16 dB of peaking, outside our range, for 99 mV.</p></li>
+<li><p><strong>With a DFE present, the noise-free optimum moves the linear work into the TX</strong> (CTLE at 0 dB, 11–16 dB of de-emphasis). In a PDA our normalized CTLE and the TX FFE pay the same price, a lower low-frequency level, and the 1-UI FIR fits a sampled channel better. The PDA cannot see noise, crosstalk, sampler sensitivity or adaptivity, which are what limit large de-emphasis in practice.</p></li>
+<li><p><strong>Within practical limits</strong> the REF eye is 134 mV (0.40 of the unequalized main cursor). Three more DFE taps add 36 mV.</p></li>
+<li><p><strong>Above about 22 dB the 12 dB CTLE limit binds.</strong> At 25 dB, CTLE + 2-tap DFE with 19 dB of peaking (51 mV) beats both Open-SERDES rows; more DFE taps help less than more CTLE.</p></li>
+</ul>
+<div id="fig:ch8-partition">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch08_partition.svg' | relative_url }}{% raw %}" style="width:753px" alt="Every strategy loses about a factor of two in eye per 5 dB of loss; combinations lose less." loading="lazy" />
+<figcaption><span class="capnum">Figure 8.7.</span> <strong>Every strategy loses about a factor of two in eye per 5 dB of loss; combinations lose less.</strong> PDA eye against loss at <span class="math inline">\(f_\mathrm{N}\)</span> (log scale, data of <a href="#tab:eq-partition">Table 8.1</a>). At REF (dotted) the Open-SERDES partition gives 134 mV. Above about 22 dB, a CTLE with more than 12 dB of peaking (purple) overtakes it, which signals when Open-SERDES would need more equalization.</figcaption>
+</figure>
+<div class="tbox tbox-example">
+<div class="tbox-title">
+<p>Worked Example 8.4 · The REF operating point in the time domain</p>
+</div>
+<p><span id="we:ch8-refop"></span> Check the partition with the Lab 5 machinery: PRBS7 through REF, a TX preset, <code>ctle(pk)</code> and an ideal 2-tap DFE. The BER is estimated at 10 mV rms slicer noise.</p>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">TX preset, CTLE</th>
+<th style="text-align: center;">pre-DFE eye</th>
+<th style="text-align: center;">+ 2-tap DFE</th>
+<th style="text-align: center;"><span class="math inline">\(p_{1}/p_{0}\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(w_1\)</span>, <span class="math inline">\(w_2\)</span> (mV)</th>
+<th style="text-align: center;">BER</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">none, 8 dB (Lab 5)</td>
+<td style="text-align: center;">60.0</td>
+<td style="text-align: center;">129.5</td>
+<td style="text-align: center;">0.30</td>
+<td style="text-align: center;">27.6, 11.8</td>
+<td style="text-align: center;"><span class="math inline">\(4.5\times10^{-12}\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">none, 0 dB</td>
+<td style="text-align: center;"><span class="math inline">\(-84.0\)</span></td>
+<td style="text-align: center;">167.1</td>
+<td style="text-align: center;">0.54</td>
+<td style="text-align: center;">91.2, 45.6</td>
+<td style="text-align: center;"><span class="math inline">\(1.3\times10^{-15}\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><span class="math inline">\(-3.5\)</span> dB, 0 dB</td>
+<td style="text-align: center;">35.4</td>
+<td style="text-align: center;">169.5</td>
+<td style="text-align: center;">0.37</td>
+<td style="text-align: center;">51.1, 23.5</td>
+<td style="text-align: center;"><span class="math inline">\(3.5\times10^{-17}\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><span class="math inline">\(-6\)</span> dB, 0 dB</td>
+<td style="text-align: center;">96.9</td>
+<td style="text-align: center;"><strong>171.8</strong></td>
+<td style="text-align: center;">0.26</td>
+<td style="text-align: center;">31.1, 11.7</td>
+<td style="text-align: center;"><span class="math inline">\(3.0\times10^{-18}\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><span class="math inline">\(-6\)</span> dB, 4 dB</td>
+<td style="text-align: center;">103.0</td>
+<td style="text-align: center;">132.6</td>
+<td style="text-align: center;">0.15</td>
+<td style="text-align: center;">12.7, 5.9</td>
+<td style="text-align: center;"><span class="math inline">\(1.4\times10^{-12}\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>A DFE alone (row 2) opens the eye, but with a closed pre-DFE eye it cannot adapt from start-up, and <span class="math inline">\(p_{1}/p_{0}=0.54\)</span> invites error propagation. The <span class="math inline">\(-6\)</span> dB preset with the CTLE near 0 dB gives the best eye, an open pre-DFE eye (97 mV) for the edge samplers, and <span class="math inline">\(p_{1}/p_{0}=0.26\)</span>: a wrong decision costs <span class="math inline">\(2w_1=62\,\mathrm{mV}\)</span> of the 86 mV half-eye.</p>
+</div>
+<h5 id="the-open-serdes-partition-and-why">The Open-SERDES partition, and why</h5>
+<ul>
+<li><p><strong>TX: 3-tap FFE, mostly de-emphasis</strong> (<span class="math inline">\(-3.5\)</span>/<span class="math inline">\(-6\)</span> dB presets, pre-tap up to <span class="math inline">\(\lvert c_{-1}\rvert=0.1\)</span>; REF uses <span class="math inline">\(-6\)</span> dB). It is the only block that removes the pre-cursor without noise, and it lowers the long-run level that would overload the CTLE (<a href="{% endraw %}{{ '/chapters/07-continuous-time-linear-equalizer/' | relative_url }}{% raw %}#sec:ctle-hbt">Section 7.4</a>). It stays moderate because it cannot adapt without a back-channel and because lost launch swing is lost SNR.</p></li>
+<li><p><strong>RX: CTLE, 0–12 dB.</strong> On REF it sits near 0–4 dB and acts mainly as the front-end gain stage. Its range covers longer channels and board-to-board and temperature variation, keeps the pre-DFE eye open for the CDR, and, unlike the TX presets, adapts at the receiver.</p></li>
+<li><p><strong>RX: 2-tap half-rate DFE, direct feedback.</strong> It removes <span class="math inline">\(p_{1}\)</span> and <span class="math inline">\(p_{2}\)</span> without noise, with 55–65 ps of tap-1 slack (<a href="#we:ch8-timing">Worked Example 8.2</a>). Each extra tap adds summer capacitance and slows tap 1 for about 10 mV more eye.</p></li>
+</ul>
+<p><strong>When we would need more.</strong> Beyond about 22 dB of loss, add a second CTLE stage (<span class="math inline">\(&gt;12\)</span> dB), 3–5 DFE taps or an IIR tail tap, and a larger pre-tap. Unroll tap 1 if post-layout timing exceeds about 0.7 UI.</p>
+<div class="tbox tbox-insight">
+<div class="tbox-title">
+<p>What this means for your design</p>
+</div>
+<p>The partition follows the pulse anatomy of <a href="{% endraw %}{{ '/chapters/05-equalization-fundamentals/' | relative_url }}{% raw %}#fig:ch5-anatomy">Figure 5.4</a>: the TX pre-tap takes the pre-cursor, de-emphasis and the CTLE take the long tail and keep the pre-DFE eye open, and the DFE takes <span class="math inline">\(p_{1}\)</span> and <span class="math inline">\(p_{2}\)</span> without noise. A noise-free PDA would push all linear work into the TX; noise, crosstalk and adaptation pull some of it back into the receiver. Always report the result in millivolts against the noise budget of <a href="{% endraw %}{{ '/chapters/04-link-budgets-and-statistical-analysis/' | relative_url }}{% raw %}#sec:noisebudget">Section 4.4</a>.</p>
+</div>
+<h2 class="unnumbered" id="exercises">Exercises</h2>
+<ol>
+<li><p>Liu’s DFE (<a href="#we:ch8-liu">Worked Example 8.1</a>) with one tap only: what is the PDA eye? If <span class="math inline">\(\hat a_{n-1}\)</span> is wrong, how much margin is left on bit <span class="math inline">\(n\)</span>?</p></li>
+<li><p>Redo <a href="#we:ch8-timing">Worked Example 8.2</a> with 120 fF of summer capacitance (more taps). Does direct feedback still fit? What <span class="math inline">\(R_L\)</span> restores it, and at what cost in summer gain?</p></li>
+<li><p>Show that the SS-LMS update <span class="math inline">\(E[\operatorname{sgn}(e_n)\hat a_{n-1}]\)</span> is zero at <span class="math inline">\(w_1=Ap_{1}\)</span> if the remaining ISI plus noise is symmetric. Why does this not stop the wandering in <a href="#fig:ch8-sslms">Figure 8.5</a>(b)?</p></li>
+<li><p>From the cursors in <a href="#sec:ch8-ref">Section 8.4</a> (<span class="math inline">\(p_{-1}=0.0138\)</span>, <span class="math inline">\(p_{0}=0.1832\)</span>, tail to <span class="math inline">\(p_{8}\)</span>), compute the PDA eye after 0, 1 and 2 DFE taps. Why is it lower than the PRBS7 numbers of <a href="#fig:ch8-taps">Figure 8.6</a>? Then use <a href="#tab:eq-partition">Table 8.1</a>: at 25 dB, which buys more, three extra taps or a 19 dB CTLE?</p></li>
+</ol>
+<div class="tbox tbox-takeaways">
+<div class="tbox-title">
+<p>Key takeaways</p>
+</div>
+<ul>
+<li><p>A DFE is an IIR equalizer with a slicer in the loop: it cancels post-cursors without amplifying noise, with taps equal to the post-cursors at its input. It cannot touch pre-cursors, so a TX pre-tap plus a DFE beats either alone (0.688 vs 0.519 and 0.65 in Liu’s example).</p></li>
+<li><p>Tap 1 must settle within 1 UI even at half rate. At 5 Gb/s direct feedback fits in about 140 ps. Unrolling is the fallback if it does not.</p></li>
+<li><p>SS-LMS adapts taps with one error sampler and counters. It wanders if a large pre-cursor is left uncancelled.</p></li>
+<li><p>On REF + 8 dB CTLE, DFE taps give <span class="math inline">\(60\to111\to130\to143\)</span> mV for 0–3 taps. Beyond four taps the gain is negligible.</p></li>
+<li><p>The Open-SERDES partition is a TX 3-tap FFE (<span class="math inline">\(-6\)</span> dB on REF), a CTLE with 0–12 dB and a 2-tap half-rate DFE. On REF it gives 172 mV (PRBS7) and 134 mV (PDA).</p></li>
+<li><p>Beyond about 22 dB of loss, more CTLE peaking and more DFE taps become necessary.</p></li>
+</ul>
+</div>
+
+<nav class="prev-next" aria-label="Chapter navigation"><a class="pn-link prev" href="{% endraw %}{{ '/chapters/07-continuous-time-linear-equalizer/' | relative_url }}{% raw %}"><small>← Previous</small>Continuous-Time Linear Equalizer</a><a class="pn-link next" href="{% endraw %}{{ '/chapters/09-the-transmitter/' | relative_url }}{% raw %}"><small>Next →</small>The Transmitter</a></nav>
+<p class="page-source">Generated from <a href="https://github.com/bricd-org/serdes-tutorial/blob/main/book/tutorial/chapters/08_dfe.tex">book/tutorial/chapters/08_dfe.tex</a>. Figure, table and equation numbers match the <a href="{% endraw %}{{ '/assets/pdf/Open-SERDES_Tutorial.pdf' | relative_url }}{% raw %}">PDF edition</a>.</p>
+{% endraw %}

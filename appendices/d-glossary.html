@@ -1,0 +1,59 @@
+---
+title: "D. Glossary"
+parent: "Appendices"
+nav_order: 4
+permalink: "/appendices/d-glossary/"
+---
+{% raw %}
+<h1 id="app:glossary"><span class="chapnum">Appendix D</span>Glossary</h1>
+<div class="description">
+<p>bang-bang phase detector that compares a data, an edge and the next data sample</p>
+<p>time window over which a sampler effectively averages its input</p>
+<p>BER against sampling position across the UI</p>
+<p>bit-error rate: errors divided by bits; Open-SERDES targets <span class="math inline">\(10^{-12}\)</span></p>
+<p>process with both bipolar (HBT) and CMOS transistors, such as SG13G2</p>
+<p>collector-emitter breakdown voltage of an HBT with the base open</p>
+<p>clock and data recovery: extracts the sampling phase from the data transitions</p>
+<p>current-mode logic: differential pairs steering a constant tail current into resistors</p>
+<p>layout that interleaves matched devices so gradients cancel</p>
+<p>continuous-time linear equalizer: an analog high-frequency boost</p>
+<p>sample of the pulse response at an integer number of UIs from the main sample</p>
+<p>duty-cycle distortion: unequal high and low times, a two-valued DJ</p>
+<p>TX FFE setting that lowers repeated bits instead of raising transitions</p>
+<p>decision-feedback equalizer: subtracts ISI predicted from past decisions</p>
+<p>deterministic (bounded) and random (Gaussian) jitter</p>
+<p>jitter model with DJ as two impulses convolved with Gaussian RJ</p>
+<p>electrostatic discharge, and the diodes that protect the pads from it</p>
+<p>overlay of the received waveform folded at one or two UIs</p>
+<p>feed-forward equalizer: an FIR filter, here in the TX driver</p>
+<p>heterojunction bipolar transistor; SG13G2 npn13G2 with <span class="math inline">\(f_T\approx300\)</span> GHz</p>
+<p>attenuation through the channel, <span class="math inline">\(-20\log_{10}\lvert S_{21}\rvert\)</span></p>
+<p>inter-symbol interference: energy of a bit that spills into its neighbors</p>
+<p>jitter tolerance: largest sinusoidal jitter, against frequency, that still meets the BER</p>
+<p>internal path from the TX output to the RX input for self-test</p>
+<p>layout-versus-schematic and design-rule checks before tape-out</p>
+<p>a latch input so small that the decision is late or undefined</p>
+<p>simulation repeated with random device mismatch</p>
+<p>two-level and four-level pulse-amplitude modulation</p>
+<p>half the symbol rate: 2.5 GHz for 5 Gb/s NRZ</p>
+<p>peak-distortion analysis: worst-case eye from the sum of absolute cursors</p>
+<p>circuit that mixes two clock phases to make any phase between them</p>
+<p>single-sideband noise power near a clock, <span class="math inline">\(\mathcal{L}(f)\)</span>, in dBc/Hz</p>
+<p>phase-locked loop: multiplies a clean reference up to the VCO frequency</p>
+<p>RC network that splits a differential clock into I and Q</p>
+<p>pseudo-random binary sequence from a linear-feedback shift register</p>
+<p>channel output for one isolated 1-UI pulse</p>
+<p>reflection at a port, <span class="math inline">\(-20\log_{10}\lvert S_{11}\rvert\)</span></p>
+<p>frequency-domain description of a network by incident and reflected waves</p>
+<p>clocked comparator (latch) that decides each bit</p>
+<p>multiplexer tree that turns a parallel word into a serial stream</p>
+<p>source-series-terminated (voltage-mode) driver</p>
+<p>eye at a target BER computed from the ISI and noise distributions</p>
+<p>coupled-inductor network that hides pad capacitance from the line</p>
+<p>unit interval: one bit time, 200 ps</p>
+<p>equalizer that forces selected cursors to zero, ignoring noise</p>
+</div>
+
+<nav class="prev-next" aria-label="Chapter navigation"><a class="pn-link prev" href="{% endraw %}{{ '/appendices/c-design-review-checklists/' | relative_url }}{% raw %}"><small>← Previous</small>Design-Review Checklists</a><a class="pn-link next" href="{% endraw %}{{ '/appendices/e-further-reading/' | relative_url }}{% raw %}"><small>Next →</small>Further Reading</a></nav>
+<p class="page-source">Generated from <a href="https://github.com/bricd-org/serdes-tutorial/blob/main/book/tutorial/chapters/A_appendices.tex">book/tutorial/chapters/A_appendices.tex</a>. Figure, table and equation numbers match the <a href="{% endraw %}{{ '/assets/pdf/Open-SERDES_Tutorial.pdf' | relative_url }}{% raw %}">PDF edition</a>.</p>
+{% endraw %}

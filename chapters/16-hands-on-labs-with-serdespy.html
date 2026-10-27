@@ -1,0 +1,307 @@
+---
+title: "16. Hands-on Labs with serdespy"
+parent: "Part V · Putting It Together"
+nav_order: 16
+permalink: "/chapters/16-hands-on-labs-with-serdespy/"
+---
+{% raw %}
+<h1 id="ch:labs"><span class="chapnum">Chapter 16</span>Hands-on Labs with serdespy</h1>
+<div class="chapterlead">
+<p>Seven short Python scripts reproduce the key numbers of this tutorial, from the closed eye of the bare channel to a bang-bang CDR locking onto real data.</p>
+</div>
+<div class="tbox tbox-objectives">
+<div class="tbox-title">
+<p>In this chapter you will learn</p>
+</div>
+<ul>
+<li><p>Set up serdespy on a current Python and run every lab from <code>tutorial/code/</code>.</p></li>
+<li><p>Turn the REF channel into a pulse response, cursors and eye, and see why it must be equalized.</p></li>
+<li><p>Design a TX FFE, a CTLE and a DFE in the model and measure what each buys.</p></li>
+<li><p>Count bit errors with jitter and noise, and compare them with the semi-analytic BER and the bathtub.</p></li>
+<li><p>Build a behavioral half-rate bang-bang PI-CDR and watch it track a frequency offset.</p></li>
+</ul>
+</div>
+<p>Every lab has the same shape: a goal, the few lines of code that matter, the figure and numbers you should get, and questions that push past the script. The figures here are drawn by <code>figsrc/ch16_labN.py</code> with exactly the computations of the labs, so your printed numbers must match to the last digit; each lab also writes its own PNGs.</p>
+<h2 id="sec:lab0"><span class="secnum">16.1</span>Lab 0: set-up</h2>
+<h5 id="goal">Goal</h5>
+<p>A working serdespy environment, and a map of the labs.</p>
+<div class="sourceCode" id="cb1" data-language="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> <span class="at">-m</span> venv ~/serdes-venv           <span class="co"># tested with Python 3.13</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="bu">source</span> ~/serdes-venv/bin/activate</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install serdespy                     <span class="co"># pulls numpy, scipy, matplotlib, scikit-rf</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> tutorial/code</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> lab1_channel.py                   <span class="co"># PNGs appear in this folder</span></span></code></pre></div>
+<p>serdespy 1.0 still uses <code>np.complex_</code>, which NumPy 2 removed; <code>common.py</code>, imported by every lab, restores it with <code>np.complex_ = np.complex128</code> before serdespy is imported. It also defines the simulation grid (64 samples per UI, <span class="math inline">\(\Delta t=3.125\)</span> ps, 0–160 GHz in 10 MHz steps) and the shared functions: <code>channel()</code> for REF, <code>ctle()</code>, <code>impulse()</code>, <code>pulse()</code>, <code>tx_wave()</code>, <code>through()</code>, the eye measurement <code>eye_scan()</code> (serdespy has none) and the Gaussian BER estimate <code>ber_q()</code>. <a href="#tab:ch16-labs">Table 16.1</a> maps the labs to the chapters.</p>
+<div id="tab:ch16-labs">
+
+</div>
+<div class="tabularx">
+<p><span>@c l L l r@</span> <strong>Lab</strong> &amp; <strong>Script</strong> &amp; <strong>What it shows (key number)</strong> &amp; <strong>Theory</strong> &amp; <strong>Time</strong><br />
+&amp; <code>lab1_channel.py</code> &amp; REF <span class="math inline">\(S_{21}\)</span>, <span class="math inline">\(h(t)\)</span>, <span class="math inline">\(p(t)\)</span>, cursors (<span class="math inline">\(-17.38\)</span> dB; PDA <span class="math inline">\(-0.161\)</span> V) &amp; Sections <a href="{% endraw %}{{ '/chapters/02-signals-systems-and-the-language-of-links/' | relative_url }}{% raw %}#sec:pulse-response">2.4</a> and <a href="{% endraw %}{{ '/chapters/03-the-channel/' | relative_url }}{% raw %}#sec:refchannel">3.7</a> &amp; 3 s<br />
+2 &amp; <code>lab2_prbs_eye.py</code> &amp; PRBS7 eye before and after REF (<span class="math inline">\(-77.8\)</span> mV) &amp; <a href="{% endraw %}{{ '/chapters/02-signals-systems-and-the-language-of-links/' | relative_url }}{% raw %}#sec:eye">Section 2.6</a> &amp; 2 s<br />
+3 &amp; <code>lab3_tx_ffe.py</code> &amp; zero-forcing TX FFE (2-tap 162.7 mV, 3-tap 144.8 mV) &amp; <a href="{% endraw %}{{ '/chapters/06-transmit-ffe/' | relative_url }}{% raw %}">Chapter 6</a> &amp; 3 s<br />
+4 &amp; <code>lab4_ctle.py</code> &amp; CTLE peaking sweep (113.3 mV at 14 dB) &amp; <a href="{% endraw %}{{ '/chapters/07-continuous-time-linear-equalizer/' | relative_url }}{% raw %}">Chapter 7</a> &amp; 4 s<br />
+5 &amp; <code>lab5_dfe.py</code> &amp; DFE taps and BER (<span class="math inline">\(3.2\times10^{-14}\)</span> at 10 mV) &amp; <a href="{% endraw %}{{ '/chapters/08-decision-feedback-equalization-and-adaptation/' | relative_url }}{% raw %}#ch:dfe">Chapter 8</a> &amp; 3 s<br />
+6 &amp; <code>lab6_jitter_ber.py</code> &amp; counted vs. estimated BER, bathtub (0.45 UI) &amp; <a href="{% endraw %}{{ '/chapters/11-jitter/' | relative_url }}{% raw %}">Chapter 11</a> &amp; 21 s<br />
+7 &amp; <code>lab7_bbcdr.py</code> &amp; bang-bang PI-CDR (lock in 0.13 s, 0 errors) &amp; <a href="{% endraw %}{{ '/chapters/13-clock-and-data-recovery/' | relative_url }}{% raw %}">Chapter 13</a> &amp; 7 s<br />
+</p>
+</div>
+<div class="tbox tbox-pitfall">
+<div class="tbox-title">
+<p>serdespy quirks that cost an afternoon each</p>
+</div>
+<ul>
+<li><p><code>sdp.Transmitter(data, levels, f)</code>: <code>f</code> is the <em>Nyquist</em> frequency (pass 2.5e9 for 5 Gb/s), whatever the docstring says.</p></li>
+<li><p>Call <code>Transmitter.FIR()</code> before <code>oversample()</code>, with taps <code>[pre, main, post]</code> or <code>[main, post]</code>.</p></li>
+<li><p><code>sdp.channel_coefficients()</code> always plots, at 1200 dpi by default: pass <code>res=150</code>.</p></li>
+<li><p><code>sdp.forcing_ffe()</code> sets the main tap to 1: rescale to <span class="math inline">\(\sum\lvert c_k\rvert=1\)</span> yourself.</p></li>
+<li><p><code>Receiver.noise()</code> discards any FFE or DFE already applied: add noise first, then equalize. Use <code>Receiver.FFE()</code>, not <code>FFE_BR()</code>, which misaligns the data.</p></li>
+<li><p>serdespy has no CDR and no MLSE, whatever the README lists; Lab 7 builds the CDR.</p></li>
+</ul>
+</div>
+<h2 id="sec:lab1"><span class="secnum">16.2</span>Lab 1: the channel</h2>
+<h5 id="goal-1">Goal</h5>
+<p>Build REF from serdespy’s ABCD-matrix functions, plot <span class="math inline">\(\lvert S_{21}\rvert\)</span>, and turn it into the impulse response, the pulse response and its cursors (Sections <a href="{% endraw %}{{ '/chapters/02-signals-systems-and-the-language-of-links/' | relative_url }}{% raw %}#sec:pulse-response">2.4</a> and <a href="{% endraw %}{{ '/chapters/03-the-channel/' | relative_url }}{% raw %}#sec:refchannel">3.7</a>).</p>
+<div class="sourceCode" id="cb2" data-language="Python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> common <span class="im">import</span> <span class="op">*</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>H <span class="op">=</span> channel()                                  <span class="co"># complex S21 on the grid F</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>h, t <span class="op">=</span> impulse(H)                              <span class="co"># h is per-sample: sum(h) = H(0)</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>p <span class="op">=</span> pulse(h)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>n_pre, n_post <span class="op">=</span> <span class="dv">2</span>, <span class="dv">10</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>cur <span class="op">=</span> sdp.channel_coefficients(p, t, SPS, n_pre, n_post, res<span class="op">=</span><span class="dv">150</span>,</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>                               title<span class="op">=</span><span class="st">&quot;Pulse response and cursors&quot;</span>)</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>isi <span class="op">=</span> np.<span class="bu">sum</span>(np.<span class="bu">abs</span>(cur)) <span class="op">-</span> cur[n_pre]</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;Peak-distortion eye (1 V swing, </span><span class="sc">{</span>n_pre<span class="sc">}</span><span class="ss">+</span><span class="sc">{</span>n_post<span class="sc">}</span><span class="ss"> cursors) = &quot;</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>      <span class="ss">f&quot;</span><span class="sc">{</span>cur[n_pre] <span class="op">-</span> isi<span class="sc">:+.4f}</span><span class="ss"> V  (negative = closed)&quot;</span>)</span></code></pre></div>
+<h5 id="what-you-should-see">What you should see</h5>
+<p><a href="#fig:ch16-lab1">Figure 16.1</a>. The loss is <span class="math inline">\(-0.59\)</span> dB at DC, <span class="math inline">\(-10.40\)</span> dB at 1.25 GHz, <strong><span class="math inline">\(-17.38\)</span> dB at 2.5 GHz</strong> and <span class="math inline">\(-30.07\)</span> dB at 5 GHz. The cursors are <span class="math inline">\(p_{-1}=0.0486\)</span>, <span class="math inline">\(p_0=0.3396\)</span>, <span class="math inline">\(p_1=0.1817\)</span>, <span class="math inline">\(p_2=0.0909\)</span>, <span class="math inline">\(p_3=0.0537\)</span> V, with <span class="math inline">\(p_1/p_0=0.535\)</span>. The ISI magnitudes add to 0.5008 V, more than the main cursor, so the peak-distortion eye is <strong><span class="math inline">\(-0.161\)</span> V</strong>: closed.</p>
+<div id="fig:ch16-lab1">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch16_lab1.svg' | relative_url }}{% raw %}" style="width:753px" alt="Lab 1: a third of the pulse arrives in its own UI, and the tail outweighs it." loading="lazy" />
+<figcaption><span class="capnum">Figure 16.1.</span> <strong>Lab 1: a third of the pulse arrives in its own UI, and the tail outweighs it.</strong> (a) <span class="math inline">\(\lvert S_{21}\rvert\)</span> of REF; the dot is the 2.5 GHz Nyquist loss. (b) The 1-UI, 1 V pulse response (pale) and its cursors at 1 UI spacing from the peak: pre-cursor red, main gold, post-cursors blue.</figcaption>
+</figure>
+<h5 id="questions-and-extensions">Questions and extensions</h5>
+<p>(1) Call <code>channel(LOSS_FAMILY[10])</code> and <code>channel(LOSS_FAMILY[25])</code> (0.572 and 1.441 m). How do <span class="math inline">\(p_1/p_0\)</span> and the PDA eye change with loss? (2) Set <code>c_pad=1e-12</code>. Where in the tail do the pad reflections appear, and why can a short DFE not cancel them?</p>
+<h2 id="sec:lab2"><span class="secnum">16.3</span>Lab 2: a PRBS eye through the channel</h2>
+<h5 id="goal-2">Goal</h5>
+<p>Send PRBS7 NRZ through REF and measure the eye at both ends (Sections <a href="{% endraw %}{{ '/chapters/02-signals-systems-and-the-language-of-links/' | relative_url }}{% raw %}#sec:prbs">2.2</a> and <a href="{% endraw %}{{ '/chapters/02-signals-systems-and-the-language-of-links/' | relative_url }}{% raw %}#sec:eye">2.6</a>).</p>
+<div class="sourceCode" id="cb3" data-language="Python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>prbs <span class="op">=</span> sdp.prbs7(<span class="dv">1</span>)                       <span class="co"># one period: 127 bits, seed = 1</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>bits <span class="op">=</span> np.tile(prbs, <span class="dv">40</span>)                  <span class="co"># 5080 bits = 1.016 us of data</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>tx <span class="op">=</span> sdp.Transmitter(bits, LEVELS, F_NYQ)  <span class="co"># NB: 3rd argument = Nyquist frequency</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>tx.oversample(SPS)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> tx.signal_ideal</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>H <span class="op">=</span> channel()</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>h, t <span class="op">=</span> impulse(H)</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>y <span class="op">=</span> through(x, h)</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>hts_tx, ph_tx, _, _ <span class="op">=</span> report_eye(<span class="st">&quot;TX output&quot;</span>, x, bits)</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>hts_rx, ph_rx, S, A <span class="op">=</span> report_eye(<span class="st">&quot;Channel output&quot;</span>, y, bits)</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>save_eye(y, ph_rx, <span class="st">&quot;Eye after 1 m channel (17.4 dB @ 2.5 GHz)&quot;</span>, <span class="st">&quot;lab2_eye_rx.png&quot;</span>)</span></code></pre></div>
+<h5 id="what-you-should-see-1">What you should see</h5>
+<p><a href="#fig:ch16-lab2">Figure 16.2</a>. The TX eye is 1000 mV and 1.00 UI. After REF the eye is <strong><span class="math inline">\(-77.8\)</span> mV</strong> and 0 UI wide: closed at every phase. The mean levels are <span class="math inline">\(+169.8\)</span> and <span class="math inline">\(-165.3\)</span> mV, at a best phase of 6/64 UI, and the channel delay is 6.722 ns.</p>
+<div id="fig:ch16-lab2">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch16_lab2.svg' | relative_url }}{% raw %}" style="width:753px" alt="Lab 2: the levels survive, the eye does not." loading="lazy" />
+<figcaption><span class="capnum">Figure 16.2.</span> <strong>Lab 2: the levels survive, the eye does not.</strong> (a) 40 bits of PRBS7 at the TX (amber) and after REF with the 6.7 ns delay removed (blue): single bits barely cross zero. (b) Density eye at the channel output, centerd on the best phase: the inner eye is closed by 77.8 mV.</figcaption>
+</figure>
+<h5 id="questions-and-extensions-1">Questions and extensions</h5>
+<p>(1) Repeat with <code>sdp.prbs13(1)</code> (tile it 2 times). <a href="{% endraw %}{{ '/chapters/04-link-budgets-and-statistical-analysis/' | relative_url }}{% raw %}#sec:pda">Section 4.2</a> quotes <span class="math inline">\(-181\)</span> mV: why is PRBS7 optimistic? (2) Count the longest run of identical bits in PRBS7 and in PRBS13. Which cursor sum does each run length expose?</p>
+<h2 id="sec:lab3"><span class="secnum">16.4</span>Lab 3: TX FFE</h2>
+<h5 id="goal-3">Goal</h5>
+<p>Compute zero-forcing 2-tap and 3-tap TX FFEs from the cursors, impose the peak-swing constraint, and measure the eyes (<a href="{% endraw %}{{ '/chapters/06-transmit-ffe/' | relative_url }}{% raw %}">Chapter 6</a>).</p>
+<div class="sourceCode" id="cb4" data-language="Python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>cur <span class="op">=</span> sdp.channel_coefficients(p, t, SPS, <span class="dv">1</span>, <span class="dv">1</span>, res<span class="op">=</span><span class="dv">150</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>c3 <span class="op">=</span> sdp.forcing_ffe(<span class="dv">1</span>, cur)              <span class="co"># [c-1, c0, c+1], c0 = 1</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>c3 <span class="op">=</span> c3 <span class="op">/</span> np.<span class="bu">sum</span>(np.<span class="bu">abs</span>(c3))              <span class="co"># peak-swing constraint sum|c| = 1</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>c2 <span class="op">=</span> sdp.forcing_ffe(<span class="dv">0</span>, cur[<span class="dv">1</span>:])          <span class="co"># [c0, c+1]: classic de-emphasis</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>c2 <span class="op">=</span> c2 <span class="op">/</span> np.<span class="bu">sum</span>(np.<span class="bu">abs</span>(c2))</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co"># ...</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>bits <span class="op">=</span> np.tile(sdp.prbs7(<span class="dv">1</span>), <span class="dv">40</span>)</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> name, c, png <span class="kw">in</span> ((<span class="va">None</span>, <span class="va">None</span>, <span class="va">None</span>), (<span class="st">&quot;2-tap&quot;</span>, c2, <span class="va">None</span>),</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>                     (<span class="st">&quot;3-tap&quot;</span>, c3, <span class="st">&quot;lab3_eye_ffe3.png&quot;</span>)):</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    y <span class="op">=</span> through(tx_wave(bits, fir<span class="op">=</span>c), h)</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    hts, ph, S, A <span class="op">=</span> report_eye(<span class="ss">f&quot;Channel + </span><span class="sc">{</span>name <span class="kw">or</span> <span class="st">&#39;no&#39;</span><span class="sc">}</span><span class="ss"> FFE&quot;</span>, y, bits)</span></code></pre></div>
+<h5 id="what-you-should-see-2">What you should see</h5>
+<p><a href="#fig:ch16-lab3">Figure 16.3</a>. The 3-tap taps are <span class="math inline">\([-0.0853, 0.5959, -0.3188]\)</span> (DC gain 0.192, 14.34 dB of Nyquist boost), the 2-tap taps <span class="math inline">\([0.6515, -0.3485]\)</span> (10.37 dB). The main cursor drops from 0.3396 to 0.1749 V, the price of equalizing at the TX. The eyes are <strong>162.7 mV, 0.89 UI with 2 taps</strong> and <strong>144.8 mV, 0.83 UI with 3 taps</strong>.</p>
+<div id="fig:ch16-lab3">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch16_lab3.svg' | relative_url }}{% raw %}" style="width:753px" alt="Lab 3: zero-forcing flattens the channel to Nyquist, but the pre-tap costs more than it gives." loading="lazy" />
+<figcaption><span class="capnum">Figure 16.3.</span> <strong>Lab 3: zero-forcing flattens the channel to Nyquist, but the pre-tap costs more than it gives.</strong> (a) REF (blue), the 3-tap FFE (amber, 0 dB at Nyquist and <span class="math inline">\(-14.3\)</span> dB at DC) and their product (teal), flat to about 2.5 GHz. (b), (c) PRBS7 eyes with the 2-tap and the 3-tap FFE.</figcaption>
+</figure>
+<h5 id="questions-and-extensions-2">Questions and extensions</h5>
+<p>(1) Zero-forcing does not maximize the eye. Hold <span class="math inline">\(c_1\)</span> and sweep <span class="math inline">\(c_{-1}\)</span> from 0 to <span class="math inline">\(-0.1\)</span>, renormalizing each time: where is the best eye, and why does the pre-tap lose under <span class="math inline">\(\sum\lvert c_k\rvert=1\)</span>? (2) Quantize the taps to multiples of 1/32 (the 5-bit driver of <a href="{% endraw %}{{ '/chapters/09-the-transmitter/' | relative_url }}{% raw %}#sec:ffe-impl">Section 9.5</a>). How much eye is lost?</p>
+<h2 id="sec:lab4"><span class="secnum">16.5</span>Lab 4: CTLE</h2>
+<h5 id="goal-4">Goal</h5>
+<p>Sweep the peaking of a one-zero, two-pole CTLE, find the best eye, and translate it into a degenerated differential pair (<a href="{% endraw %}{{ '/chapters/07-continuous-time-linear-equalizer/' | relative_url }}{% raw %}#sec:ctle-degen">Section 7.2</a>).</p>
+<div class="sourceCode" id="cb5" data-language="Python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>FP1, FP2 <span class="op">=</span> <span class="fl">2.5e9</span>, <span class="fl">10e9</span>                    <span class="co"># pole 1 at Nyquist, output pole 10 GHz</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>H <span class="op">=</span> channel()</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>bits <span class="op">=</span> np.tile(sdp.prbs7(<span class="dv">1</span>), <span class="dv">40</span>)</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> tx_wave(bits)</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>peaks, eh, ew <span class="op">=</span> np.arange(<span class="dv">0</span>, <span class="dv">21</span>, <span class="dv">2</span>), [], []</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> pk <span class="kw">in</span> peaks:</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    h_link, t <span class="op">=</span> impulse(H <span class="op">*</span> ctle(pk, FP1, FP2))   <span class="co"># channel x CTLE</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    hts, ph, S, A <span class="op">=</span> eye_scan(through(x, h_link), bits)</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    eh.append(hts[ph])<span class="op">;</span> ew.append(np.<span class="bu">sum</span>(hts <span class="op">&gt;</span> <span class="dv">0</span>) <span class="op">/</span> SPS)</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>best <span class="op">=</span> peaks[<span class="bu">int</span>(np.argmax(eh))]</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="co"># ...</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>gm, a <span class="op">=</span> <span class="fl">20e-3</span>, <span class="dv">10</span><span class="op">**</span>(best <span class="op">/</span> <span class="dv">20</span>)            <span class="co"># example: gm = 20 mS per side</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>RS <span class="op">=</span> <span class="dv">2</span> <span class="op">*</span> (a <span class="op">-</span> <span class="dv">1</span>) <span class="op">/</span> gm                     <span class="co"># A = 1 + gm*RS/2</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>CS <span class="op">=</span> <span class="dv">1</span> <span class="op">/</span> (RS <span class="op">*</span> <span class="dv">2</span> <span class="op">*</span> np.pi <span class="op">*</span> FP1 <span class="op">/</span> a)       <span class="co"># wz = 1/(RS*CS)</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>RD, CL <span class="op">=</span> <span class="dv">1</span> <span class="op">/</span> gm, <span class="dv">1</span> <span class="op">/</span> (<span class="dv">2</span> <span class="op">*</span> np.pi <span class="op">*</span> FP2 <span class="op">/</span> gm)   <span class="co"># gm*RD = 1, wp2 = 1/(RD*CL)</span></span></code></pre></div>
+<h5 id="what-you-should-see-3">What you should see</h5>
+<p><a href="#fig:ch16-lab4">Figure 16.4</a>. The eye opens at 6 dB (31.6 mV), reaches 104.0 mV at 12 dB, peaks at <strong>113.3 mV, 0.94 UI at 14 dB</strong> and falls again beyond. With 14 dB nominal, the real peak-to-DC gain is only 12.11 dB because the second pole eats some of it; the CTLE is <span class="math inline">\(-14.00\)</span> dB at DC and <span class="math inline">\(-3.10\)</span> dB at Nyquist. The circuit values are <span class="math inline">\(R_S=401\,\Omega\)</span>, <span class="math inline">\(C_S=0.795\)</span> pF, <span class="math inline">\(R_D=50\,\Omega\)</span> and <span class="math inline">\(C_\mathrm{L}=318\)</span> fF.</p>
+<div id="fig:ch16-lab4">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch16_lab4.svg' | relative_url }}{% raw %}" style="width:753px" alt="Lab 4: more peaking opens the eye until the CTLE starts making ISI of its own." loading="lazy" />
+<figcaption><span class="capnum">Figure 16.4.</span> <strong>Lab 4: more peaking opens the eye until the CTLE starts making ISI of its own.</strong> (a) CTLE responses for 4, 8 and 14 dB, all 0 dB at high frequency. (b) Eye height against peaking; the shaded band is the 0–12 dB range of the Open-SERDES CTLE. (c) The eye at the 14 dB optimum.</figcaption>
+</figure>
+<h5 id="questions-and-extensions-3">Questions and extensions</h5>
+<p>(1) The optimum lies outside the Open-SERDES range. What does the DFE of Lab 5 do with the 8 dB eye that the CTLE alone cannot? (2) Move <code>FP2</code> to 6 GHz and re-sweep; compare with <a href="{% endraw %}{{ '/chapters/15-design-and-verification-flow-with-open-tools/' | relative_url }}{% raw %}#we:ch15-pole">Worked Example 15.1</a>.</p>
+<h2 id="sec:lab5"><span class="secnum">16.6</span>Lab 5: DFE</h2>
+<h5 id="goal-5">Goal</h5>
+<p>Take the post-cursors left by a moderate 8 dB CTLE as DFE taps, measure the eye against the number of taps, and estimate the BER (<a href="{% endraw %}{{ '/chapters/08-decision-feedback-equalization-and-adaptation/' | relative_url }}{% raw %}#ch:dfe">Chapter 8</a>).</p>
+<div class="sourceCode" id="cb6" data-language="Python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>PEAK <span class="op">=</span> <span class="dv">8</span>                                   <span class="co"># CTLE peaking [dB] (lab 4 model)</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>h_link, t <span class="op">=</span> impulse(H <span class="op">*</span> ctle(PEAK))        <span class="co"># channel x CTLE</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>y <span class="op">=</span> through(tx_wave(bits), h_link)         <span class="co"># CTLE output waveform</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>cur <span class="op">=</span> sdp.channel_coefficients(pulse(h_link), t, SPS, <span class="dv">1</span>, <span class="dv">8</span>, res<span class="op">=</span><span class="dv">150</span>)</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>h_pre, h0, post <span class="op">=</span> cur[<span class="dv">0</span>], cur[<span class="dv">1</span>], cur[<span class="dv">2</span>:]</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> n <span class="kw">in</span> (<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">4</span>, <span class="dv">5</span>, <span class="dv">8</span>):</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    rx <span class="op">=</span> sdp.Receiver(y, SPS, F_NYQ, LEVELS, shift<span class="op">=</span><span class="va">True</span>)  <span class="co"># centre eye at 0</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> n:</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>        rx.nrz_DFE(post[:n])</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>    report_eye(<span class="ss">f&quot;CTLE </span><span class="sc">{</span>PEAK<span class="sc">}</span><span class="ss"> dB + </span><span class="sc">{</span>n<span class="sc">}</span><span class="ss">-tap DFE&quot;</span>, rx.signal, bits)</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a><span class="co"># ... final design: 3 taps, then ber_q(S[ph], A[ph], sigma) for 5..20 mV</span></span></code></pre></div>
+<h5 id="what-you-should-see-4">What you should see</h5>
+<p><a href="#fig:ch16-lab5">Figure 16.5</a>. With the 8 dB CTLE, <span class="math inline">\(p_{-1}=0.0138\)</span>, <span class="math inline">\(p_0=0.1832\)</span> and <span class="math inline">\(p_1\)</span>–<span class="math inline">\(p_3\)</span> = 0.0552, 0.0235, 0.0160 V. The eye grows from 60.0 mV with no DFE to 110.7, 129.5 and <strong>143.0 mV</strong> with 1, 2 and 3 taps, then saturates near 155 mV. With 3 taps the feedback is <span class="math inline">\(\pm27.6\)</span>, <span class="math inline">\(\pm11.8\)</span> and <span class="math inline">\(\pm8.0\)</span> mV, and the estimated BER is <span class="math inline">\(5.9\times10^{-46}\)</span>, <strong><span class="math inline">\(3.2\times10^{-14}\)</span></strong>, <span class="math inline">\(6.0\times10^{-8}\)</span> and <span class="math inline">\(1.8\times10^{-5}\)</span> at <span class="math inline">\(\sigma\)</span> = 5, 10, 15 and 20 mV. A noise-free run through <code>sdp.prbs_checker</code> gives 0 errors in 5024 bits. The lab uses 3 taps; the chip has 2, which gives 129.5 mV here.</p>
+<div id="fig:ch16-lab5">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch16_lab5.svg' | relative_url }}{% raw %}" style="width:753px" alt="Lab 5: the first DFE tap is worth more than the next five together." loading="lazy" />
+<figcaption><span class="capnum">Figure 16.5.</span> <strong>Lab 5: the first DFE tap is worth more than the next five together.</strong> (a) Eye height against the number of DFE taps after an 8 dB CTLE; teal is the Open-SERDES choice, gold the lab’s. (b), (c) The eye before and after a 3-tap DFE. The steps at <span class="math inline">\(\pm0.5\)</span> UI in (c) are an artifact of serdespy’s per-UI feedback; only the sampling instant is meaningful.</figcaption>
+</figure>
+<h5 id="questions-and-extensions-4">Questions and extensions</h5>
+<p>(1) Reproduce the Open-SERDES operating point of <a href="{% endraw %}{{ '/chapters/08-decision-feedback-equalization-and-adaptation/' | relative_url }}{% raw %}#sec:eq-partition">Section 8.5</a>: TX taps <span class="math inline">\([0.75, -0.25]\)</span> (<span class="math inline">\(-6\)</span> dB), a 0 dB CTLE and 2 DFE taps. You should get 171.8 mV. (2) The worst-case <span class="math inline">\(Q\)</span> at 10 mV is <span class="math inline">\(143.0/2/10=7.15\)</span>, yet the BER is <span class="math inline">\(3.2\times10^{-14}\)</span>, not <span class="math inline">\(Q(7.15)\)</span>. Why is <code>ber_q</code> more optimistic than the worst case?</p>
+<h2 id="sec:lab6"><span class="secnum">16.7</span>Lab 6: jitter, noise and BER</h2>
+<h5 id="goal-6">Goal</h5>
+<p>Add 5 ps rms TX random jitter and RX noise to the Lab 5 link, count real bit errors, and compare them with the estimate and the bathtub (<a href="{% endraw %}{{ '/chapters/11-jitter/' | relative_url }}{% raw %}#sec:dualdirac">Section 11.3</a>).</p>
+<div class="sourceCode" id="cb7" data-language="Python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>np.random.seed(<span class="dv">2026</span>)                       <span class="co"># repeatable jitter and noise</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>PEAK, N_TAPS, RJ_UI <span class="op">=</span> <span class="dv">8</span>, <span class="dv">3</span>, <span class="fl">0.025</span>          <span class="co"># RJ = 2.5 % UI = 5 ps rms</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>bits <span class="op">=</span> np.tile(sdp.prbs7(<span class="dv">1</span>), <span class="dv">800</span>)          <span class="co"># 101 600 bits</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>y <span class="op">=</span> through(tx_wave(bits, jitter_ui<span class="op">=</span>RJ_UI), h_link)   <span class="co"># TX RJ -&gt; channel -&gt; CTLE</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>rx <span class="op">=</span> sdp.Receiver(y, SPS, F_NYQ, LEVELS, shift<span class="op">=</span><span class="va">True</span>)  <span class="co"># sampling phase -&gt; index 0</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>rx.nrz_DFE(taps)</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>hts, ph, S, A <span class="op">=</span> report_eye(<span class="st">&quot;With 5 ps TX RJ, no noise&quot;</span>, rx.signal, bits)</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> sigma <span class="kw">in</span> (<span class="fl">10e-3</span>, <span class="fl">15e-3</span>, <span class="fl">20e-3</span>, <span class="fl">25e-3</span>):</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>    rx.noise(sigma)                        <span class="co"># resets to pre-DFE signal + AWGN</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>    rx.nrz_DFE(taps)                       <span class="co"># real decisions: error propagation</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>    d <span class="op">=</span> sdp.nrz_a2d(rx.signal, SPS, <span class="fl">0.0</span>)[skip:<span class="op">-</span><span class="dv">5</span>]</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>    n_err <span class="op">=</span> sdp.prbs_checker(<span class="dv">7</span>, sdp.prbs7(<span class="dv">1</span>), d)[<span class="dv">0</span>]</span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>    est <span class="op">=</span> ber_q(S[<span class="dv">0</span>], A[<span class="dv">0</span>], sigma)</span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a><span class="co"># ... bathtub: ber_q(S[o % SPS], A[o % SPS], sigma) at every phase offset o</span></span></code></pre></div>
+<h5 id="what-you-should-see-5">What you should see</h5>
+<p><a href="#fig:ch16-lab6">Figure 16.6</a>. With jitter but no noise the eye is 115.6 mV and 0.73 UI. Counting over 101 544 bits:</p>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;"><span class="math inline">\(\sigma\)</span> (mV)</th>
+<th style="text-align: center;">10</th>
+<th style="text-align: center;">15</th>
+<th style="text-align: center;">20</th>
+<th style="text-align: center;">25</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">errors counted</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">6</td>
+<td style="text-align: center;">43</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">counted BER</td>
+<td style="text-align: center;"><span class="math inline">\(&lt;3\times10^{-5}\)</span></td>
+<td style="text-align: center;"><span class="math inline">\(9.9\times10^{-6}\)</span></td>
+<td style="text-align: center;"><span class="math inline">\(5.9\times10^{-5}\)</span></td>
+<td style="text-align: center;"><span class="math inline">\(4.2\times10^{-4}\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">estimated BER</td>
+<td style="text-align: center;"><span class="math inline">\(1.4\times10^{-12}\)</span></td>
+<td style="text-align: center;"><span class="math inline">\(1.4\times10^{-7}\)</span></td>
+<td style="text-align: center;"><span class="math inline">\(2.4\times10^{-5}\)</span></td>
+<td style="text-align: center;"><span class="math inline">\(3.9\times10^{-4}\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>At 25 mV count and estimate agree within 10 %; the single 15 mV error is a true rare event (a 63.6 mV margin hit by <span class="math inline">\(4.25\sigma\)</span> of noise). With <span class="math inline">\(\sigma=5\)</span> mV the bathtub is open <strong>0.45 UI at <span class="math inline">\(10^{-12}\)</span></strong> (0.66 UI at <span class="math inline">\(10^{-5}\)</span>); at 20 mV it never reaches <span class="math inline">\(10^{-5}\)</span>, and the counted points fall on the estimate.</p>
+<div id="fig:ch16-lab6">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch16_lab6.svg' | relative_url }}{% raw %}" style="width:753px" alt="Lab 6: counted errors confirm the estimate where counting is possible; the estimate takes over below 10^{-5}." loading="lazy" />
+<figcaption><span class="capnum">Figure 16.6.</span> <strong>Lab 6: counted errors confirm the estimate where counting is possible; the estimate takes over below <span class="math inline">\(10^{-5}\)</span>.</strong> (a) Bathtubs from <code>ber_q</code> for 5 and 20 mV of noise, with error counts at 20 mV (dots) at offsets up to <span class="math inline">\(\pm0.375\)</span> UI. (b) BER at the eye center against noise. The open triangle at 10 mV is the 95 % bound <span class="math inline">\(3/N\)</span> of <a href="{% endraw %}{{ '/chapters/15-design-and-verification-flow-with-open-tools/' | relative_url }}{% raw %}#eq:ch15-bits">Equation (15.4)</a> for zero errors in <span class="math inline">\(N\)</span> bits.</figcaption>
+</figure>
+<h5 id="questions-and-extensions-5">Questions and extensions</h5>
+<p>(1) How many bits would you have to simulate to see one error at <span class="math inline">\(\sigma=10\)</span> mV? How long would that take? (2) Raise the RJ to 6 ps rms (<code>RJ_UI = 0.03</code>). How much does the <span class="math inline">\(10^{-12}\)</span> opening at 5 mV shrink? Compare with the 14<span class="math inline">\(\sigma\)</span> rule of <a href="{% endraw %}{{ '/chapters/11-jitter/' | relative_url }}{% raw %}#eq:tj">Equation (11.3)</a>.</p>
+<h2 id="sec:lab7"><span class="secnum">16.8</span>Lab 7: a bang-bang PI-CDR</h2>
+<h5 id="goal-7">Goal</h5>
+<p>serdespy has no CDR, so <code>lab7_bbcdr.py</code> builds one on the Lab 4 link (REF + 14 dB CTLE, 5 ps RJ, 5 mV noise): a half-rate Alexander detector, a P+I loop filter at 625 MHz and a 64-step PI, with the RX clock 200 ppm fast and starting 74 ps off the eye center, as in <a href="{% endraw %}{{ '/chapters/13-clock-and-data-recovery/' | relative_url }}{% raw %}#fig:ch13-sim">Figure 13.9</a>. It samples the real waveform where the PI says: per UI one data sample D and one edge sample E half a UI earlier, as the four half-rate samplers deliver. A transition with <span class="math inline">\(E\)</span> equal to the previous <span class="math inline">\(D\)</span> means the clock is early (the loop body below is excerpted; the script also counts errors and has a fixed-clock mode).</p>
+<div class="sourceCode" id="cb8" data-language="Python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> k <span class="kw">in</span> <span class="bu">range</span>(n_upd):</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    n <span class="op">=</span> k <span class="op">*</span> UPD <span class="op">+</span> np.arange(UPD)                      <span class="co"># RX bit indices of this update</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="co"># ... phi_d = data phase: phi0 + ppm offset + optional sinusoidal jitter</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    phi_c <span class="op">=</span> np.<span class="bu">round</span>(acc) <span class="op">*</span> LSB                       <span class="co"># PI phase (UI)</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    t_d <span class="op">=</span> t0 <span class="op">+</span> SPS <span class="op">*</span> (n <span class="op">-</span> phi_d <span class="op">+</span> phi_c)              <span class="co"># data-sampler instants</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    d <span class="op">=</span> sample(y, t_d) <span class="op">+</span> sigma <span class="op">*</span> rng.standard_normal(UPD) <span class="op">&gt;</span> <span class="dv">0</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    e <span class="op">=</span> sample(y, t_d <span class="op">-</span> SPS <span class="op">/</span> <span class="dv">2</span>) <span class="op">+</span> sigma <span class="op">*</span> rng.standard_normal(UPD) <span class="op">&gt;</span> <span class="dv">0</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    prev <span class="op">=</span> np.concatenate(([d[<span class="dv">0</span>] <span class="cf">if</span> d_prev <span class="kw">is</span> <span class="va">None</span> <span class="cf">else</span> d_prev], d[:<span class="op">-</span><span class="dv">1</span>]))</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    trans <span class="op">=</span> prev <span class="op">!=</span> d                                 <span class="co"># a transition before each bit</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    votes <span class="op">=</span> np.where(e <span class="op">==</span> prev, <span class="dv">1</span>, <span class="op">-</span><span class="dv">1</span>) <span class="op">*</span> trans        <span class="co"># +1: clock early -&gt; later</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>    pipe.append(np.sign(votes.<span class="bu">sum</span>()))                 <span class="co"># majority vote of the block</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>    v <span class="op">=</span> pipe.pop(<span class="dv">0</span>)                                   <span class="co"># ... seen d_lat updates later</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> cdr:</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>        freg <span class="op">+=</span> ki <span class="op">*</span> v                                <span class="co"># integral path (frequency)</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>        acc <span class="op">+=</span> kp <span class="op">*</span> v <span class="op">+</span> freg                          <span class="co"># proportional path + phase</span></span></code></pre></div>
+<h5 id="what-you-should-see-6">What you should see</h5>
+<p><a href="#fig:ch16-lab7">Figure 16.7</a>, with the baseline of <a href="{% endraw %}{{ '/chapters/13-clock-and-data-recovery/' | relative_url }}{% raw %}#sec:picdr">Section 13.6</a> (<span class="math inline">\(K_P\)</span> = 1/8 LSB, <span class="math inline">\(K_P/K_I\)</span> = 128, one update of extra latency). The loop locks in <strong>0.13 s</strong> (the phase-only model of <a href="{% endraw %}{{ '/chapters/13-clock-and-data-recovery/' | relative_url }}{% raw %}#fig:ch13-sim">Figure 13.9</a>, with a stricter lock test, reports 0.19 s); the integral register settles at 199 ppm against the true 200; the tracking error is <strong>2.57 ps rms</strong> and 17.3 ps peak-to-peak, around a static offset of <span class="math inline">\(-7.4\)</span> ps from the maximum-height eye center. There are <strong>0 bit errors</strong> in 59 680 bits with the CDR, against <strong>1372</strong> (BER <span class="math inline">\(2.3\times10^{-2}\)</span>) with a fixed clock, which slides across an eye edge once per microsecond. Raising <span class="math inline">\(K_P\)</span> to 1/2 and 1 LSB raises the wander to 5.13 and 9.90 ps rms (31.1 and 57.5 ps pp): the trade-off of <a href="{% endraw %}{{ '/chapters/13-clock-and-data-recovery/' | relative_url }}{% raw %}#we:ch13-step">Worked Example 13.2</a>.</p>
+<div id="fig:ch16-lab7">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch16_lab7.svg' | relative_url }}{% raw %}" style="width:753px" alt="Lab 7: the PI rotates continuously to follow a 200 ppm offset, and the errors stop." loading="lazy" />
+<figcaption><span class="capnum">Figure 16.7.</span> <strong>Lab 7: the PI rotates continuously to follow a 200 ppm offset, and the errors stop.</strong> (a) PI code (navy) over the code the data phase requires (gold); it wraps every 2.0 s. (b) Clock-minus-data phase: the 74 ps initial error is pulled in by 0.13 s, then the loop dithers around a <span class="math inline">\(-7.4\)</span> ps lock point. (c) Cumulative errors: fixed clock (red, one burst per UI of drift) and CDR (blue, none).</figcaption>
+</figure>
+<h5 id="questions-and-extensions-6">Questions and extensions</h5>
+<p>(1) Sweep <span class="math inline">\(K_P\)</span> from 1/16 to 1 LSB and the latency <code>d_lat</code> from 0 to 4. Plot the rms and peak-to-peak wander and compare with dither <span class="math inline">\(\approx2S\,T_\mathrm{lat}\)</span> (<a href="{% endraw %}{{ '/chapters/13-clock-and-data-recovery/' | relative_url }}{% raw %}#sec:bbcdr">Section 13.4</a>). (2) Set <code>ki=0</code> and raise <code>ppm</code> to 300, 450 and 550. Where does the proportional-only loop lose lock, and does it match the 488 ppm of <a href="{% endraw %}{{ '/chapters/13-clock-and-data-recovery/' | relative_url }}{% raw %}#sec:picdr">Section 13.6</a>? Watch the static phase offset grow with the frequency offset before it fails. (3) Add sinusoidal jitter with <code>sj_pp</code> and <code>sj_f</code>. Find the largest amplitude at 1 and 4.9 MHz with zero errors, and plot your JTOL points on <a href="{% endraw %}{{ '/chapters/13-clock-and-data-recovery/' | relative_url }}{% raw %}#fig:ch13-jtol">Figure 13.6</a>. Why does the loop lock 7 ps before the eye center?</p>
+<h2 id="sec:ch16-next"><span class="secnum">16.9</span>Where to go next</h2>
+<h5 id="build-the-gui-demo">Build the GUI demo</h5>
+<p>The proposal lists a GUI front-end for the link model among its deliverables, in the spirit of the Julia SerDes framework (JLSD) it cites. The labs are the engine: put sliders for loss, taps, peaking and noise in front of <code>channel()</code>, the FFE, <code>ctle()</code>, the DFE and <code>lab7_bbcdr.simulate()</code>, and redraw the eye and bathtub on every change. Cross-check the eyes against PyBERT [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-pybert">36</a>], a mature open link simulator with IBIS-AMI support.</p>
+<h5 id="use-a-measured-channel">Use a measured channel</h5>
+<p>Load the test board’s 4-port Touchstone file. <code>sdp.four_port_to_diff</code> assumes ports 1<span class="math inline">\(\to\)</span>2 and 3<span class="math inline">\(\to\)</span>4 and returns <span class="math inline">\(V_\mathrm{out}/V_s\)</span>, half of <span class="math inline">\(S_{21}\)</span> for a matched link; the data must start near DC (<strong>scikit-rf</strong> can extrapolate).</p>
+<div class="sourceCode" id="cb9" data-language="Python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> skrf <span class="im">as</span> rf</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>ntw <span class="op">=</span> rf.Network(<span class="st">&quot;board.s4p&quot;</span>)               <span class="co"># measured channel, ports 1-&gt;2, 3-&gt;4</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>Hd, fd, hd, td <span class="op">=</span> sdp.four_port_to_diff(ntw, <span class="va">None</span>, <span class="dv">50</span>, <span class="dv">50</span>, t_d<span class="op">=</span>DT)</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>h <span class="op">=</span> <span class="dv">2</span> <span class="op">*</span> hd                                  <span class="co"># S21-like: same scale as impulse(channel())</span></span></code></pre></div>
+<p>On a synthetic 4-port built from REF this returns exactly <span class="math inline">\(-17.38\)</span> dB and <span class="math inline">\(p_0=0.3396\)</span> V; Labs 2–7 then run unchanged. Next: crosstalk, adaptation with <code>sdp.lms_equalizer</code>, and the statistical eye of <a href="{% endraw %}{{ '/chapters/04-link-budgets-and-statistical-analysis/' | relative_url }}{% raw %}#sec:stateye">Section 4.3</a>.</p>
+<div class="tbox tbox-takeaways">
+<div class="tbox-title">
+<p>Key takeaways</p>
+</div>
+<ul>
+<li><p>serdespy 1.0 runs on NumPy 2 with one shim; remember its quirks: Nyquist frequency in <code>Transmitter</code>, FIR before oversampling, <code>res=150</code>, renormalized taps, noise before equalization.</p></li>
+<li><p>REF loses 17.38 dB at Nyquist; its PDA eye is <span class="math inline">\(-0.161\)</span> V and its PRBS7 eye <span class="math inline">\(-77.8\)</span> mV.</p></li>
+<li><p>Under the peak-swing constraint the 2-tap FFE (162.7 mV) beats the zero-forcing 3-tap (144.8 mV); a CTLE alone peaks at 113.3 mV at 14 dB; 8 dB plus a 2- or 3-tap DFE gives 129.5 or 143.0 mV.</p></li>
+<li><p>Counted errors confirm <code>ber_q</code> where counting is possible; below <span class="math inline">\(10^{-5}\)</span> only the estimate speaks.</p></li>
+<li><p>A bang-bang PI-CDR locks to 200 ppm in 0.13 s with 2.6 ps rms wander and no errors (a fixed clock: 1372).</p></li>
+</ul>
+</div>
+
+<nav class="prev-next" aria-label="Chapter navigation"><a class="pn-link prev" href="{% endraw %}{{ '/chapters/15-design-and-verification-flow-with-open-tools/' | relative_url }}{% raw %}"><small>← Previous</small>Design and Verification Flow with Open Tools</a><a class="pn-link next" href="{% endraw %}{{ '/appendices/a-formula-sheet/' | relative_url }}{% raw %}"><small>Next →</small>Formula Sheet</a></nav>
+<p class="page-source">Generated from <a href="https://github.com/bricd-org/serdes-tutorial/blob/main/book/tutorial/chapters/16_labs.tex">book/tutorial/chapters/16_labs.tex</a>. Figure, table and equation numbers match the <a href="{% endraw %}{{ '/assets/pdf/Open-SERDES_Tutorial.pdf' | relative_url }}{% raw %}">PDF edition</a>.</p>
+{% endraw %}

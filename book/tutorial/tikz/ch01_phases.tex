@@ -1,0 +1,15 @@
+% ch01_phases.tex -- the five project phases as chevrons
+\begin{tikzpicture}[x=1cm,y=1cm]
+\foreach \i/\t/\d/\c/\col in {
+  0/{Phase 0}/{Specs and\\feasibility}/{Ch.\,1, 4, 14}/gold,
+  1/{Phase 1}/{System model\\(serdespy)}/{Ch.\,2--8, 16}/bblue,
+  2/{Phase 2}/{Circuit design\\+ digital RTL}/{Ch.\,9--13}/navy,
+  3/{Phase 3}/{Layout, APR,\\extraction, EM}/{Ch.\,15}/slate,
+  4/{Phase 4}/{Sign-off, tape-out,\\lab test}/{Ch.\,15, 16}/golddk}{
+  \pgfmathsetmacro{\x}{\i*3.22}
+  \fill[\col] (\x,0) -- (\x+2.85,0) -- (\x+3.2,0.45) -- (\x+2.85,0.9) -- (\x,0.9) -- (\x+0.35,0.45) -- cycle;
+  \node[font=\sffamily\footnotesize\bfseries,text=white] at (\x+1.6,0.45) {\t};
+  \node[font=\sffamily\scriptsize,text=navy,align=center,anchor=north] at (\x+1.6,-0.08) {\d};
+  \node[font=\sffamily\scriptsize\itshape,text=muted,anchor=north] at (\x+1.6,-0.78) {\c};
+}
+\end{tikzpicture}

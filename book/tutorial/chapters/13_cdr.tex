@@ -1,0 +1,397 @@
+\tikzsetfigurename{13_cdr-}
+\chapter{Clock and Data Recovery}\label{ch:cdr}
+\chapterlead{The receiver has no clock wire: it must find the centre of every bit from the data itself, and keep finding it while the two crystals drift apart.}
+
+\begin{objectives}
+\begin{itemize}
+  \item Explain why a receiver needs a CDR and compare PLL-based, PI-based and oversampling architectures.
+  \item Analyze the Hogge (linear) and Alexander (bang-bang) phase detectors, including the half-rate version used by \OS{}.
+  \item Model a linear CDR and a bang-bang CDR: gain $K_\mathrm{BB}$, slewing bandwidth and dither.
+  \item Read a jitter-tolerance mask and size the loop to pass it.
+  \item Design the \OS{} phase-interpolator CDR: PI linearity, step size, frequency-offset range and a behavioural simulation.
+\end{itemize}
+\end{objectives}
+
+%% =====================================================================
+\section{Why the receiver needs a CDR}\label{sec:ch13-why}
+
+The TX and RX of a serial link run from different crystals, each accurate to about $\pm100$\,ppm. Their bit rates can differ by 200\,ppm, so the data phase drifts past a fixed RX clock by $2\times10^{-4}$\,UI every UI: one whole UI every 5000\,bits, or every microsecond at 5\,Gb/s. A fixed-phase sampler would walk out of the eye within half a microsecond, so the receiver must extract phase and frequency from the data transitions: \textbf{clock and data recovery} (CDR). Line coding or scrambling guarantees the transitions, and the CDR tracks slow jitter as a bonus (\cref{sec:ch11-jtran}).
+
+\Cref{fig:ch13-arch} shows the three common architectures. A \textbf{PLL-based CDR} has a VCO in the loop: lowest dither, but a VCO per lane and a frequency detector to pull in. A \textbf{PI-based dual-loop CDR} shares one clean PLL and rotates its phase per lane with a digitally controlled phase interpolator: synthesizable, free of false lock and robust over PVT, at the cost of quantization and latency. An \textbf{oversampling} CDR samples three times per UI and picks the best sample, with no loop but three times the samplers. \OS{} uses the PI dual loop because it reuses the team's PLL (\cref{ch:pll}).
+
+\begin{figure}[tbp]
+\centering
+\begin{subfigure}[b]{0.33\linewidth}\centering
+\begin{tikzpicture}[font=\sffamily\scriptsize,b/.style={blkb,minimum width=8mm,minimum height=6mm,font=\sffamily\scriptsize,inner sep=1.5pt}]
+  \node[text=navy] (d) at (-0.15,0) {D$_\mathrm{in}$};
+  \node[b] (pd) at (0.95,0) {PD}; \node[b] (lf) at (2.1,0) {LF}; \node[b] (vc) at (3.25,0) {VCO};
+  \node[b,fill=gtint,draw=golddk] (fd) at (2.1,-1.05) {FD};
+  \draw[sig] (d) -- (pd); \draw[sig] (pd) -- (lf); \draw[sig] (lf) -- (vc);
+  \draw[sig] (vc.east) -- (4.25,0) node[above,text=navy]{CK};
+  \draw[sig] (3.95,0) node[dot]{} |- (0.95,0.7) -- (pd.north);
+  \draw[sig] (3.95,0) |- (fd.east); \draw[sig] (fd.north) -- (lf.south);
+  \draw[sig] (0.6,-1.05) node[left,text=navy]{$f_\mathrm{ref}$} -- (fd.west);
+\end{tikzpicture}
+\caption{PLL-based}
+\end{subfigure}\hfill
+\begin{subfigure}[b]{0.34\linewidth}\centering
+\begin{tikzpicture}[font=\sffamily\scriptsize,b/.style={blkb,minimum width=8mm,minimum height=6mm,font=\sffamily\scriptsize,inner sep=1.5pt}]
+  \node[text=navy] (d) at (-0.15,0) {D$_\mathrm{in}$};
+  \node[b] (sa) at (0.95,0) {S}; \node[blkg,minimum width=8mm,minimum height=6mm,font=\sffamily\scriptsize,inner sep=1.5pt] (bb) at (2.15,0) {BBPD}; \node[blkg,minimum width=8mm,minimum height=6mm,font=\sffamily\scriptsize,inner sep=1.5pt] (dl) at (3.45,0) {DLF};
+  \node[b] (pl) at (0.95,1.15) {PLL}; \node[b] (pi) at (2.15,1.15) {PI};
+  \draw[sig] (d) -- (sa); \draw[sig] (sa) -- (bb); \draw[sig] (bb) -- (dl);
+  \draw[sig] (pl) -- node[above]{I/Q} (pi); \draw[sig] (dl.north) |- node[pos=0.3,right]{code} (pi.east);
+  \draw[clk] (pi.south) -- ++(0,-0.25) -| (sa.north);
+  \draw[sig] (-0.15,1.15) node[left,text=navy]{$f_\mathrm{ref}$} -- (pl);
+\end{tikzpicture}
+\caption{PI-based dual loop (\OS)}
+\end{subfigure}\hfill
+\begin{subfigure}[b]{0.3\linewidth}\centering
+\begin{tikzpicture}[font=\sffamily\scriptsize,b/.style={blkb,minimum width=8mm,minimum height=6mm,font=\sffamily\scriptsize,inner sep=1.5pt}]
+  \node[text=navy] (d) at (-0.15,0) {D$_\mathrm{in}$};
+  \node[b] (sa) at (1.0,0) {3$\times$S}; \node[blkg,minimum width=8mm,minimum height=6mm,font=\sffamily\scriptsize,inner sep=1.5pt] (pk) at (2.35,0) {pick};
+  \node[b] (pl) at (1.0,1.15) {PLL};
+  \draw[sig] (d) -- (sa); \draw[sig] (sa) -- (pk); \draw[sig] (pk) -- (3.35,0) node[above,text=navy]{data};
+  \draw[clk] (pl) -- node[right]{3 phases/UI} (sa);
+\end{tikzpicture}
+\caption{Oversampling}
+\end{subfigure}
+\caption{\textbf{Three ways to recover the clock.} (a) A VCO inside the loop, with a frequency detector (FD) to pull in. (b) A global PLL plus a per-lane phase interpolator steered by a bang-bang phase detector and a digital loop filter (DLF). (c) Blind oversampling: three samples per UI and a decision on which to keep.}
+\label{fig:ch13-arch}
+\end{figure}
+
+%% =====================================================================
+\section{Phase detectors}\label{sec:pd}
+
+A PLL's PFD does not work on data: random data skips edges, and a missing edge looks like a frequency error. A CDR phase detector must compare edges only where the data has them, and output \emph{nothing} during runs of identical bits (\textbf{tri-state}). Two classic detectors do this.
+
+\paragraph{The Hogge linear detector}
+Two flip-flops and two XORs (\cref{fig:ch13-hogge}). FF1 retimes the data (B), FF2 delays B by half a cycle (A). $X = D_\mathrm{in}\oplus B$ lasts from each data transition to the next rising clock edge, $\Tb/2 + \Delta t$ when the clock is $\Delta t$ late; $Y = B\oplus A$ always lasts $\Tb/2$. X pumps up and Y pumps down, so the net charge per transition is proportional to $\Delta t$: a linear detector of gain $TD\cdot I_P/2\pi$, where the \textbf{transition density} TD is about 0.5 for random data. It tri-states and retimes the data. Its weakness is speed: at 5\,Gb/s X and Y are 100\,ps pulses from gates with 20--30\,ps edges, and the clock-to-Q delay leaves a static error unless matched; Liu puts its practical limit near 10\,Gb/s~\cite{liuCDR}.
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[font=\sffamily\scriptsize,
+   ff/.style={draw=navy,line width=0.7pt,fill=tile,minimum width=10mm,minimum height=10mm}]
+  \node[ff] (f1) at (0,0) {FF1}; \node[ff] (f2) at (2.1,0) {FF2};
+  \draw[sig] (-1.6,0.2) node[left,text=navy]{D$_\mathrm{in}$} -- ([yshift=2mm]f1.west);
+  \draw[sig] ([yshift=2mm]f1.east) -- node[below]{B} ([yshift=2mm]f2.west);
+  \draw[navy,line width=0.7pt] ([yshift=2mm]f2.east) -- (3.0,0.2) node[above,text=navy]{A};
+  \draw[clk] (-1.6,-0.75) node[left,text=golddk]{CK} -- (1.35,-0.75);
+  \draw[clk] (-0.9,-0.75) |- ([yshift=-2.5mm]f1.west);
+  \draw[clk] (1.35,-0.75) |- ([yshift=-2.5mm]f2.west); \node[golddk] at (1.15,-0.4) {$\overline{\mathrm{CK}}$};
+  \node[xor port,scale=0.7,color=navy] (x1) at (2.4,1.45) {};
+  \node[xor port,scale=0.7,color=navy] (x2) at (4.0,0.7) {};
+  \draw[navy,line width=0.7pt] (-1.15,0.2) node[circ]{} |- (x1.in 1);
+  \draw[navy,line width=0.7pt] (0.85,0.2) node[circ]{} |- (x1.in 2);
+  \draw[navy,line width=0.7pt] (1.15,0.2) node[circ]{} |- (x2.in 1);
+  \draw[navy,line width=0.7pt] (3.0,0.2) |- (x2.in 2);
+  \draw[sig] (x1.out) -- (5.4,1.45) node[right,text=navy]{X $\to$ up ($+I_P$)};
+  \draw[sig] (x2.out) -- (5.4,0.7) node[right,text=navy]{Y $\to$ down ($-I_P$)};
+  \draw[sig] (3.0,0.2) -- (3.0,-0.35) -- (5.4,-0.35) node[right,text=navy]{retimed data};
+\end{tikzpicture}\par\smallskip
+\begin{tikzpicture}[font=\sffamily\scriptsize,tt/.style={timing/xunit=0.2cm,timing/yunit=0.3cm,timing/slope=0.08,line width=0.7pt,draw=navy}]
+  \foreach \y/\lab/\s in {0/D$_\mathrm{in}$/{8H8L16H16L10H},-0.55/CK/{H4L4H4L4H4L4H4L4H4L4H4L4H4L4HL},-1.1/B/{13H8L16H16L5H},-1.65/A/{17H8L16H16L1H},-2.2/X/{8L5H3L5H11L5H11L5H5L},-2.75/Y/{13L4H4L4H12L4H12L4H1L}}{
+    \node[anchor=east,text=navy] at (-0.1,\y+0.15) {\lab};
+    \timing[tt] at (0,\y) {\s};}
+  \foreach \x in {1.6,3.2,6.4,9.6}{\draw[muted,dotted] (\x,0.4) -- (\x,-2.8);}
+  \draw[c4,<->,line width=0.6pt] (1.6,-2.05) -- (2.6,-2.05); \node[c4,anchor=east] at (1.55,-2.05) {$\Tb/2+\Delta t$};
+  \draw[c3,<->,line width=0.6pt] (2.6,-2.6) -- (3.4,-2.6); \node[c3,anchor=west] at (3.45,-2.6) {$\Tb/2$};
+  \node[lbl,anchor=west] at (11.8,-0.5) {clock late by $\Delta t = \Tb/8$:};
+  \node[lbl,anchor=west] at (11.8,-0.9) {X is wider than Y,};
+  \node[lbl,anchor=west] at (11.8,-1.3) {net charge is up};
+\end{tikzpicture}
+\caption{\textbf{The Hogge detector measures phase as a pulse-width difference.} FF1 retimes the data (B), FF2 delays it by half a period (A). X spans from each data transition to the next clock edge, $\Tb/2 + \Delta t$; Y is always $\Tb/2$. With no transition, both stay low: the detector tri-states.}
+\label{fig:ch13-hogge}
+\figsrc{After Liu~\cite{liuCDR} and Razavi~\cite{razaviOptical}.}
+\end{figure}
+
+\paragraph{The Alexander bang-bang detector}
+The Alexander detector (\cref{fig:ch13-alex}) takes two samples per bit: a data sample at the bit centre and an \textbf{edge sample} half a bit earlier, at the expected transition. Three consecutive samples, S1 (previous data), S2 (edge) and S3 (current data), tell everything. If S1 = S3 there was no transition and the detector says nothing. Otherwise S2 equals whichever data bit it was closer to: if S2 = S1 the edge sample was taken \emph{before} the transition and the clock is early; if S2 = S3 it was taken after, and the clock is late. With $X = S1\oplus S2$ and $Y = S2\oplus S3$:
+\begin{center}\small
+\begin{tabular}{cccl}
+\toprule
+$(X, Y)$ & (0,0) & (0,1) & (1,0) \\
+\midrule
+Meaning & no transition & clock early: delay it & clock late: advance it \\
+\bottomrule
+\end{tabular}
+\end{center}
+The output is only the \emph{sign} of the error, hence ``bang-bang'' (BB). It reuses the data samplers, retimes, tri-states and runs at the samplers' full speed: the most common CDR detector.
+
+\begin{figure}[tbp]
+\centering
+\begin{subfigure}[b]{0.5\linewidth}\centering
+\begin{tikzpicture}[font=\sffamily\scriptsize,
+   ff/.style={draw=navy,line width=0.7pt,fill=tile,minimum width=9mm,minimum height=8mm}]
+  \node[ff] (fd) at (0,0.9) {FF$_D$}; \node[ff] (fe) at (0,-0.9) {FF$_E$}; \node[ff] (fp) at (1.7,0.9) {FF$_P$};
+  \draw[sig] (-1.5,0) node[left,text=navy]{D$_\mathrm{in}$} -- (-0.9,0) node[circ]{} |- (fd.west);
+  \draw[sig] (-0.9,0) |- (fe.west);
+  \draw[sig] (fd.east) -- (fp.west);
+  \node[xor port,scale=0.65,color=navy] (xl) at (3.6,1.25) {};
+  \node[xor port,scale=0.65,color=navy] (xe) at (3.6,-0.35) {};
+  \draw[navy,line width=0.7pt] (fp.east) -- ++(0.25,0) |- (xl.in 1);
+  \draw[navy,line width=0.7pt] (fe.east) -- (2.6,-0.9) |- (xe.in 2);
+  \draw[navy,line width=0.7pt] (2.6,-0.9) node[circ]{} -- (2.6,0.5) |- (xl.in 2);
+  \draw[navy,line width=0.7pt] (0.75,0.9) node[circ]{} -- (0.75,0.15) -| (2.35,-0.2) -- (xe.in 1);
+  \draw[sig] (xl.out) -- ++(0.35,0) node[right,text=navy]{late};
+  \draw[sig] (xe.out) -- ++(0.35,0) node[right,text=navy]{early};
+  \node[lbl] at (2.55,1.25) {S1}; \node[lbl] at (2.85,-1.1) {S2}; \node[lbl] at (0.95,0.35) {S3};
+  \node[golddk] at (0,1.55) {CK}; \node[golddk] at (0,-1.55) {$\overline{\mathrm{CK}}$}; \node[golddk] at (1.7,1.55) {CK};
+\end{tikzpicture}
+\caption{Three flip-flops and two XORs}
+\end{subfigure}\hfill
+\begin{subfigure}[b]{0.48\linewidth}\centering
+\begin{tikzpicture}[font=\sffamily\scriptsize,x=1cm,y=1cm]
+  \foreach \yo/\ttl/\tx/\res/\col in {0/{clock early}/0.70/{S2 = S1: (0,1), early}/c1,-1.9/{clock late}/1.30/{S2 = S3: (1,0), late}/c4}{
+    \begin{scope}[yshift=\yo cm]
+      \draw[navy,line width=0.9pt] (-0.3,0) -- (0.75,0) -- (1.25,1) -- (2.6,1);
+      \draw[navy,line width=0.9pt,densely dotted] (-0.3,1) -- (0.75,1) -- (1.25,0) -- (2.6,0);
+      \draw[muted,line width=0.4pt] (-0.3,0.5) -- (2.6,0.5);
+      \foreach \x/\l in {0/S1,\tx/S2,2.0/S3}{\draw[gold,line width=0.9pt,-{Stealth[length=1.6mm]}] (\x,1.35) -- (\x,1.05); \node[golddk] at (\x,1.5) {\l};}
+      \node[anchor=west,text=\col] at (2.7,0.75) {\ttl};
+      \node[anchor=west,text=\col] at (2.7,0.3) {\res};
+    \end{scope}}
+\end{tikzpicture}
+\caption{Early and late, for a 0$\to$1 (solid) or 1$\to$0 transition}
+\end{subfigure}
+\caption{\textbf{The Alexander detector compares the edge sample with its neighbours.} (a) FF$_D$ samples the data (S3), FF$_E$ samples the edge half a period earlier (S2), FF$_P$ holds the previous bit (S1); in practice a fourth flip-flop retimes S2 to CK. (b) If the edge sample lands before the transition it equals S1 (clock early); after it, S3 (clock late).}
+\label{fig:ch13-alex}
+\figsrc{After Liu~\cite{liuCDR}.}
+\end{figure}
+
+\paragraph{Half-rate in \OS{}} At half rate the four samplers D0, E0, D1, E1 fire on I, Q, $\bar{\mathrm{I}}$, $\bar{\mathrm{Q}}$ of the 2.5\,GHz clock (\cref{sec:quadrature,sec:sampler}). Each clock cycle yields two early/late decisions, from (D0, E0, D1) and (D1, E1, D0$'$), so every transition is used. The cost is that I/Q and duty-cycle errors now appear as phase offsets between the two halves (\cref{we:ch12-iq}).
+
+\paragraph{Mueller-M\"uller} This \textbf{baud-rate} detector uses one data sample and one error sample per UI and no edge samplers. Its output $z_k = e_k d_{k-1} - e_{k-1}d_k$ averages to $h_1 - h_{-1}$, so it locks where the first pre- and post-cursors are equal, a channel-dependent point. It suits ADC-based receivers; \OS{} has edge samplers and uses Alexander.
+
+%% =====================================================================
+\section{The linear CDR model and jitter transfer}\label{sec:ch13-linear}
+
+With a linear detector, a CDR is a PLL with $N = 1$ and a detector gain $TD\cdot I_P/2\pi$. With proportional resistor $R_p$ and integrating capacitor $C_p$, \cref{eq:ch12-wnz} gives~\cite{liuCDR}
+\begin{keyeq}[Linear CDR]
+\begin{equation}
+\begin{gathered}
+  H(s) = \frac{\phi_\mathrm{out}}{\phi_\mathrm{in}} = \frac{2\zeta\omega_n s + \omega_n^2}{s^2 + 2\zeta\omega_n s + \omega_n^2}, \\
+  \omega_n = \sqrt{\frac{\Kvco I_P}{2\pi C_p}}, \qquad
+  \zeta = \frac{R_p}{2}\sqrt{\frac{\Kvco I_P C_p}{2\pi}}, \qquad
+  \omega_{-3\mathrm{dB}} \approx 2\zeta\omega_n = \frac{\Kvco I_P R_p}{2\pi} .
+\end{gathered}
+  \label{eq:ch13-lin}
+\end{equation}
+\end{keyeq}
+with TD absorbed into $I_P$. $|H|$ is the \textbf{jitter transfer}: the jitter the recovered clock follows. $|1 - H|$ is what the clock does \emph{not} follow, and therefore what reaches the sampler as eye closure (\cref{fig:ch13-jtran}a). Wireline CDRs use $\zeta \gg 1$, typically 4--5, because any peaking would amplify jitter in a chain of repeaters; with $\zeta = 4.5$ the peaking is 0.09\,dB (\cref{tab:ch12-zeta}).
+
+\begin{figure}[tbp]
+\centering
+\includegraphics[width=\linewidth]{ch13_jtran}
+\caption{\textbf{A CDR is a low-pass filter for jitter, and a bang-bang CDR's corner moves with the jitter amplitude.} (a) Linear CDR with $f_{-3\mathrm{dB}}$ = 4\,MHz and $\zeta$ = 4.5: the clock tracks slow jitter ($|H|$), and the error $|1-H|$ rises at 40 then 20\,dB/decade. (b) Simulated jitter transfer of the analog bang-bang CDR of \cref{we:ch13-bb} ($R$ = 200\,\Ohm, $S = 3\times10^6$\,UI/s) for four sinusoidal-jitter amplitudes. The corner halves each time the amplitude doubles; the triangles mark the slewing prediction $\pi S/(2A_\mathrm{pk})$, within 7--22\% of simulation.}
+\label{fig:ch13-jtran}
+\end{figure}
+
+%% =====================================================================
+\section{Bang-bang CDR dynamics}\label{sec:bbcdr}
+
+A BB detector has infinite gain at zero error, but jitter rescues the linear model: with Gaussian edge jitter of rms $\sigma_j$, the \emph{average} output is the sign function smoothed by the jitter PDF:
+\[
+  \overline{\mathrm{PD}}(\Delta\phi) = TD\cdot E\big[\sgn(\Delta\phi + j)\big] = TD\cdot\operatorname{erf}\!\Big(\frac{\Delta\phi}{\sqrt2\,\sigma_j}\Big),
+\]
+whose slope at zero, $TD\cdot 2/(\sqrt{2\pi}\sigma_j)$, is the linearized gain (\cref{fig:ch13-bbchar}a):
+\begin{keyeq}[Bang-bang detector gain, linearized by jitter]
+\begin{equation}
+  K_\mathrm{BB} = TD\,\sqrt{\frac{2}{\pi}}\,\frac{1}{\sigma_j} \quad \text{(per UI of phase error)} .
+  \label{eq:ch13-kbb}
+\end{equation}
+\end{keyeq}
+The loop gain, and so the bandwidth, is inversely proportional to the input jitter: a clean input makes a fast loop, a noisy input a slow one. Always quote a BB-CDR's bandwidth together with the jitter it was measured with.
+
+\begin{figure}[tbp]
+\centering
+\includegraphics[width=\linewidth]{ch13_bbchar}
+\caption{\textbf{Jitter linearizes the bang-bang detector; large jitter makes the loop slew.} (a) Average detector output against phase error: the ideal sign function smoothed by Gaussian jitter, with slope $\sqrt{2/\pi}/\sigma_j$ at zero, against an ideal linear detector. (b) Analog BB-CDR (proportional path only) with 0.4\,UI$_\mathrm{pp}$ of 5\,MHz input jitter. The input slope, $\omega A_\mathrm{pk} = 6.3\times10^6$\,UI/s, exceeds the loop's slew rate $S = 3\times10^6$\,UI/s, so the recovered phase becomes a triangle that lags the input.}
+\label{fig:ch13-bbchar}
+\end{figure}
+
+\paragraph{Slewing} For large jitter the detector saturates and the recovered phase moves at its maximum rate, the \textbf{slew rate} $S$. In a VCO-based loop each decision shifts the VCO frequency by $\Delta f_P = \Kvco I_P R_p$ for one bit, moving the phase by $\Delta\phi_P = \Delta f_P\,\Tb$ clock cycles, and decisions arrive at rate $TD/\Tb$; so $S = TD\,\Delta\phi_P/\Tb$. A sinusoid $A_\mathrm{pk}\sin\omega t$ is tracked as long as its peak slope $\omega A_\mathrm{pk}$ is below $S$. Beyond that the output is a triangle of peak $S\,T/4$ (\cref{fig:ch13-bbchar}b), so its gain is $\pi S/(2A_\mathrm{pk}\omega)$ and
+\begin{keyeq}[Slew-limited BB-CDR bandwidth]
+\begin{equation}
+  S = TD\,\frac{\Delta\phi_P}{\Tb}, \qquad
+  \omega_{-3\mathrm{dB}} = \frac{\pi S}{2A_\mathrm{pk}}, \qquad
+  \text{dither}_\mathrm{pp} \approx 2(D+1)\,\Delta\phi_P .
+  \label{eq:ch13-slew}
+\end{equation}
+\end{keyeq}
+The last term is the \textbf{dither}: with no jitter at all, a BB loop hunts around the lock point, and a loop latency of $D$ extra decision periods lets it overshoot by $D$ more steps each way. Large $S$ helps jitter tolerance but costs dither; the integral path must be weak compared with the proportional path, $K_P/K_I \ge 16$ (for an analog loop, $R_pC_p/\Tb \gg 1$), or the loop rings.
+
+\begin{table}[htbp]
+\centering
+\caption{The slewing model against Liu's measured 90\,nm, 10\,Gb/s BB-CDR~\cite{liuCDR}: $R_p$ = 10\,\Ohm, $C_p$ = 100\,nF, $\Kvco$ = 1\,GHz/V, $I_P$ = 300\,\textmu{}A, so $\Delta f_P$ = 3\,MHz and, at full rate with $TD$ = 0.5, $S = 1.5\times10^6$\,UI/s.}
+\label{tab:ch13-liu}
+\small
+\begin{tabular}{lccc|lccc}
+\toprule
+Jitter (UI$_\mathrm{pp}$) & 0.125 & 0.25 & 0.5 & $R_p$ (\Ohm) / $C_p$ (nF) & 5 / 100 & 10 / 100 & 20 / 100 \\
+Predicted $f_{-3\mathrm{dB}}$ (MHz) & 6.0 & 3.0 & 1.5 & Measured (MHz) & 1.0 & 1.5 & 2.7 \\
+Measured (MHz) & 4.1 & 2.8 & 1.45 & $C_p$ = 10 / 32 / 100\,nF & \multicolumn{3}{c}{2.8 / 2.55 / 2.6} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\Cref{tab:ch13-liu} checks \cref{eq:ch13-slew} against measurements. The prediction matches at 0.25 and 0.5\,UI$_\mathrm{pp}$; at 0.125\,UI the loop is no longer slewing (the input slope is below $S$) and the measured corner saturates. The bandwidth scales with $R_p$, the proportional path, and hardly depends on $C_p$: a BB-CDR is designed through its proportional step.
+
+\begin{example}{An analog BB-CDR that fails, and the fix}\label{we:ch13-bb}
+\textbf{Given:} a half-rate VCO-based BB-CDR at 5\,Gb/s, $\Kvco$ = 150\,MHz/V, $I_P$ = 100\,\textmu{}A, $R_p$ = 100\,\Ohm, $C_p$ = 1\,nF, $TD$ = 0.5, and a stressed input that leaves a timing margin TM = 0.4\,UI.
+
+\textbf{Step:} $\Delta f_P$ = 1.5\,MHz; one cycle of the 2.5\,GHz clock is 2\,UI, so $\Delta\phi_P = 1.5\times10^6\times200\,\mathrm{ps}\times2 = 6\times10^{-4}$\,UI per bit and $S = 0.5\times6\times10^{-4}/200\,\mathrm{ps} = 1.5\times10^6$\,UI/s.
+\textbf{JTOL} (\cref{sec:jtol}): $\mathrm{TM} + 2S/\omega = 0.4 + 0.48 = 0.88$\,UI$_\mathrm{pp}$ at 1\,MHz, below the 1\,UI mask point: \textbf{fails}. Simulation gives 0.95\,UI at 1\,MHz and 0.35\,UI at 2\,MHz (mask 0.5).
+\textbf{Fix:} $R_p$ = 200\,\Ohm{} doubles $S$ to $3\times10^6$\,UI/s: $0.4 + 0.95 = 1.35$\,UI at 1\,MHz (simulated 1.36) and 0.61\,UI at 2\,MHz: \textbf{passes}.
+\textbf{Costs:} dither with a 3-bit latency is $2\times4\times1.2\times10^{-3} = 0.01$\,UI, negligible. $R_pC_p/\Tb = 1000$, so the loop is well damped. The proportional path alone pulls in only $|\Delta f/f| < TD\,\Delta\phi_P \approx 600$\,ppm, so a frequency detector or reference loop must bring the VCO that close first.
+\end{example}
+
+%% =====================================================================
+\section{Jitter tolerance}\label{sec:jtol}
+
+\textbf{Jitter tolerance} (JTOL) is the largest sinusoidal jitter (SJ), versus frequency, that the receiver accepts while meeting the BER, measured with a stressed input that already carries the specified RJ and DJ. Let TM be the timing margin left by that stress. A linear CDR leaves the error $|1-H|$ times the input, so
+\begin{equation}
+  \mathrm{JTOL}(\omega) = \frac{\mathrm{TM}}{|1 - H(j\omega)|}, \qquad
+  \mathrm{JTOL}_\mathrm{BB}(\omega) \approx \mathrm{TM} + \frac{2S}{\omega} .
+  \label{eq:ch13-jtol}
+\end{equation}
+Far below the bandwidth the CDR tracks almost everything and JTOL is many UI; far above, JTOL falls to TM. A BB-CDR in its slew-limited region follows $2S/\omega$, a $-20$\,dB/decade line. Standards define a \textbf{JTOL mask} that the curve must stay above. We use a USB~3 Gen~1-style mask: 2\,UI$_\mathrm{pp}$ at 0.5\,MHz falling at $-20$\,dB/decade to 0.2\,UI at 4.9\,MHz, flat to 50\,MHz (check the exact points against the standard you target). Passing the $-20$\,dB/decade part needs $S \gtrsim \pi f(A_\mathrm{mask} - \mathrm{TM})$, about $2.5\times10^6$\,UI/s at 0.5\,MHz.
+
+\begin{figure}[tbp]
+\centering
+\includegraphics[width=\linewidth]{ch13_jtol}
+\caption{\textbf{Jitter tolerance against the mask.} Navy: the mask. Dotted: a linear CDR with 4\,MHz bandwidth. Red and teal: the analog BB-CDR of \cref{we:ch13-bb}; dots are simulations, dashed lines \cref{eq:ch13-jtol}. With $R_p$ = 100\,\Ohm{} the curve dips under the mask at 1--2\,MHz; 200\,\Ohm{} passes. Blue: the simulated \OS{} PI-CDR, which passes with a thin margin at 1--2\,MHz. At high frequency every BB curve flattens near 0.3\,UI, TM minus the loop's own dither.}
+\label{fig:ch13-jtol}
+\end{figure}
+
+%% =====================================================================
+\section{The Open-SERDES PI-based CDR}\label{sec:picdr}
+
+\Cref{fig:ch13-picdr} shows the \OS{} CDR. The PLL supplies I and Q at 2.5\,GHz. Two \textbf{phase interpolators} (PIs) rotate them: the data PI (code $k$) clocks D0 and D1, the edge PI (code $k + 16$, a quarter period later) clocks E0 and E1. A 1:8 demultiplexer feeds the digital loop at 625\,MHz ($T_\mathrm{upd}$ = 1.6\,ns, 8\,UI), where up to eight Alexander early/late decisions per update are reduced by a majority vote to $v \in \{-1, 0, +1\}$. The loop filter is proportional plus integral:
+\begin{equation}
+  f \leftarrow f + K_I\,v, \qquad \mathrm{acc} \leftarrow \mathrm{acc} + K_P\,v + f, \qquad k = \mathrm{round}(\mathrm{acc}) \bmod 64 .
+\end{equation}
+The \textbf{frequency register} $f$ learns the TX-RX frequency offset, and the \textbf{phase accumulator} has fractional bits below the PI's 6.25\,ps LSB, so the proportional step $K_P$ can be a fraction of a PI step. The baseline uses $K_P = 1/8$\,LSB (0.78\,ps), $K_P/K_I = 128$ and a latency of two updates ($D = 1$).
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[font=\sffamily\scriptsize,scale=0.95,transform shape,
+   b/.style={blkb,minimum width=15mm,minimum height=8mm,font=\sffamily\scriptsize,inner sep=2pt},
+   g/.style={blkg,minimum width=14mm,minimum height=8mm,font=\sffamily\scriptsize,inner sep=2pt}]
+  \node[b] (pll) at (0.6,2.1) {PLL\\2.5\,GHz};
+  \node[b] (iq) at (2.7,2.1) {PPF + CML\\I/Q};
+  \node[b,minimum width=19mm] (pi) at (5.1,2.1) {PI$_D$: code $k$\\PI$_E$: $k+16$};
+  \node[b,minimum width=17mm] (sa) at (1.6,0) {4 samplers\\D0 E0 D1 E1};
+  \node[g] (de) at (3.9,0) {1:8\\demux};
+  \node[g] (bb) at (6.0,0) {Alexander\\8 early/late};
+  \node[g,minimum width=11mm] (vo) at (8.0,0) {vote\\$v$};
+  \node[g,minimum width=10mm] (kp) at (9.8,0.6) {$K_P$};
+  \node[g,minimum width=10mm] (ki) at (9.8,-0.6) {$K_I$};
+  \node[g,minimum width=15mm] (fr) at (11.6,-0.6) {freq. reg.\\$f \mathrel{+}= K_I v$};
+  \node[sumnode] (sm) at (13.2,0.6) {$+$};
+  \node[g,minimum width=17mm] (ac) at (13.2,2.1) {phase acc.\\6 bits + fraction};
+  \draw[sig] (-0.6,0) node[left,text=navy,align=right]{from\\CTLE/DFE} -- (sa);
+  \draw[sig] (pll) -- (iq); \draw[sig] (iq) -- (pi);
+  \draw[clk] (pi.south) -- (5.1,1.05) -| node[pos=0.25,above,text=golddk]{four phases} (sa.north);
+  \draw[sig] (sa) -- (de); \draw[sig] (de) -- (bb); \draw[sig] (bb) -- (vo);
+  \draw[sig] (vo.east) -- (8.85,0) node[dot]{} |- (kp.west); \draw[sig] (8.85,0) |- (ki.west);
+  \draw[sig] (ki) -- (fr); \draw[sig] (kp) -- (sm); \draw[sig] (fr.east) -| (sm.south);
+  \draw[sig] (sm) -- (ac); \draw[sig] (ac) -- node[above]{code $k$ (6 bits)} (pi.east);
+  \draw[sig] (de.south) -- ++(0,-0.55) node[below,text=navy]{data to 1:16 deserializer};
+  \draw[region] (3.05,-1.25) rectangle (14.2,1.35);
+  \node[lbl,anchor=south east] at (14.15,-1.22) {digital, 625\,MHz, 1.2\,V CMOS};
+  \node[lbl,anchor=south west] at (-1.4,2.75) {analog, 2.5\,GHz};
+\end{tikzpicture}
+\caption{\textbf{The \OS{} PI-based dual-loop CDR.} The PLL and polyphase filter make I/Q; two PIs rotate them under a 6-bit code; four half-rate samplers feed an Alexander detector through a 1:8 demux; a majority vote drives a proportional path ($K_P$) and an integral path whose register holds the frequency offset. The phase accumulator keeps fractional bits below the PI step.}
+\label{fig:ch13-picdr}
+\end{figure}
+
+\paragraph{The phase interpolator} A PI forms $(1-\alpha)\,\mathrm{I} + \alpha\,\mathrm{Q}$ with two current-steered weights. For sinusoidal I and Q the output phase is $\theta = \arctan[\alpha/(1-\alpha)]$, not $90^\circ\alpha$: linear weights trace the chord between the two phasors, not the arc (\cref{fig:ch13-pi}a). With 16 codes per quadrant, the integral nonlinearity (INL) reaches $\pm4.1^\circ$ ($\pm4.5$\,ps) at $\alpha \approx 0.25$ and 0.75, and the amplitude dips to 0.71 at $\alpha = 0.5$. Weights taken from a sine/cosine table and quantized to 6 bits cut the INL to $\pm0.55^\circ$ (0.6\,ps) (\cref{fig:ch13-pi}b); a limiting buffer after the PI removes the amplitude dip. The law assumes near-sinusoidal inputs, with edges about as slow as the 100\,ps phase spacing, which the PPF and CML buffers of \cref{sec:quadrature} provide; square-wave inputs make the PI jump between phases.
+
+\begin{figure}[tbp]
+\centering
+\begin{minipage}[b]{0.42\linewidth}\centering
+\begin{tikzpicture}[font=\sffamily\scriptsize,scale=1.0]
+  \draw[pale,line width=0.6pt] (2,0) arc (0:90:2);
+  \draw[->,navy,line width=1pt] (0,0) -- (2,0) node[right]{I};
+  \draw[->,navy,line width=1pt] (0,0) -- (0,2) node[above]{Q};
+  \draw[c4,dashed,line width=0.8pt] (2,0) -- (0,2);
+  \draw[->,c4,line width=1pt] (0,0) -- (1.5,0.5) node[right]{$\alpha = \frac14$};
+  \draw[->,muted,densely dotted,line width=0.8pt] (0,0) -- (1.848,0.765);
+  \draw[c4,line width=0.6pt] (0.9,0) arc (0:18.4:0.9); \node[c4] at (1.08,0.13) {$\theta$};
+  \draw[golddk,line width=0.6pt] (1.25,0.416) arc (18.4:22.5:1.31);
+  \node[golddk,anchor=west] at (1.85,1.0) {INL $-4.1^\circ$};
+  \draw[golddk,line width=0.4pt] (1.86,0.95) -- (1.33,0.52);
+  \node[dot,fill=c4] at (1,1) {}; \node[c4,anchor=south west] at (1,1) {$\alpha=\frac12$: $|v| = 0.71$};
+  \node[muted,anchor=north] at (1,-0.15) {$(1-\alpha)\mathrm{I} + \alpha\mathrm{Q}$ moves on the chord};
+\end{tikzpicture}
+\subcaption{Phasors}
+\end{minipage}\hfill
+\begin{minipage}[b]{0.56\linewidth}\centering
+\includegraphics{ch13_inl}
+\subcaption{INL over the 64 codes}
+\end{minipage}
+\caption{\textbf{Linear weights make the PI nonlinear.} (a) Interpolating between I and Q with linear weights moves along the chord (dashed), so at $\alpha = 1/4$ the phase is 18.4$^\circ$ instead of 22.5$^\circ$ and the amplitude drops. (b) INL for linear weights ($\pm4.1^\circ$ = $\pm4.5$\,ps, repeating every quadrant) and for sine/cosine weights quantized to 6 bits ($\pm0.55^\circ$).}
+\label{fig:ch13-pi}
+\end{figure}
+
+\paragraph{Frequency-offset range} A $\pm300$\,ppm offset (two $\pm100$\,ppm crystals plus margin) drifts the data by $300\times10^{-6}\times1.6\,\mathrm{ns} = 0.48$\,ps per update, 0.077 PI step; the integral register holds this rate and the PI rotates continuously, wrapping every 833 updates (1.33\,\textmu{}s). The proportional path alone could follow $0.78\,\mathrm{ps}/1.6\,\mathrm{ns} = 488$\,ppm, so $\pm300$\,ppm would use 61\% of its slew: hence the integral path. The PI's ceiling, one step per update, is $6.25\,\mathrm{ps}/1.6\,\mathrm{ns} = 3906$\,ppm. The rotating code sweeps the INL pattern at four times the 750\,kHz rotation rate, a 3\,MHz periodic jitter. Spread-spectrum clocking (5000\,ppm) is out of range.
+
+\begin{example}{PI step size: 64 or 128 steps?}\label{we:ch13-step}
+\textbf{Question:} does doubling the PI resolution reduce the CDR's own jitter? \textbf{Method:} the behavioural model of \code{ch13\_sim.py}: +200\,ppm offset, input RJ 1.32\,ps and $\pm10$\,ps DDJ, $K_P$ chosen so that every design has the same slew $S = 2.44\times10^6$\,UI/s (the JTOL requirement), $D$ = 1. ``Wander'' is the recovered-phase error; the peak-to-peak value is taken at the $10^{-5}$ quantiles of $1.2\times10^5$ updates.
+\begin{center}\small
+\begin{tabular}{llcccc}
+\toprule
+PI steps & loop clock & $K_P$ & wander rms & wander pp & JTOL vs mask \\
+\midrule
+64 & 312.5\,MHz & 1 LSB (integer) & 10.7\,ps & 58.1\,ps & 2.6$\times$ \\
+64 & 312.5\,MHz & 1/4 LSB & 3.3\,ps & 24.3\,ps & pass \\
+128 & 312.5\,MHz & 1/2 LSB & 2.9\,ps & 23.0\,ps & pass \\
+\textbf{64} & \textbf{625\,MHz} & \textbf{1/8 LSB} & \textbf{2.5\,ps} & \textbf{19.2\,ps} & pass \\
+128 & 625\,MHz & 1/4 LSB & 1.9\,ps & 15.6\,ps & pass \\
+\bottomrule
+\end{tabular}
+\end{center}
+\textbf{Answer:} at a fixed loop clock, 128 steps saves only 1.3\,ps. What matters is the proportional step in picoseconds (fixed by JTOL) and the latency in nanoseconds, since dither $\approx 2S\,T_\mathrm{lat}$; an integer-step loop is far too noisy. A 625\,MHz loop halves the latency and brings 64 steps inside the 20\,ps allocation of \cref{tab:ch11-budget}. Keep 64 steps; use 128 only if the 625\,MHz loop fails timing.
+\end{example}
+
+\begin{figure}[tbp]
+\centering
+\includegraphics[width=\linewidth]{ch13_sim}
+\caption{\textbf{The \OS{} PI-CDR locks to a +200\,ppm input in 0.2\,\textmu{}s and then tracks it.} Behavioural simulation of the baseline (64 steps, 625\,MHz loop, $K_P$ = 1/8\,LSB, $K_P/K_I$ = 128). (a) The PI code follows the drifting data phase and wraps every 2.0\,\textmu{}s, one full rotation of 2\,UI. (b) The integral register learns the offset and settles at +200\,ppm. (c) Phase error: 74\,ps at start, locked after 0.19\,\textmu{}s, then 2.6\,ps rms tracking error.}
+\label{fig:ch13-sim}
+\end{figure}
+
+\paragraph{Behavioural check} In \cref{fig:ch13-sim} the baseline starts 0.37\,UI off with +200\,ppm offset: it locks in 0.19\,\textmu{}s, the integral register settles at 200\,ppm within about 1\,\textmu{}s, and the tracking error is 2.6\,ps rms. The same model gives the JTOL curve in \cref{fig:ch13-jtol}: 3.0\,UI$_\mathrm{pp}$ at 0.5\,MHz, 1.08 at 1\,MHz, 0.51 at 2\,MHz (mask 0.5: marginal, within the sweep's 10\% resolution) and 0.32 at high frequency. Its jitter transfer has a $-3$\,dB corner near 9\,MHz for 0.2\,UI$_\mathrm{pp}$ input and 16\,MHz for 0.05\,UI$_\mathrm{pp}$, as \cref{eq:ch13-slew} predicts for a BB loop; \cref{ch:jitter} conservatively assumed 4\,MHz when counting the PLL's untracked jitter.
+
+\begin{insight}
+Size a BB-CDR in this order: $S$ from the JTOL mask; $K_P\cdot\mathrm{LSB} = S\,T_\mathrm{upd}$; the shortest latency the logic allows (dither $\propto S\,T_\mathrm{lat}$); then $K_I \le K_P/16$ and an integral register wide enough for the ppm range.
+\end{insight}
+
+\begin{tryit}[Lab 7: CDR]
+\Cref{sec:lab7} builds a fuller version of \code{ch13\_sim.py}. Reproduce \cref{fig:ch13-sim}, then sweep $K_P$ and the latency $D$ and plot wander against JTOL margin: you will find the trade-off of \cref{we:ch13-step}.
+\end{tryit}
+
+\begin{specnote}[Open-SERDES CDR targets]
+Half-rate Alexander BBPD; two 64-step PIs (6.25\,ps) with sine/cosine weights (INL $\le 1^\circ$); P+I loop at 625\,MHz, $K_P$ = 1/8\,LSB, $K_P/K_I$ = 128, latency $\le$ 2 updates; $\pm300$\,ppm; lock $<$ 1\,\textmu{}s; wander $\le$ 20\,ps pp; JTOL above the mask with TM = 0.4\,UI. Power estimate: PIs and buffers 6--10\,mW, digital loop about 2\,mW.
+\end{specnote}
+
+%% =====================================================================
+\section{Exercises}\label{sec:ch13-ex}
+
+\begin{enumerate}[label=\textbf{13.\arabic*},leftmargin=2.4em]
+  \item TX and RX crystals are at $+100$ and $-80$\,ppm. How long does the data take to drift one UI at 5\,Gb/s, and how many PI codes per microsecond must the CDR rotate?
+  \item In the Hogge detector at 5\,Gb/s, the clock is 20\,ps early. Give the widths of X and Y, and the average current for $I_P$ = 100\,\textmu{}A and $TD$ = 0.5.
+  \item A BB-CDR sees $\sigma_j$ = 0.03\,UI. Compute $K_\mathrm{BB}$ for $TD$ = 0.5. By what factor does the small-signal bandwidth change if the channel doubles the jitter?
+  \item For a 625\,MHz loop, find the smallest $K_P$ (in PI LSBs) that passes the mask point 2\,UI$_\mathrm{pp}$ at 0.5\,MHz with TM = 0.4\,UI. What dither would $D = 3$ give?
+\end{enumerate}
+
+\begin{takeaways}
+\begin{itemize}
+  \item 200\,ppm drifts one UI per microsecond, so the receiver recovers phase and frequency from the data; \OS{} uses a PI dual loop that reuses the PLL.
+  \item Hogge is linear but needs 100\,ps pulses; Alexander reuses the samplers: (0,1) early, (1,0) late, (0,0) no transition.
+  \item Linear CDR: a PLL with $N = 1$, $\omega_{-3\mathrm{dB}} \approx \Kvco I_P R_p/2\pi$; only $|1-H|$ of the jitter reaches the sampler.
+  \item Bang-bang: $K_\mathrm{BB} = TD\sqrt{2/\pi}/\sigma_j$; slewing gives $\omega_{-3\mathrm{dB}} = \pi S/(2A_\mathrm{pk})$; JTOL $\approx$ TM + $2S/\omega$.
+  \item The \OS{} PI-CDR locks to +200\,ppm in 0.2\,\textmu{}s, wanders 2.6\,ps rms and passes the mask.
+\end{itemize}
+\end{takeaways}

@@ -1,0 +1,153 @@
+---
+title: "6. Transmit FFE"
+parent: "Part II · Equalization"
+nav_order: 6
+permalink: "/chapters/06-transmit-ffe/"
+---
+{% raw %}
+<h1 id="ch:txffe"><span class="chapnum">Chapter 6</span>Transmit FFE</h1>
+<div class="chapterlead">
+<p>The transmitter knows every bit before it leaves the chip, so it can pre-distort the waveform to cancel the ISI the channel is about to add.</p>
+</div>
+<div class="tbox tbox-objectives">
+<div class="tbox-title">
+<p>In this chapter you will learn</p>
+</div>
+<ul>
+<li><p>Describe the TX feed-forward equalizer (FFE) as a 3-tap FIR filter, and write its output and its effect on the pulse response.</p></li>
+<li><p>Derive the FFE frequency response and the de-emphasis in dB, and explain the peak-swing constraint <span class="math inline">\(\sum\lvert c_k\rvert=1\)</span>.</p></li>
+<li><p>Solve for zero-forcing taps as a small matrix equation, and say when least squares does better.</p></li>
+<li><p>Show on the REF channel why zero-forcing taps are not eye-optimal (Lab 3).</p></li>
+<li><p>Pick practical settings: standard presets, tap resolution, and the swing the FFE costs.</p></li>
+</ul>
+</div>
+<h2 id="sec:ch6-fir"><span class="secnum">6.1</span>A FIR filter in the driver</h2>
+<p>The TX FFE is a finite-impulse-response filter that acts on the symbol stream <span class="math inline">\(a_n\in\{-1,+1\}\)</span> before the driver (<a href="#fig:ch6-fir">Figure 6.1</a>). With three taps, the driver output during UI <span class="math inline">\(n\)</span> is <span id="eq:ch6-fir"></span><span class="math display">\[x_n=A\left(c_{-1}\,a_{n+1}+c_0\,a_n+c_1\,a_{n-1}\right). \tag{6.1}\]</span> The <strong>pre-tap</strong> <span class="math inline">\(c_{-1}\)</span> weights the <em>next</em> bit. The transmitter already knows that bit, because in hardware the whole chain is delayed by one UI. The <strong>main tap</strong> is <span class="math inline">\(c_0\)</span> and the <strong>post-tap</strong> is <span class="math inline">\(c_1\)</span>. Liu writes the general <span class="math inline">\((2M+1)\)</span>-tap version as <span class="math inline">\(H(z)=\sum_{k=0}^{2M}\alpha_{-M+k}z^{-k}\)</span> with <span class="math inline">\(z=e^{j\omega T_\mathrm{b}}\)</span> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-liuEq">5</a>]. It has no feedback, so it is unconditionally stable.</p>
+<p>Since the channel is linear, sending <span class="math inline">\(x_n\)</span> is the same as sending three scaled, shifted copies of each bit. The pulse response seen at the receiver is therefore the convolution of the tap list with the cursor list: <span id="eq:ch6-conv"></span><span class="math display">\[q_k=\sum_{j=-1}^{1}c_j\,p_{k-j}=c_{-1}p_{k+1}+c_0p_{k}+c_1p_{k-1}. \tag{6.2}\]</span> <a href="#eq:ch6-conv">Equation (6.2)</a> is all we need. Every FFE question in this chapter is a question about the new cursors <span class="math inline">\(q_k\)</span>.</p>
+<div id="fig:ch6-fir">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/tikz/06_txffe-0.svg' | relative_url }}{% raw %}" style="width:577px" alt="A 3-tap TX FFE is a short delay line with weighted taps." loading="lazy" />
+<figcaption><span class="capnum">Figure 6.1.</span> <strong>A 3-tap TX FFE is a short delay line with weighted taps.</strong> Each bit is sent three times: once early with weight <span class="math inline">\(c_{-1}\)</span>, once on time with <span class="math inline">\(c_0\)</span>, and once late with <span class="math inline">\(c_1\)</span>. In a CML driver the taps are parallel current-steering slices that share the output load (<a href="{% endraw %}{{ '/chapters/09-the-transmitter/' | relative_url }}{% raw %}#sec:ffe-impl">Section 9.5</a>).</figcaption>
+</figure>
+<h2 id="sec:ffe-taps"><span class="secnum">6.2</span>De-emphasis, pre-emphasis and the swing limit</h2>
+<p>The driver’s output swing is fixed by its tail current and load at <span class="math inline">\(\pm A\)</span>. By <a href="#eq:ch6-fir">Equation (6.1)</a>, the largest output occurs when all terms add, so it equals <span class="math inline">\(A\sum\lvert c_k\rvert\)</span>. To keep the driver within its swing we require the <strong>peak-power constraint</strong>: <span id="eq:ch6-peak"></span><span class="math display">\[\lvert c_{-1}\rvert+\lvert c_0\rvert+\lvert c_1\rvert=1 . \tag{6.3}\]</span> For a low-pass channel the side taps are negative. Consider a 2-tap FFE with <span class="math inline">\(c_1&lt;0\)</span>. A <em>transition</em> bit (<span class="math inline">\(a_n=-a_{n-1}\)</span>) gets <span class="math inline">\(\lvert x_n\rvert=A(c_0+\lvert c_1\rvert)=A\)</span>, the full swing. A <em>repeated</em> bit gets <span class="math inline">\(A(c_0-\lvert c_1\rvert)\)</span>, which is smaller. This is <strong>de-emphasis</strong>: transitions keep full swing and runs of identical bits are attenuated (<a href="#fig:ch6-deemph">Figure 6.2</a>).</p>
+<p><strong>Pre-emphasis</strong> has exactly the same filter shape, but it is scaled the other way. It keeps <span class="math inline">\(c_0=1\)</span> and lifts the transitions to <span class="math inline">\(A(1+\lvert c_1\rvert)\)</span>. A driver that already runs at its maximum swing has no headroom for that, so a practical TX de-emphasizes.</p>
+<div id="fig:ch6-deemph">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch06_deemph.svg' | relative_url }}{% raw %}" style="width:753px" alt="De-emphasis keeps transitions at full swing and halves the repeated bits." loading="lazy" />
+<figcaption><span class="capnum">Figure 6.2.</span> <strong>De-emphasis keeps transitions at full swing and halves the repeated bits.</strong> (a) TX output for a 24-bit pattern without FFE, and with 6 dB of 2-tap de-emphasis (<span class="math inline">\(c_0=0.751\)</span>, <span class="math inline">\(c_1=-0.249\)</span>). (b) The same signals after the REF channel. Without FFE a long run charges the line far beyond the transition levels, so the next transition cannot cross in time. With de-emphasis the run and transition levels are much closer, and the dots (one sample per UI) form a cleaner pattern.</figcaption>
+</figure>
+<h5 id="frequency-response">Frequency response</h5>
+<p>The FFE transfer function is <span class="math inline">\(H_\mathrm{FFE}(f)=\sum_k c_k\,e^{-j2\pi fkT_\mathrm{b}}\)</span>. For two taps, <span class="math inline">\(\lvert H\rvert^2=c_0^2+c_1^2+2c_0c_1\cos(2\pi fT_\mathrm{b})\)</span>. In Liu’s normalization <span class="math inline">\(c_0=1\)</span>, <span class="math inline">\(c_1=\alpha\)</span>, with <span class="math inline">\(-1&lt;\alpha&lt;0\)</span>:</p>
+<div class="tbox tbox-keyeq">
+<div class="tbox-title">
+<p>Key equation · 2-tap FFE response and de-emphasis</p>
+</div>
+<div id="eq:ffe-resp">
+
+</div>
+<p><span class="math display">\[\lvert H_\mathrm{FFE}(f)\rvert=\sqrt{1+\alpha^2+2\alpha\cos(2\pi fT_\mathrm{b})},\qquad
+  \mathrm{DE}=20\log_{10}\frac{\lvert H(f_\mathrm{N})\rvert}{\lvert H(0)\rvert}=20\log_{10}\frac{1-\alpha}{1+\alpha} \tag{6.4}\]</span> With <span class="math inline">\(\sum\lvert c\rvert=1\)</span> the response is <span class="math inline">\(c_0+c_1=1-2\lvert c_1\rvert\)</span> at DC and <span class="math inline">\(c_0-c_1=1\)</span> at <span class="math inline">\(f_\mathrm{N}\)</span>, so <span class="math inline">\(\mathrm{DE}=-20\log_{10}(1-2\lvert c_1\rvert)\)</span>.</p>
+</div>
+<p>As a check, <a href="#eq:ffe-resp">Equation (6.4)</a> gives <span class="math inline">\(1+\alpha\)</span> at DC and <span class="math inline">\(1-\alpha\)</span> at <span class="math inline">\(f_\mathrm{N}\)</span>, matching Liu’s sketch. (The handwritten notes contain a typo, <span class="math inline">\(\sqrt{(1+\alpha)^2+2\alpha\cos\omega T_\mathrm{b}}\)</span>, which fails this DC check.) The response rises monotonically from DC to <span class="math inline">\(f_\mathrm{N}\)</span> and repeats with period <span class="math inline">\(1/T_\mathrm{b}=5\,\mathrm{GHz}\)</span> (<a href="#fig:ch6-ffefreq">Figure 6.3</a>a). It never rises above 0 dB. It only pulls the low frequencies down.</p>
+<div class="tbox tbox-example">
+<div class="tbox-title">
+<p>Worked Example 6.1 · The PCIe de-emphasis presets in volts</p>
+</div>
+<p><span id="we:ch6-pcie"></span> PCIe Gen2 at 5 GT/s specifies TX de-emphasis of −3.5 dB and −6 dB. For <span class="math inline">\(-3.5\)</span> dB, <span class="math inline">\(1-2\lvert c_1\rvert=10^{-3.5/20}=0.668\)</span>, so <span class="math inline">\(c_1=-0.166\)</span> and <span class="math inline">\(c_0=0.834\)</span>. For <span class="math inline">\(-6\)</span> dB, <span class="math inline">\(1-2\lvert c_1\rvert=0.501\)</span>, so <span class="math inline">\(c_1=-0.249\)</span> and <span class="math inline">\(c_0=0.751\)</span>.</p>
+<p>With <span class="math inline">\(A=0.5\,\mathrm{V}\)</span> (1 Vppd), transition bits swing <span class="math inline">\(\pm500\,\mathrm{mV}\)</span> in both cases. Repeated bits swing <span class="math inline">\(\pm0.668\times500=\pm334\,\mathrm{mV}\)</span> at <span class="math inline">\(-3.5\)</span> dB and <span class="math inline">\(\pm251\,\mathrm{mV}\)</span> at <span class="math inline">\(-6\)</span> dB. A 9.5 dB setting would need <span class="math inline">\(c_1=-1/3\)</span> and leave repeated bits at <span class="math inline">\(\pm167\,\mathrm{mV}\)</span>.</p>
+<p>In a CML driver the taps steer a fixed total tail current, so the supply current is the same at every setting. De-emphasis does not save power. It only redistributes the swing.</p>
+</div>
+<div id="fig:ch6-ffefreq">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch06_ffefreq.svg' | relative_url }}{% raw %}" style="width:753px" alt="A TX FFE pulls the low frequencies down; it never lifts f_\mathrm{N}." loading="lazy" />
+<figcaption><span class="capnum">Figure 6.3.</span> <strong>A TX FFE pulls the low frequencies down; it never lifts <span class="math inline">\(f_\mathrm{N}\)</span>.</strong> (a) <a href="#eq:ffe-resp">Equation (6.4)</a> for 0, 3.5, 6 and 9.5 dB of de-emphasis. The response peaks at <span class="math inline">\(f_\mathrm{N}\)</span> and is periodic in <span class="math inline">\(f_\mathrm{b}\)</span>. (b) REF channel times FFE. Each setting removes as many dB of the low-frequency excess as its de-emphasis, so the cascade gets flatter but stays at <span class="math inline">\(-17.4\)</span> dB at <span class="math inline">\(f_\mathrm{N}\)</span>.</figcaption>
+</figure>
+<h2 id="sec:ch6-solve"><span class="secnum">6.3</span>Solving for the taps</h2>
+<h5 id="zero-forcing">Zero forcing</h5>
+<p>Choose the three taps so that the equalized pulse has <span class="math inline">\(q_{-1}=0\)</span>, <span class="math inline">\(q_0=1\)</span> and <span class="math inline">\(q_1=0\)</span>. Writing <a href="#eq:ch6-conv">Equation (6.2)</a> for <span class="math inline">\(k=-1,0,1\)</span> gives three linear equations in three unknowns. Each row is one cursor of the equalized pulse, and each column is the pulse shifted by one tap:</p>
+<div class="tbox tbox-keyeq">
+<div class="tbox-title">
+<p>Key equation · Zero-forcing FFE taps</p>
+</div>
+<div id="eq:ch6-zf">
+
+</div>
+<p><span class="math display">\[\begin{bmatrix}p_{0}&amp;p_{-1}&amp;p_{-2}\\ p_{1}&amp;p_{0}&amp;p_{-1}\\ p_{2}&amp;p_{1}&amp;p_{0}\end{bmatrix}
+  \begin{bmatrix}c_{-1}\\ c_0\\ c_1\end{bmatrix}=
+  \begin{bmatrix}0\\1\\0\end{bmatrix},
+  \qquad c_k\leftarrow\frac{c_k}{\sum_j\lvert c_j\rvert}. \tag{6.5}\]</span></p>
+</div>
+<p>The matrix has constant diagonals: it is a <strong>Toeplitz</strong> matrix. A <span class="math inline">\((2M+1)\)</span>-tap FFE gives a <span class="math inline">\((2M+1)\times(2M+1)\)</span> system of the same form. The normalization step comes last. It scales the whole equalized pulse down, but it does not change where the zeros are.</p>
+<div class="tbox tbox-example">
+<div class="tbox-title">
+<p>Worked Example 6.2 · Liu’s 3-tap zero-forcing FFE</p>
+</div>
+<p><span id="we:ch6-liu"></span> Liu’s example pulse has <span class="math inline">\(x_{-1}=0.2\)</span>, <span class="math inline">\(x_0=0.85\)</span>, <span class="math inline">\(x_1=-0.2\)</span>, <span class="math inline">\(x_2=0.1\)</span> and <span class="math inline">\(x_3=0.05\)</span> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-liuEq">5</a>]. <a href="#eq:ch6-zf">Equation (6.5)</a> reads <span class="math display">\[\begin{bmatrix}0.85&amp;0.2&amp;0\\-0.2&amp;0.85&amp;0.2\\0.1&amp;-0.2&amp;0.85\end{bmatrix}
+\begin{bmatrix}\alpha_{-1}\\\alpha_0\\\alpha_1\end{bmatrix}=\begin{bmatrix}0\\1\\0\end{bmatrix}
+\;\Rightarrow\;\boldsymbol\alpha=[-0.248,\ 1.053,\ 0.277].\]</span> Since <span class="math inline">\(\sum\lvert\alpha\rvert=1.578\)</span>, the normalized taps are <span class="math inline">\([-0.157,\ 0.667,\ 0.176]\)</span>. The equalized cursors for <span class="math inline">\(k=-2..4\)</span> are <span class="math inline">\([-0.031,\ 0,\ 0.634,\ 0,\ 0.024,\ 0.051,\ 0.009]\)</span>. With <span class="math inline">\(2A=1\)</span>, the PDA eye opens from <span class="math inline">\(0.85-0.55=0.30\)</span> to <span class="math inline">\(0.634-0.115=0.519\)</span> (<a href="#fig:ch6-zf">Figure 6.4</a>). Three lessons:</p>
+<ul>
+<li><p>The post-tap is <em>positive</em>, because <span class="math inline">\(x_1\)</span> is negative. ZF inverts whatever ISI is there. This FFE is not even high-pass: it is <span class="math inline">\(-3.3\)</span> dB at DC and <span class="math inline">\(-3.8\)</span> dB at <span class="math inline">\(f_\mathrm{N}\)</span>.</p></li>
+<li><p>ISI is pushed outside the forced window. A new cursor appears at <span class="math inline">\(k=-2\)</span>, and <span class="math inline">\(k=3\)</span> grows from 6 % to 8 % of the main cursor.</p></li>
+<li><p>Normalization costs main cursor. It drops from 0.85 to 0.634.</p></li>
+</ul>
+</div>
+<div id="fig:ch6-zf">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch06_zf.svg' | relative_url }}{% raw %}" style="width:753px" alt="Zero forcing zeros only the cursors it is told to." loading="lazy" />
+<figcaption><span class="capnum">Figure 6.4.</span> <strong>Zero forcing zeros only the cursors it is told to.</strong> (a) Liu’s example pulse. (b) After the normalized 3-tap ZF FFE, the cursors at <span class="math inline">\(k=\pm1\)</span> are exactly zero, but ISI appears at <span class="math inline">\(k=-2\)</span> and grows at <span class="math inline">\(k=+3\)</span> (circled). Normalization to <span class="math inline">\(\sum\lvert c\rvert=1\)</span> lowers the main cursor to 0.634.</figcaption>
+</figure>
+<h5 id="least-squares-and-mmse">Least squares and MMSE</h5>
+<p>Zero forcing looks at only <span class="math inline">\(2M+1\)</span> cursors. <strong>Least squares</strong> (LS) uses the whole pulse. Stack shifted copies of the full pulse as the columns of a matrix <span class="math inline">\(\mathbf H\)</span> (one row per output cursor), then minimize <span class="math inline">\(\lVert\mathbf H\mathbf c-\mathbf y_\mathrm{des}\rVert^2\)</span>, where <span class="math inline">\(\mathbf y_\mathrm{des}\)</span> is 1 at the main cursor and 0 elsewhere. The solution is <span class="math inline">\(\mathbf c=(\mathbf H^\mathsf{T}\mathbf H)^{-1}\mathbf H^\mathsf{T}\mathbf y_\mathrm{des}\)</span>, which is then normalized. For a receiver FIR, where noise passes through the filter, the noise-aware <strong>MMSE</strong> form adds <span class="math inline">\((\sigma_\mathrm{n}^2/\sigma_a^2)\mathbf I\)</span> to <span class="math inline">\(\mathbf H^\mathsf{T}\mathbf H\)</span>. Palermo’s 10 Gb/s example gives <span class="math inline">\(\mathbf c=[-0.131,\ 0.595,\ -0.274]\)</span> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-palermo720eq">22</a>]. Its DC gain is <span class="math inline">\(\sum c=0.190\)</span> (<span class="math inline">\(-14.4\)</span> dB) and its Nyquist gain is <span class="math inline">\(\lvert\sum(-1)^kc_k\rvert=1\)</span>, so it applies 14.4 dB of de-emphasis, all of it paid in swing.</p>
+<h5 id="the-ref-channel">The REF channel</h5>
+<p>Lab 3 applies <a href="#eq:ch6-zf">Equation (6.5)</a> to the REF cursors <span class="math inline">\(p_{-1}=0.0486\)</span>, <span class="math inline">\(p_{0}=0.3396\)</span> and <span class="math inline">\(p_{1}=0.1817\)</span>. The 3-tap ZF taps are <span class="math inline">\([-0.0853,\ 0.5959,\ -0.3188]\)</span>, which is 14.3 dB of boost. The 2-tap ZF taps, forcing only <span class="math inline">\(q_1=0\)</span>, are <span class="math inline">\([0.6515,\ -0.3485]\)</span>, or 10.4 dB. <a href="#fig:ch6-ref">Figure 6.5</a> shows the result for PRBS7. The eye goes from −77.8 mV without FFE to 162.7 mV (0.89 UI) with the 2-tap FFE, but only to 144.8 mV (0.83 UI) with the 3-tap ZF FFE. (With PRBS13 the 2-tap eye is 148 mV. Its PDA and statistical eyes, 126 mV and 131 mV at <span class="math inline">\(10^{-12}\)</span>, are worked out in Sections <a href="{% endraw %}{{ '/chapters/04-link-budgets-and-statistical-analysis/' | relative_url }}{% raw %}#sec:pda">4.2</a> and <a href="{% endraw %}{{ '/chapters/04-link-budgets-and-statistical-analysis/' | relative_url }}{% raw %}#sec:stateye">4.3</a>.)</p>
+<p>So the 3-tap zero-forcing FFE is <em>worse</em> than the 2-tap one. Under <span class="math inline">\(\sum\lvert c\rvert=1\)</span>, every unit of tap weight comes out of the main cursor, which drops from 0.340 to 0.175 V with three taps. The pre-tap spends 0.085 of the budget to null <span class="math inline">\(p_{-1}=0.049\)</span> exactly, and it leaks <span class="math inline">\(p_{2}\)</span> into <span class="math inline">\(q_1\)</span>. A grid search for the 3-tap setting with the largest PDA eye finds <span class="math inline">\([-0.04,\ 0.61,\ -0.35]\)</span>. Its PRBS7 eye is 163.6 mV, only 1 mV better than the 2-tap FFE. <em>Zero forcing is a recipe, not an optimum.</em> Judge taps by the eye they produce.</p>
+<div id="fig:ch6-ref">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch06_ref.svg' | relative_url }}{% raw %}" style="width:753px" alt="On REF, a 2-tap FFE opens the eye; the 3-tap ZF FFE does slightly worse." loading="lazy" />
+<figcaption><span class="capnum">Figure 6.5.</span> <strong>On REF, a 2-tap FFE opens the eye; the 3-tap ZF FFE does slightly worse.</strong> (a) Pulse responses without FFE, with the 2-tap ZF taps <span class="math inline">\([0.652,-0.349]\)</span> and with the 3-tap ZF taps <span class="math inline">\([-0.085,0.596,-0.319]\)</span>. Dots mark the cursors. (b, c) PRBS7 eyes at the RX input, plotted on the same scale. The open eye is 163 mV but only about a third of the unequalized swing. That is the price of equalizing at the TX.</figcaption>
+</figure>
+<div class="tbox tbox-tryit">
+<div class="tbox-title">
+<p>Lab 3: TX FFE</p>
+</div>
+<p><code>lab3_tx_ffe.py</code> computes the ZF taps with <code>sdp.forcing_ffe</code>, normalizes them, and measures the eyes quoted above. Change the pre-tap by hand and watch the eye move in both directions (<a href="{% endraw %}{{ '/chapters/16-hands-on-labs-with-serdespy/' | relative_url }}{% raw %}#sec:lab3">Section 16.4</a>).</p>
+</div>
+<h2 id="sec:ch6-practical"><span class="secnum">6.4</span>Practical notes</h2>
+<h5 id="presets">Presets</h5>
+<p>Standards define a few TX presets rather than free taps, because a transmitter cannot measure the channel. PCIe Gen2 uses −3.5 dB and −6 dB (<a href="#we:ch6-pcie">Worked Example 6.1</a>). Open-SERDES offers the same two presets plus a small pre-tap. <a href="{% endraw %}{{ '/chapters/08-decision-feedback-equalization-and-adaptation/' | relative_url }}{% raw %}#sec:eq-partition">Section 8.5</a> shows that <span class="math inline">\(-6\)</span> dB is the right preset for REF once a DFE follows.</p>
+<h5 id="tap-resolution">Tap resolution</h5>
+<p>A CML driver builds each tap from <span class="math inline">\(N\)</span> equal current slices, so the taps move in steps of <span class="math inline">\(1/N\)</span>. For the REF 2-tap FFE, 8 slices give <span class="math inline">\([0.625,-0.375]\)</span> and a 162.6 mV eye. 32 slices give <span class="math inline">\([0.656,-0.344]\)</span> and 162.3 mV. The ideal setting gives 162.7 mV. The eye is flat near its optimum, so 4–5 bits (16–32 slices) are plenty at this data rate. Palermo quotes 4–6 bits as typical [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-palermo720eq">22</a>].</p>
+<div class="tbox tbox-insight">
+<div class="tbox-title">
+<p>What this means for your design</p>
+</div>
+<p>A TX FFE does not boost the high frequencies. It <em>lowers the low frequencies</em>, because the driver is already at its peak swing. The 10.4 dB ZF setting on REF leaves repeated bits at 30 % of full swing, and the eye at the receiver is about a third of the unequalized swing. Receiver noise, crosstalk and sampler offset do not shrink with it, so the SNR falls by the de-emphasis. Keep the TX FFE at moderate de-emphasis (3.5–6 dB) with a small pre-tap, and let the receiver equalizers do the rest. How the driver builds the taps is covered in <a href="{% endraw %}{{ '/chapters/09-the-transmitter/' | relative_url }}{% raw %}#sec:ffe-impl">Section 9.5</a>.</p>
+</div>
+<div class="tbox tbox-takeaways">
+<div class="tbox-title">
+<p>Key takeaways</p>
+</div>
+<ul>
+<li><p>A TX FFE is a short FIR filter. Its taps convolve with the cursor list: <span class="math inline">\(q_k=\sum_jc_jp_{k-j}\)</span>.</p></li>
+<li><p>The peak-swing constraint <span class="math inline">\(\sum\lvert c_k\rvert=1\)</span> forces de-emphasis. Transitions keep full swing and repeated bits are attenuated.</p></li>
+<li><p>A 2-tap FFE has <span class="math inline">\(\lvert H\rvert=\sqrt{1+\alpha^2+2\alpha\cos2\pi fT_\mathrm{b}}\)</span>, with de-emphasis <span class="math inline">\(-20\log_{10}(1-2\lvert c_1\rvert)\)</span>. PCIe’s <span class="math inline">\(-3.5\)</span> and <span class="math inline">\(-6\)</span> dB correspond to <span class="math inline">\(c_1=-0.166\)</span> and <span class="math inline">\(-0.249\)</span>.</p></li>
+<li><p>Zero-forcing taps solve a small Toeplitz system. Least squares uses the whole pulse, and MMSE adds noise.</p></li>
+<li><p>On REF, 2-tap ZF gives 162.7 mV and 3-tap ZF gives 144.8 mV. Zero forcing is not eye-optimal.</p></li>
+<li><p>The FFE costs launch swing and SNR, not power. Use moderate presets and 4–5-bit taps.</p></li>
+</ul>
+</div>
+
+<nav class="prev-next" aria-label="Chapter navigation"><a class="pn-link prev" href="{% endraw %}{{ '/chapters/05-equalization-fundamentals/' | relative_url }}{% raw %}"><small>← Previous</small>Equalization Fundamentals</a><a class="pn-link next" href="{% endraw %}{{ '/chapters/07-continuous-time-linear-equalizer/' | relative_url }}{% raw %}"><small>Next →</small>Continuous-Time Linear Equalizer</a></nav>
+<p class="page-source">Generated from <a href="https://github.com/bricd-org/serdes-tutorial/blob/main/book/tutorial/chapters/06_txffe.tex">book/tutorial/chapters/06_txffe.tex</a>. Figure, table and equation numbers match the <a href="{% endraw %}{{ '/assets/pdf/Open-SERDES_Tutorial.pdf' | relative_url }}{% raw %}">PDF edition</a>.</p>
+{% endraw %}

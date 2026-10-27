@@ -1,0 +1,96 @@
+%% tutorial.tex -- Open-SERDES Design Tutorial (BRICD)
+%% Compile with pdfLaTeX + BibTeX (Overleaf: set this file as the Main document).
+%% All sources live in the tutorial/ folder.
+\documentclass[11pt,a4paper,oneside,openany]{book}
+\usepackage{tutorial/serdestut}
+
+% Faster compiles while editing (Overleaf free plan has a 10 s limit): uncomment and list the
+% chapters you are working on; cross-references to other chapters keep working.
+%\includeonly{tutorial/chapters/03_channel,tutorial/chapters/04_linkanalysis}
+% Partial builds (local): if <jobname>.only exists it may contain \includeonly{...}
+\IfFileExists{\jobname.only}{\input{\jobname.only}}{}
+
+\hypersetup{pdftitle={Designing a Serial Link from Scratch: The Open-SERDES Tutorial},
+            pdfauthor={Open-SERDES Project, BRICD}}
+
+\begin{document}
+\frontmatter
+%% ------------------------------------------------------------------ title page
+\begin{titlepage}
+\thispagestyle{empty}
+\tikzexternaldisable
+\begin{tikzpicture}[remember picture,overlay]
+  \fill[navy] (current page.south west) rectangle (current page.north east);
+  \foreach \x in {0,1,...,21}{\draw[slate,line width=0.3pt] ($(current page.south west)+(\x*1cm,0)$) -- ++(0,30cm);}
+  \foreach \y in {0,1,...,30}{\draw[slate,line width=0.3pt] ($(current page.south west)+(0,\y*1cm)$) -- ++(21cm,0);}
+  % stylised eye diagram
+  \begin{scope}[shift={($(current page.south west)+(3.0cm,4.6cm)$)},x=1.15cm,y=1cm]
+    \foreach \dx/\op in {-0.18/0.45,0/1,0.18/0.45}{
+      \foreach \s in {0,4,8}{
+        \draw[goldlt,line width=2.2pt,opacity=\op,line cap=round]
+          (\s+\dx-0.6,0) .. controls (\s+\dx+1.0,0) and (\s+\dx+1.0,3.6) .. (\s+\dx+2.6,3.6);
+        \draw[goldlt,line width=2.2pt,opacity=\op,line cap=round]
+          (\s+\dx-0.6,3.6) .. controls (\s+\dx+1.0,3.6) and (\s+\dx+1.0,0) .. (\s+\dx+2.6,0);
+      }}
+    \draw[goldlt,line width=2.2pt,opacity=0.85] (-0.6,0) -- (12.6,0) (-0.6,3.6) -- (12.6,3.6);
+  \end{scope}
+  \node[anchor=north west,text=goldlt,font=\sffamily\bfseries\large] at ($(current page.north west)+(2.4cm,-3.2cm)$)
+     {OPEN-SERDES \textperiodcentered{} IHP SG13G2 \textperiodcentered{} 5\,Gb/s NRZ};
+  \node[anchor=north west,text=white,font=\sffamily\bfseries\fontsize{40}{46}\selectfont,text width=16.5cm,align=left]
+     at ($(current page.north west)+(2.4cm,-4.4cm)$) {Designing a Serial Link from Scratch};
+  \draw[gold,line width=2.4pt] ($(current page.north west)+(2.45cm,-8.75cm)$) -- ++(4.5cm,0);
+  \node[anchor=north west,text=pale,font=\sffamily\Large,text width=15.5cm,align=left]
+     at ($(current page.north west)+(2.4cm,-9.3cm)$)
+     {A design tutorial for undergraduate engineers building an open-source high-speed SerDes in 130\,nm SiGe BiCMOS};
+  \node[anchor=north west,text=white,font=\sffamily\normalsize,text width=15.5cm,align=left]
+     at ($(current page.north west)+(2.4cm,-12.6cm)$)
+     {Channels \textperiodcentered{} Link budgets \textperiodcentered{} Equalization \textperiodcentered{} TX and RX circuits \textperiodcentered{} Jitter, PLLs and CDR \textperiodcentered{} Open-source design flow \textperiodcentered{} Hands-on labs};
+  \node[anchor=south west,text=white,font=\sffamily\bfseries\large] at ($(current page.south west)+(2.4cm,2.6cm)$) {BRICD};
+  \node[anchor=south west,text=pale,font=\sffamily\small] at ($(current page.south west)+(2.4cm,1.9cm)$)
+     {Biomedical Research in Integrated Circuit Design \textperiodcentered{} thebricd.org};
+  \node[anchor=south east,text=pale,font=\sffamily\small,align=right] at ($(current page.south east)+(-2.4cm,1.9cm)$)
+     {Open-SERDES Project\\Draft v0.1 \textperiodcentered{} October 2026};
+\end{tikzpicture}
+\tikzexternalenable
+\end{titlepage}
+
+\input{tutorial/chapters/00_preface}
+{\hypersetup{linkcolor=navy}\tableofcontents}
+
+\mainmatter
+\tutpart{Foundations}{What a serial link is, the language we use to describe it, and the channel that makes it hard. Everything later in this tutorial is built on the pulse response, the eye diagram and the bit-error rate introduced here.}
+\include{tutorial/chapters/01_intro}
+\include{tutorial/chapters/02_signals}
+\include{tutorial/chapters/03_channel}
+\include{tutorial/chapters/04_linkanalysis}
+
+\tutpart{Equalization}{Undoing the channel. We look at where equalization can live in the link (TX FFE, CTLE, DFE), how much each can do, what it costs, and how to split the work between them for the Open-SERDES channel.}
+\include{tutorial/chapters/05_eqfund}
+\include{tutorial/chapters/06_txffe}
+\include{tutorial/chapters/07_ctle}
+\include{tutorial/chapters/08_dfe}
+
+\tutpart{Transceiver Circuits}{Turning the system model into transistors: the serializer and output driver on the transmit side, and the termination, front-end and samplers on the receive side, all with SG13G2 HBTs and CMOS.}
+\include{tutorial/chapters/09_tx}
+\include{tutorial/chapters/10_rx}
+
+\tutpart{Clocking}{Every bit is only as good as the clock edge that samples it. Jitter, clock generation with a phase-locked loop, and clock and data recovery.}
+\include{tutorial/chapters/11_jitter}
+\include{tutorial/chapters/12_pll}
+\include{tutorial/chapters/13_cdr}
+
+\tutpart{Putting It Together}{The complete Open-SERDES architecture and its budgets, the open-source design and verification flow, and hands-on labs that let you reproduce every key plot in this tutorial.}
+\include{tutorial/chapters/14_arch}
+\include{tutorial/chapters/15_flow}
+\include{tutorial/chapters/16_labs}
+
+\appendix
+\include{tutorial/chapters/A_appendices}
+
+\backmatter
+\cleardoublepage
+\renewcommand{\bibname}{References}
+\phantomsection\addcontentsline{toc}{chapter}{References}
+\bibliographystyle{unsrtnat}
+\bibliography{tutorial/bib/core,tutorial/bib/p1,tutorial/bib/p2,tutorial/bib/p3,tutorial/bib/p4,tutorial/bib/p5,tutorial/bib/p6}
+\end{document}

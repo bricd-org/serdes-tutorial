@@ -1,0 +1,66 @@
+% ch01_beol.tex -- stylized SG13G2 cross-section (not to scale) + HBT symbol and spiral inductor
+\begin{tikzpicture}[x=0.95cm,y=1cm,
+  met/.style={fill=c1!55,draw=navy,line width=0.4pt},
+  tmet/.style={fill=c1!75,draw=navy,line width=0.5pt},
+  via/.style={fill=muted!60,draw=none},
+  ann/.style={font=\sffamily\scriptsize,text=navy,anchor=west,align=left}]
+% oxide background
+\fill[bgpale] (0,0.9) rectangle (8.6,6.15);
+% substrate and device layer
+\fill[muted!18] (0,0) rectangle (8.6,0.9);
+\node[font=\sffamily\scriptsize,text=muted] at (6.9,0.3) {p-substrate};
+% NMOS (left)
+\fill[c3!30] (0.5,0.62) rectangle (1.05,0.9); \fill[c3!30] (1.55,0.62) rectangle (2.1,0.9);
+\fill[muted!70] (1.05,0.95) rectangle (1.55,1.15);
+\node[font=\sffamily\scriptsize,text=muted] at (1.3,0.4) {NMOS};
+% HBT (right of NMOS): buried collector, SiGe base, T-shaped emitter
+\fill[c2!35] (2.8,0.25) rectangle (5.2,0.6);
+\fill[c2!55] (3.1,0.6) rectangle (4.9,0.9);
+\fill[goldlt] (3.2,0.9) rectangle (4.8,1.05);
+\fill[c4!60] (3.85,1.05) rectangle (4.15,1.25); \fill[c4!60] (3.65,1.25) rectangle (4.35,1.38);
+\node[font=\sffamily\scriptsize,text=brown] at (4.0,0.08) {SiGe:C HBT};
+% contacts
+\foreach \x in {0.7,1.85,3.3,4.0,4.65}{\fill[via] (\x,1.05) rectangle (\x+0.12,1.6);}
+% thin metals M1..M5
+\foreach \y/\n in {1.6/1,1.95/2,2.3/3,2.65/4,3.0/5}{
+  \fill[met] (0.4,\y) rectangle (2.3,\y+0.13);
+  \fill[met] (3.0,\y) rectangle (5.0,\y+0.13);
+  \fill[via] (1.2,\y+0.13) rectangle (1.32,\y+0.35);
+  \fill[via] (3.9,\y+0.13) rectangle (4.02,\y+0.35);}
+% MIM capacitor between M5 and TM1
+\fill[gold] (5.7,3.28) rectangle (7.6,3.36);
+\fill[met] (5.6,3.0) rectangle (7.8,3.13);
+\fill[via] (6.5,3.36) rectangle (6.62,3.6);
+\node[font=\sffamily\scriptsize,text=golddk] at (6.7,2.75) {MIM cap};
+% TopMetal1 and TopMetal2
+\fill[via] (1.2,3.13) rectangle (1.32,3.6); \fill[via] (3.9,3.13) rectangle (4.02,3.6);
+\fill[tmet] (0.4,3.6) rectangle (8.0,4.05);
+\fill[via] (2.0,4.05) rectangle (2.2,4.6); \fill[via] (6.0,4.05) rectangle (6.2,4.6);
+\foreach \x in {0.6,2.6,4.6,6.6}{\fill[tmet] (\x,4.6) rectangle (\x+1.4,5.45);}
+\draw[muted,line width=0.6pt] (0,5.75) -- (8.6,5.75);
+\node[font=\sffamily\scriptsize,text=muted,anchor=south east] at (8.55,5.77) {passivation};
+% labels on the right of the stack
+\draw[decorate,decoration={brace,amplitude=4pt},navy] (8.75,3.13) -- (8.75,1.6);
+\node[ann] at (8.95,2.37) {Metal1--Metal5: thin Al,\\[-1pt]dense local routing};
+\node[ann] at (8.95,3.82) {TopMetal1, \textbf{2\,\textmu m}};
+\node[ann] at (8.95,5.03) {TopMetal2, \textbf{3\,\textmu m}: inductors,\\[-1pt]T-lines, supply rails};
+\node[ann] at (8.95,3.25) {\textcolor{golddk}{MIM $\approx$1.5\,fF/\textmu m$^2$}};
+\node[font=\sffamily\scriptsize\itshape,text=muted,anchor=west] at (0.0,6.35) {stylized, not to scale};
+% ---- HBT symbol
+\begin{scope}[shift={(13.45,4.4)}]
+  \draw[color=navy] (0,0) node[npn,scale=1.0](Q){};
+  \draw[navy] (Q.B) -- ++(-0.35,0) node[left,font=\sffamily\scriptsize]{B};
+  \draw[navy] (Q.C) -- ++(0,0.25) node[above,font=\sffamily\scriptsize]{C};
+  \draw[navy] (Q.E) -- ++(0,-0.25) node[below,font=\sffamily\scriptsize]{E};
+  \node[font=\sffamily\footnotesize\bfseries,text=navy,anchor=west] at (0.5,0.45) {npn13G2};
+  \node[font=\sffamily\scriptsize,text=navy,anchor=west,align=left] at (0.5,-0.25)
+     {$f_T\approx300$\,GHz\\[-1pt]$f_{max}\approx450$--$500$\,GHz\\[-1pt]$BV_{CEO}\approx1.7$\,V};
+\end{scope}
+% ---- spiral inductor (top view)
+\begin{scope}[shift={(13.25,1.25)}]
+  \draw[c1!80!navy,line width=1.6pt,line cap=round]
+    (-1.0,-0.8) -- (-0.75,-0.8) -- (-0.75,0.75) -- (0.75,0.75) -- (0.75,-0.75) -- (-0.5,-0.75)
+    -- (-0.5,0.5) -- (0.5,0.5) -- (0.5,-0.5) -- (-0.25,-0.5) -- (-0.25,0.25) -- (0.25,0.25) -- (0.25,-0.1);
+  \node[font=\sffamily\scriptsize,text=navy,anchor=west,align=left] at (1.0,0.0) {spiral inductor\\[-1pt](TopMetal2,\\[-1pt]top view)};
+\end{scope}
+\end{tikzpicture}

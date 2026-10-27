@@ -1,0 +1,257 @@
+\tikzsetfigurename{07_ctle-}
+\chapter{Continuous-Time Linear Equalizer}\label{ch:ctle}
+\chapterlead{A CTLE is a high-pass filter built into the first receiver stage. It lifts the frequencies the channel attenuated by giving up gain at low frequencies.}
+\suppressfloats[t]
+
+\begin{objectives}
+\begin{itemize}
+  \item Compare passive RC, RLC and degenerated-pair CTLEs and know why the degenerated pair is the workhorse.
+  \item Derive the degenerated-pair transfer function, with its zero, two poles, DC gain and peaking.
+  \item Turn a peaking target into $R_S$, $C_S$, $R_D$ and $\CL$, and respect the gain--bandwidth limit.
+  \item Choose the peaking for the REF channel, and recognize over-peaking.
+  \item Design an \sgx{} HBT CTLE, explain why its realized boost falls short of the ideal, and make it programmable from 0 to 12\,dB.
+\end{itemize}
+\end{objectives}
+
+\section{From RC to RLC: three passive ideas}\label{sec:ch7-passive}
+
+The channel is a low-pass filter, so its inverse must be a high-pass filter. Liu's notes walk through three ways to build one, shown in \cref{fig:ch7-passive}~\cite{liuEq}.
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[american, scale=0.82, transform shape, font=\small]
+  % (a) RC high-pass
+  \begin{scope}
+    \draw (0,0) node[left]{$v_\mathrm{in}$} to[C, l=$C$, o-*] (2,0) to[short,-o] (2.8,0) node[right]{$v_\mathrm{out}$};
+    \draw (2,0) to[R, l_=$R$] (2,-1.7) node[ground]{};
+    \node[font=\sffamily\small, text=navy] at (1.3,-2.6) {(a) RC high-pass};
+  \end{scope}
+  % (b) compensated divider
+  \begin{scope}[xshift=5.0cm]
+    \draw (0,0) node[left]{$v_\mathrm{in}$} to[short,o-*] (0.4,0);
+    \draw (0.4,0) -- (0.4,0.65) to[C, l=$C_1$] (2.2,0.65) -- (2.2,0);
+    \draw (0.4,0) -- (0.4,-0.65) to[R, l_=$R_1$] (2.2,-0.65) -- (2.2,0);
+    \draw (2.2,0) to[short,*-*] (3.1,0) to[short] (4.1,0) to[short,*-o] (4.8,0) node[right]{$v_\mathrm{out}$};
+    \draw (3.1,0) to[R, l_=$R_2$] (3.1,-1.7) node[ground]{};
+    \draw (4.1,0) to[C, l=$C_2$] (4.1,-1.7) node[ground]{};
+    \node[font=\sffamily\small, text=navy] at (2.2,-2.6) {(b) $R_1\Vert C_1$ / $R_2\Vert C_2$ divider};
+  \end{scope}
+  % (c) RLC load (half circuit)
+  \begin{scope}[xshift=12.2cm, yshift=-0.3cm]
+    \draw (0,2.5) node[vcc]{$V_\mathrm{DD}$} to[L, l_=$L$] (0,1.3) to[R, l_=$R_S$] (0,0.1) node[circ]{};
+    \draw (0,0.1) -- (1.0,0.1) node[circ]{} to[short,-o] (1.7,0.1) node[right]{$v_\mathrm{out}$};
+    \draw (0,0.1) to[I, l_=$g_mv_\mathrm{in}$] (0,-1.4) node[ground]{};
+    \draw (1.0,0.1) to[C, l=$C$] (1.0,-1.4) node[ground]{};
+    \node[font=\sffamily\small, text=navy] at (0.7,-2.3) {(c) RLC load};
+  \end{scope}
+\end{tikzpicture}
+\caption{\textbf{Three passive ways to make a high-pass equalizer.} (a)~A plain RC high-pass has no DC gain. (b)~A deliberately over-compensated divider has a finite DC gain but attenuates at every frequency. (c)~An inductively peaked load gives real boost, but with complex poles that ring.}
+\label{fig:ch7-passive}
+\end{figure}
+
+\paragraph{RC high-pass} $H(s)=sRC/(1+sRC)$ has zero gain at DC. A long run of identical bits decays toward 0\,V, so the baseline wanders with the data. On its own it is unusable.
+
+\paragraph{Over-compensated divider} With a series $R_1\Vert C_1$ and a shunt $R_2\Vert C_2$,
+\begin{equation}
+  H(s)=\frac{R_2}{R_1+R_2}\cdot\frac{1+sR_1C_1}{1+s\,(R_1\Vert R_2)(C_1+C_2)},\qquad
+  \frac{\omega_p}{\omega_z}=\frac{R_1+R_2}{R_2}\cdot\frac{C_1}{C_1+C_2}.
+  \label{eq:ch7-passive}
+\end{equation}
+The DC gain is $R_2/(R_1+R_2)$ and the high-frequency gain is $C_1/(C_1+C_2)$. With $R_1C_1=R_2C_2$ it is a flat compensated probe; a larger $R_1C_1$ makes it an equalizer. It is very linear, but its gain is below 1 everywhere (``no gain'', in Liu's words), which degrades the SNR at the next stage.
+
+\paragraph{RLC load} Put an inductor in series with the load resistor $R_S$ of a differential pair and let $C$ be the node capacitance. With $\omega_n=1/\sqrt{LC}$ and $\zeta=\tfrac{R_S}{2}\sqrt{C/L}$, the load impedance is
+\begin{equation}
+  Z(s)=R_S\,\frac{\omega_n}{2\zeta}\cdot\frac{s+2\zeta\omega_n}{s^2+2\zeta\omega_n s+\omega_n^2},\qquad
+  \frac{\lvert Z(j\omega_n)\rvert}{R_S}=\frac{\sqrt{1+4\zeta^2}}{4\zeta^2}.
+  \label{eq:ch7-rlc}
+\end{equation}
+With $\zeta=0.2$ the boost is 6.7, or \qty{16.6}{\deci\bel} (\cref{fig:ch7-rlc}). Liu calls the result a ``fatal drawback'': the complex poles sit close to the $j\omega$ axis, so the step response rings as $e^{-\zeta\omega_nt}\cos(\sqrt{1-\zeta^2}\,\omega_nt)$, and the ringing is ISI of its own. Mild inductive peaking with $\zeta\approx0.5$--0.7 is still useful. It extends bandwidth without much ringing, and we return to it in \cref{sec:ctle-hbt}.
+
+\begin{figure}[!tbp]
+  \centering
+  \includegraphics[width=\linewidth]{ch07_rlc}
+  \caption{\textbf{An RLC load buys boost with ringing.} (a)~Load impedance from \cref{eq:ch7-rlc} for several damping factors. $\zeta=0.2$ gives \qty{16.6}{\deci\bel} of peaking at $\omega_n$. (b)~Step responses. At $\zeta=0.2$ the output overshoots to 2.7 times its final value and rings for several periods inside the $e^{-\zeta\omega_nt}$ envelope (dotted).}
+  \label{fig:ch7-rlc}
+\end{figure}
+
+\section{The source-degenerated differential pair}\label{sec:ctle-degen}
+
+The workhorse CTLE is a differential pair with a parallel $R_S\Vert C_S$ between its sources or emitters (\cref{fig:ch7-degen}). At low frequency $R_S$ degenerates the pair and lowers its gain. At high frequency $C_S$ shorts $R_S$, and the full gain $\gm R_D$ returns. The zero and first pole are set by $R_S$ and $C_S$, so $R_S$ can be a triode MOSFET and $C_S$ a varactor, giving a tunable CTLE~\cite{liuEq,palermo720eq}.
+
+\begin{figure}[!tbp]
+\centering
+\begin{tikzpicture}[american, scale=0.8, transform shape, font=\small]
+  % differential pair
+  \draw (0,0) node[nmos](M1){};
+  \draw (4,0) node[nmos, xscale=-1](M2){};
+  \node[left=1pt, font=\small] at ($(M1.center)+(0.55,0.35)$) {};
+  \draw (M1.D) -- (0,1.3) coordinate(o1) to[R, l=$R_D$] (0,3.1);
+  \draw (M2.D) -- (4,1.3) coordinate(o2) to[R, l_=$R_D$] (4,3.1);
+  \draw (0,3.1) -- (4,3.1); \draw (2,3.1) node[vcc]{$V_\mathrm{DD}$};
+  \draw (o1) to[short,*-] (1.1,1.3) to[C, l_=$\CL$] (1.1,0.2) node[ground]{};
+  \draw (o2) to[short,*-] (2.9,1.3) to[C, l=$\CL$] (2.9,0.2) node[ground]{};
+  \draw (o1) to[short,-o] (-1.2,1.3) node[left]{$v_\mathrm{o}^-$};
+  \draw (o2) to[short,-o] (5.2,1.3) node[right]{$v_\mathrm{o}^+$};
+  \draw (M1.G) to[short,-o] (-1.2,0) node[left]{$v_\mathrm{in}^+$};
+  \draw (M2.G) to[short,-o] (5.2,0) node[right]{$v_\mathrm{in}^-$};
+  \draw (M1.S) -- (0,-1.3) coordinate(s1);
+  \draw (M2.S) -- (4,-1.3) coordinate(s2);
+  \draw (s1) to[short,*-] (0.9,-1.3) to[R, l=$R_S$, *-*] (3.1,-1.3) to[short,-*] (s2);
+  \draw (0.9,-1.3) -- (0.9,-2.2) to[C, l_=$C_S$] (3.1,-2.2) -- (3.1,-1.3);
+  \draw (s1) to[I, l_=$I/2$] (0,-3.4) node[ground]{};
+  \draw (s2) to[I, l=$I/2$] (4,-3.4) node[ground]{};
+  % half circuit
+  \begin{scope}[xshift=8.6cm]
+    \draw (0,0) node[nmos](M){};
+    \draw (M.D) -- (0,1.3) coordinate(oh) to[R, l=$R_D$] (0,3.1) node[vcc]{$V_\mathrm{DD}$};
+    \draw (oh) to[short,*-] (0.9,1.3) node[circ]{} to[C, l=$\CL$] (0.9,0.1) node[ground]{};
+    \draw (0.9,1.3) to[short,-o] (1.7,1.3) node[right]{$v_\mathrm{o}$};
+    \draw (M.G) to[short,-o] (-0.9,0) node[left]{$v_\mathrm{in}$};
+    \draw (M.S) -- (0,-1.3) coordinate(sh);
+    \draw (sh) to[short,*-] (-0.6,-1.3) to[R, l_=$R_S/2$] (-0.6,-3.0) node[ground]{};
+    \draw (sh) -- (0.6,-1.3) to[C, l=$2C_S$] (0.6,-3.0) node[ground]{};
+    \node[font=\sffamily\small, text=navy] at (0.3,-3.9) {half circuit};
+  \end{scope}
+\end{tikzpicture}
+\caption{\textbf{The degenerated differential pair is the workhorse CTLE.} $R_S\Vert C_S$ between the sources sets the zero and the first pole. $R_D\Vert\CL$ at the drains sets the second pole. The split tail ($2\times I/2$) keeps DC current out of $R_S$. In the half circuit, the degeneration appears as $R_S/2$ in parallel with $2C_S$.}
+\label{fig:ch7-degen}
+\end{figure}
+
+\begin{derivation}[Transfer function of the degenerated pair]
+In the half circuit the source sees $Z_S=\tfrac{R_S}{2}\big\Vert\tfrac{1}{2sC_S}=\dfrac{R_S/2}{1+sR_SC_S}$. Series feedback divides the transconductance by $1+\gm Z_S$:
+\[
+G_m(s)=\frac{\gm}{1+\gm Z_S}=\frac{\gm\,(1+sR_SC_S)}{1+\gm R_S/2+sR_SC_S}
+=\frac{\gm}{1+\gm R_S/2}\cdot\frac{1+sR_SC_S}{1+\dfrac{sR_SC_S}{1+\gm R_S/2}} .
+\]
+The drain load is $Z_D=R_D/(1+sR_D\CL)$, and $H=G_mZ_D$ (the sign inversion is absorbed by the output polarity).
+\end{derivation}
+
+\begin{keyeq}[Degenerated-pair CTLE]
+\begin{equation}
+  \begin{gathered}
+  \Hctle(s)=\frac{\gm R_D}{1+\gm R_S/2}\cdot\frac{1+s/\omega_z}{(1+s/\omega_{p1})(1+s/\omega_{p2})},\\[2pt]
+  \omega_z=\frac{1}{R_SC_S},\qquad
+  \omega_{p1}=\frac{1+\gm R_S/2}{R_SC_S},\qquad
+  \omega_{p2}=\frac{1}{R_D\CL}
+  \end{gathered}
+  \label{eq:ctle-tf}
+\end{equation}
+DC gain $=\gm R_D/(1+\gm R_S/2)$. Gain between $\omega_{p1}$ and $\omega_{p2}$ $\approx\gm R_D$. Ideal peaking $=\omega_{p1}/\omega_z=1+\gm R_S/2$.
+\end{keyeq}
+
+$R_S$ sets the peaking and the DC gain, and barely moves $\omega_{p1}\approx\gm/(2C_S)$ when $\gm R_S/2\gg1$. $C_S$ moves $\omega_z$ and $\omega_{p1}$ together at constant peaking (\cref{fig:ch7-bode}a). In this book the ``peaking'' of a setting means the \emph{ideal} ratio $\omega_{p1}/\omega_z$, as in \code{ctle()} of \code{link.py}, which fixes $f_{p1}=\fN$, $f_{p2}=\qty{10}{\giga\hertz}$ and 0\,dB high-frequency gain. The boost realized at $\fN$ is smaller: the 12\,dB setting gives \qty{9.0}{\deci\bel}, because the first pole already costs 3\,dB there (\cref{fig:ch7-bode}b).
+
+\begin{figure}[!tbp]
+  \centering
+  \includegraphics[width=\linewidth]{ch07_bode}
+  \caption{\textbf{Zero, poles and peaking of the degenerated pair.} (a)~\Cref{eq:ctle-tf} for the Lab~4 example circuit ($\gm=\qty{20}{\milli\siemens}$, $R_S=\qty{401}{\ohm}$, $C_S=\qty{0.795}{\pico\farad}$, $R_D=\qty{50}{\ohm}$, $\CL=\qty{318}{\femto\farad}$), with its asymptotes. The ideal peaking is 14\,dB, but the boost at $\fN$ is only 10.9\,dB. (b)~The \code{ctle()} family from 0 to 12\,dB, as used in the REF studies. The legend gives the boost realized at $\fN$.}
+  \label{fig:ch7-bode}
+\end{figure}
+
+\begin{example}{From a peaking target to component values}\label{we:ch7-design}
+Lab~4 finds 14\,dB best for REF without a DFE (\cref{sec:ch7-ref}). Target $a=10^{14/20}=5.01$, $f_{p1}=\fN$, $f_{p2}=\qty{10}{\giga\hertz}$ and 0\,dB high-frequency gain, with $\gm=\qty{20}{\milli\siemens}$ per side. Peaking: $R_S=2(a-1)/\gm=\qty{401}{\ohm}$. Zero: $f_z=f_{p1}/a=\qty{0.499}{\giga\hertz}$, so $C_S=1/(2\pi f_zR_S)=\qty{0.795}{\pico\farad}$. Gain: $\gm R_D=1$ gives $R_D=\qty{50}{\ohm}$, and $\CL=1/(2\pi f_{p2}R_D)=\qty{318}{\femto\farad}$. The DC gain is $\gm R_D/a=0.20$ (\qty{-14}{\deci\bel}). This circuit only \emph{loses} gain at low frequency; a real front end adds gain with more $\gm R_D$ or a following stage.
+\end{example}
+
+\paragraph{Gain--bandwidth} Multiplying the mid-band gain by the second pole gives
+\begin{equation}
+  (\gm R_D)\cdot\omega_{p2}=\frac{\gm}{\CL}.
+  \label{eq:ch7-gbw}
+\end{equation}
+This is the gain--bandwidth product of a plain differential pair; degeneration does not change it. A high $\omega_{p2}$ together with a large peak gain needs more $\gm$ (current) or a smaller $\CL$ (smaller next stage, inductive peaking).
+
+\section{The CTLE on the REF channel}\label{sec:ch7-ref}
+
+Lab~4 cascades REF with \code{ctle(pk)} and sweeps the peaking (\cref{fig:ch7-ref}). Without a CTLE the PRBS7 eye is \qty{-84}{\milli\volt}. It opens at about 4\,dB, reaches \qty{104}{\milli\volt} at 12\,dB and peaks at \qty{113.3}{\milli\volt} (0.94\,UI) at 14\,dB. Beyond 16\,dB it closes again. Meanwhile the main cursor $2A\pk{0}$ falls steadily, from \qty{337}{\milli\volt} to \qty{140}{\milli\volt} at 14\,dB. This is the CTLE ``boosting'' by suppressing the low frequencies.
+
+\begin{figure}[!tbp]
+  \centering
+  \includegraphics[width=\linewidth]{ch07_ref}
+  \caption{\textbf{More peaking is better only up to a point.} (a)~REF pulse response alone and after 8, 14 and 20\,dB CTLEs. At 20\,dB the first post-cursors go negative, which is over-equalization. (b)~PRBS7 eye height and main cursor against peaking (Lab~4). The eye is best at 14\,dB (\qty{113}{\milli\volt}), just outside the \OS{} range (shaded). The main cursor shrinks at every step.}
+  \label{fig:ch7-ref}
+\end{figure}
+
+\begin{insight}
+\begin{itemize}
+  \item \textbf{Over-peaking returns the ISI with the opposite sign.} Above 16\,dB, $\pk{1}$ and $\pk{2}$ turn negative and the eye closes again.
+  \item \textbf{Every dB of peaking costs main cursor.} From 0 to 14\,dB the main cursor drops by 7.6\,dB. Noise that enters after the CTLE, such as sampler and DFE-summer noise, does not drop with it, and the CTLE's high-frequency gain lifts noise and crosstalk relative to the signal.
+  \item \textbf{Pre-cursors shrink but do not vanish.} In our model $\pk{-1}$ falls from 0.049 to 0.006 at 14\,dB. A larger pre-cursor, for example from a reflection, is a job for the TX pre-tap.
+  \item With a DFE behind it, the CTLE should be tuned for the best eye \emph{after} the DFE. Let the DFE take $\pk{1}$ instead of peaking it away (\cref{sec:eq-partition}).
+\end{itemize}
+\end{insight}
+
+\begin{tryit}[Lab 4: CTLE]
+\code{lab4\_ctle.py} sweeps the peaking from 0 to 20\,dB, prints the eye and the cursors, and converts the best setting into $R_S$, $C_S$, $R_D$ and $\CL$ (\cref{sec:lab4}).
+\end{tryit}
+
+\section{An HBT CTLE in SG13G2}\label{sec:ctle-hbt}
+
+\OS{} builds its CTLE from \sgx{} SiGe HBTs. A bipolar transistor gives $\gm=I_C/V_T=\qty{38.7}{\milli\siemens}$ per mA, several times more than a MOSFET at the same current, and its $f_T\approx\qty{300}{\giga\hertz}$ keeps device capacitance small. The circuit is \cref{fig:ch7-degen} with npn devices, emitter degeneration $R_E\Vert C_E$ and collector loads $R_C$. Each $V_{CE}$ must stay below the $\mathrm{BV}_{CEO}$ of about 1.6--1.7\,V on the 2.5\,V analog supply.
+
+\begin{example}{An SG13G2 HBT CTLE with 10\,dB of ideal peaking}\label{we:ch7-hbt}
+Bias with $I_\mathrm{tail}=\qty{2}{\milli\ampere}$ (1\,mA per side): $\gm=\qty{1}{\milli\ampere}/\qty{25.85}{\milli\volt}=\qty{38.7}{\milli\siemens}$.
+\begin{itemize}
+  \item 10\,dB ideal peaking: $1+\gm R_E/2=3.16$, so $R_E=2(2.16)/\gm=\qty{112}{\ohm}$.
+  \item Put $f_{p1}$ at $\fN$: $f_z=2.5/3.16=\qty{0.79}{\giga\hertz}$, so $C_E=1/(2\pi f_zR_E)=\qty{1.8}{\pico\farad}$.
+  \item $R_C=\qty{200}{\ohm}$ and $\CL=\qty{100}{\femto\farad}$ give $f_{p2}=\qty{7.96}{\giga\hertz}$.
+  \item DC gain $=\gm R_C/3.16=2.45$ (\qty{7.8}{\deci\bel}). $\lvert H(j2\pi\fN)\rvert=\qty{14.8}{\deci\bel}$.
+\end{itemize}
+The \textbf{realized boost} at $\fN$ is $14.8-7.8=\qty{7.0}{\deci\bel}$, not 10\,dB. Each factor of \cref{eq:ctle-tf} evaluated at $\fN$ shows why: the zero contributes $20\log_{10}\lvert1+j\,2.5/0.79\rvert=+10.4$\,dB, the first pole $-3.0$\,dB because it sits at $\fN$, and the second pole $-0.4$\,dB. The response peaks at \qty{4.3}{\giga\hertz}, well above $\fN$.
+
+\emph{Fix.} The boost at $\fN$ is set by $\fN/f_z$, minus whatever the poles take away. Move $f_{p1}$ up to $2\fN$ and lower $f_z$ to \qty{0.70}{\giga\hertz}. That needs $1+\gm R_E/2=7.1$ (17\,dB ideal), so $R_E=\qty{317}{\ohm}$ and $C_E=\qty{0.72}{\pico\farad}$. The realized boost is then \qty{10.0}{\deci\bel}. The price is DC gain, which falls to \qty{0.7}{\deci\bel} (\cref{fig:ch7-we6}). A second option is inductive (shunt) peaking in the collector loads. It pushes $\omega_{p2}$ out and adds a little gain near $\fN$ (\cref{sec:ch7-passive}).
+\end{example}
+
+\begin{figure}[!tbp]
+  \centering
+  \includegraphics[width=\linewidth]{ch07_we6}
+  \caption{\textbf{The pole-zero ``ideal'' overstates the boost at $\fN$.} Blue: \cref{we:ch7-hbt} as designed. The asymptotes promise 10\,dB, but only 7.0\,dB is realized at $\fN$ (arrow). Teal: the fixed design, with $f_{p1}=2\fN$ and $f_z=\qty{0.70}{\giga\hertz}$, realizes 10.0\,dB at the cost of DC gain.}
+  \label{fig:ch7-we6}
+\end{figure}
+
+\paragraph{Programmability} The \OS{} CTLE must cover 0--12\,dB of peaking for channels shorter and longer than REF. \Cref{fig:ch7-hbt} shows the usual way to do it: binary-weighted banks of $R_E$ and $C_E$ segments, switched in parallel by MOS switches under a digital code. Closing more $R_E$ segments lowers $R_{E,\mathrm{eff}}$, which reduces the peaking and raises the DC gain. A fully closed bank (0\,dB) makes it a flat amplifier. $C_E$ segments are switched together with $R_E$, so $\omega_{p1}$ stays near $2\fN$. Keep the switches small. Their on-resistance adds to $R_E$ and their junction capacitance adds to $C_E$, and both shift the corners. Include them in the \tool{ngspice} netlist.
+
+\begin{figure}[!tbp]
+\centering
+\begin{tikzpicture}[american, scale=0.72, transform shape, font=\small]
+  \draw (0,0) node[npn](Q1){};
+  \draw (5,0) node[npn, xscale=-1](Q2){};
+  \node[font=\small, text=navy] at ($(Q1.center)+(0.75,0)$) {$Q_1$};
+  \node[font=\small, text=navy] at ($(Q2.center)+(-0.75,0)$) {$Q_2$};
+  \draw (Q1.C) -- (0,1.2) coordinate(o1) to[R, l=$R_C$] (0,3.0);
+  \draw (Q2.C) -- (5,1.2) coordinate(o2) to[R, l_=$R_C$] (5,3.0);
+  \draw (0,3.0) -- (5,3.0); \draw (2.5,3.0) node[vcc]{$V_\mathrm{CC}=\qty{2.5}{\volt}$};
+  \draw (o1) to[short,*-o] (-1.2,1.2) node[left]{$v_\mathrm{o}^-$};
+  \draw (o2) to[short,*-o] (6.2,1.2) node[right]{$v_\mathrm{o}^+$};
+  \draw (Q1.B) to[short,-o] (-1.2,0) node[left]{$v_\mathrm{in}^+$};
+  \draw (Q2.B) to[short,-o] (6.2,0) node[right]{$v_\mathrm{in}^-$};
+  \draw (Q1.E) -- (0,-1.2) coordinate(e1);
+  \draw (Q2.E) -- (5,-1.2) coordinate(e2);
+  % banks
+  \draw (e1) to[short,*-*] (1.0,-1.2) to[R, l=$R_{E0}$] (4.0,-1.2) to[short,*-*] (e2);
+  \draw (1.0,-1.2) to[short,-*] (1.0,-2.3) to[R, l_=$R_{E1}$] (2.6,-2.3) to[nos, l_=$b_1$] (4.0,-2.3) to[short,-*] (4.0,-1.2);
+  \draw (1.0,-2.3) to[short,-*] (1.0,-3.4) to[C, l_=$C_{E0}$] (4.0,-3.4) to[short,-*] (4.0,-2.3);
+  \draw (1.0,-3.4) -- (1.0,-4.5) to[C, l_=$C_{E1}$] (2.6,-4.5) to[nos, l_=$b_2$] (4.0,-4.5) -- (4.0,-3.4);
+  \draw (e1) to[I, l_=$I/2$] (0,-5.2) node[ground]{};
+  \draw (e2) to[I, l=$I/2$] (5,-5.2) node[ground]{};
+\end{tikzpicture}
+\caption{\textbf{A programmable HBT CTLE.} An \sgx{} npn pair with emitter degeneration banks. Closing switch $b_1$ puts $R_{E1}$ in parallel with $R_{E0}$, lowering the peaking. Switch $b_2$ adds $C_{E1}$ and lowers the corners. More binary-weighted segments (code $b_{3:0}$) cover 0--12\,dB. The split tail keeps DC current out of the banks, so the switches carry no bias current.}
+\label{fig:ch7-hbt}
+\end{figure}
+
+\paragraph{Noise} The degeneration resistor adds $\sqrt{4kTR_E}=\qty{1.4}{\nano\volt\per\sqrt{\hertz}}$ for $R_E=\qty{112}{\ohm}$, against $\sqrt{2\cdot2kT/\gm}=\qty{0.65}{\nano\volt\per\sqrt{\hertz}}$ of collector shot noise from the pair. Over \qty{5}{\giga\hertz} that is about \qty{0.1}{\milli\volt} rms, far below the \qty{10}{\milli\volt} slicer noise assumed in Lab~5. Offset, crosstalk and linearity limit a 5\,Gb/s CTLE before thermal noise does.
+
+\paragraph{Linearity and overload} With a split tail, the pair fully switches when the differential input exceeds about $I_\mathrm{tail}R_E/2$ plus a few $V_T$. For \cref{we:ch7-hbt} that is $112+\sim100\approx\qty{0.2}{\volt}$. Long runs on REF arrive at nearly the full DC level, $\pm0.93\times\qty{0.5}{\volt}=\pm\qty{0.47}{\volt}$ differential. The CTLE would compress them, and a compressed CTLE breaks the linear superposition that the DFE taps rely on. Three remedies stack: TX de-emphasis lowers the long-run level ($\pm\qty{0.23}{\volt}$ at $-6$\,dB); the fixed design's $I_\mathrm{tail}R_E/2=\qty{317}{\milli\volt}$ widens the linear range; and an input attenuator or gain control handles short channels (\cref{sec:rx-frontend}). At high frequency $C_E$ shorts $R_E$ and the range shrinks toward that of a bare pair, about $\pm2V_T$. That is tolerable, because the channel has already attenuated the high-frequency content by \qty{17}{\deci\bel}.
+
+\begin{specnote}[Open-SERDES CTLE targets (derived here)]
+Ideal peaking 0--12\,dB in 1--2\,dB steps ($\approx9$\,dB realized at $\fN$); $f_{p1}\approx1$--$2\,\fN$; $f_{p2}\ge\qty{7.5}{\giga\hertz}$; DC gain $\ge0$\,dB at 12\,dB; LF linear range $\ge\pm\qty{0.25}{\volt}$ differential. Verify the realized boost in \tool{ngspice}.
+\end{specnote}
+
+\begin{takeaways}
+\begin{itemize}
+  \item An RC high-pass has no DC gain and a passive divider has no gain at all. RLC peaking gives boost but rings when $\zeta$ is small (16.6\,dB at $\zeta=0.2$).
+  \item The degenerated pair gives $\omega_z=1/R_SC_S$, $\omega_{p1}=(1+\gm R_S/2)/R_SC_S$ and $\omega_{p2}=1/R_D\CL$, with ideal peaking $1+\gm R_S/2$.
+  \item The CTLE boosts by suppressing the low frequencies. Its gain--bandwidth is still $\gm/\CL$.
+  \item On REF, the eye is best at 14\,dB without a DFE (\qty{113.3}{\milli\volt}). Over-peaking turns the post-cursors negative and costs main cursor.
+  \item Realized boost at $\fN$ is well below the ideal when $f_{p1}=\fN$: 7.0\,dB instead of 10\,dB in \cref{we:ch7-hbt}. Move $f_{p1}$ up and $f_z$ down to recover it.
+  \item Make the HBT CTLE programmable with switched $R_E$/$C_E$ banks, and check its linear range against the long-run input level.
+\end{itemize}
+\end{takeaways}

@@ -1,0 +1,247 @@
+---
+title: "15. Design and Verification Flow with Open Tools"
+parent: "Part V · Putting It Together"
+nav_order: 15
+permalink: "/chapters/15-design-and-verification-flow-with-open-tools/"
+---
+{% raw %}
+<h1 id="ch:flow"><span class="chapnum">Chapter 15</span>Design and Verification Flow with Open Tools</h1>
+<div class="chapterlead">
+<p>From a Python model to a GDS file and a test bench, with nothing but open-source tools: which tool does what, how the model and the circuits keep each other honest, and how to prove the chip works.</p>
+</div>
+<div class="tbox tbox-objectives">
+<div class="tbox-title">
+<p>In this chapter you will learn</p>
+</div>
+<ul>
+<li><p>Name the open tool used at each stage of the Open-SERDES flow and say what it checks.</p></li>
+<li><p>Close the loop between the serdespy model and the transistor-level circuits by back-annotating simulated responses.</p></li>
+<li><p>Choose a testbench, a measurement and a pass/fail criterion for every block, including corners and Monte Carlo.</p></li>
+<li><p>Apply the layout rules that matter at 5 Gb/s: symmetry, current density, metal width, inductors, extraction and decoupling.</p></li>
+<li><p>Plan the lab bring-up: test board, loopback, on-chip PRBS checking and the measurements that compare silicon with the model.</p></li>
+</ul>
+</div>
+<p>The flow in <a href="#fig:ch15-flow">Figure 15.1</a> runs left to right, but it is not a pipeline. Every stage feeds numbers back to the system model, and the chip is ready for tape-out only when the model, rerun with those numbers, still shows margin at every corner.</p>
+<div id="fig:ch15-flow">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch15_flow_infographic.svg' | relative_url }}{% raw %}" style="width:763px" alt="The Open-SERDES design flow, end to end." loading="lazy" />
+<figcaption><span class="capnum">Figure 15.1.</span> <strong>The Open-SERDES design flow, end to end.</strong> Specifications and the serdespy system model come first; schematics in <strong>Xschem</strong> with <strong>ngspice</strong>, layout in <strong>KLayout</strong>, extraction and EM simulation, and sign-off (DRC, LVS, <strong>CACE</strong> datasheets) follow; then tape-out and lab test. The arrows back to the model are the important ones: each stage returns measured numbers that replace assumptions.</figcaption>
+</figure>
+<h2 id="sec:toolchain"><span class="secnum">15.1</span>The open toolchain</h2>
+<p>Every tool in this chapter ships in one Docker image, <strong>IIC-OSIC-TOOLS</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-iicosic">2</a>], together with the IHP SG13G2 PDK [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-ihppdk">1</a>]; pinning one image tag gives the whole team identical tools. The Open-SERDES repository builds on the JKU <strong>analog mixed-signal chip template</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-jkutemplate">7</a>] (it needs image 2026.06 or later). Its recursive Makefiles make one <code>make all</code> harden the digital macros, run every testbench including PVT and Monte Carlo, run DRC, LVS and extraction on the analog macros, assemble the chip digital-on-top with seal ring, pad frame and fill, run a full-chip LVS without black boxes, and draw the bonding diagram. GitHub Actions rerun it on every commit, so a broken block is noticed the day it breaks.</p>
+<p><a href="#fig:ch15-tools">Figure 15.2</a> maps the tools onto the flow, and <a href="#tab:ch15-tools">Table 15.1</a> says what each one is for.</p>
+<div id="fig:ch15-tools">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/tikz/15_flow-0.svg' | relative_url }}{% raw %}" style="width:764px" alt="Two lanes, one container." loading="lazy" />
+<figcaption><span class="capnum">Figure 15.2.</span> <strong>Two lanes, one container.</strong> The analog lane (HBT CML driver, CTLE, samplers, PLL, PIs) is hand-designed and verified block by block; the digital lane (PRBS, CDR loop filter, CMOS serializer and deserializer stages, SPI) is synthesized by <strong>LibreLane</strong>. Both merge in a digital-on-top assembly and one sign-off. The red dashed arrows are the feedback paths: corners and Monte Carlo send the designer back to the schematic, and extracted responses go back to the system model.</figcaption>
+</figure>
+<div id="tab:ch15-tools">
+
+</div>
+<div class="tabularx">
+<p><span>@&gt;p<span>40mm</span> L l@</span> <strong>Tool</strong> &amp; <strong>Purpose in Open-SERDES</strong> &amp; <strong>Stage</strong><br />
+<strong>serdespy</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-serdespy">3</a>], <strong>PyBERT</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-pybert">36</a>] &amp; link models, eyes, BER (<a href="{% endraw %}{{ '/chapters/16-hands-on-labs-with-serdespy/' | relative_url }}{% raw %}">Chapter 16</a>); PyBERT adds a GUI and IBIS-AMI &amp; system model<br />
+<strong>scikit-rf</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p2:skrf2022">18</a>] &amp; Touchstone files, mixed-mode S-parameters, de-embedding &amp; model, EM, lab<br />
+<strong>Xschem</strong> &amp; schematics, symbols, testbench netlists for every simulator &amp; schematic<br />
+<strong>ngspice</strong> &amp; <code>.op</code>, <code>.ac</code>, <code>.noise</code>, <code>.tran</code>, transient noise, Verilog-A via OSDI &amp; simulation<br />
+<strong>Xyce</strong>, <strong>VACASK</strong> &amp; parallel SPICE for large post-layout runs; Verilog-A simulator with PSS and HB &amp; simulation<br />
+<strong>CACE</strong> &amp; YAML datasheet: runs testbenches over corners, checks min/typ/max limits &amp; characterization<br />
+<strong>KLayout</strong>, <strong>Magic</strong> &amp; layout editing; IHP DRC and LVS decks; RC extraction (<strong>Magic</strong>) &amp; layout, sign-off<br />
+<strong>Netgen</strong>, <strong>KLayout-PEX</strong> &amp; LVS comparison; parasitic extraction for SG13G2 &amp; sign-off, extraction<br />
+<strong>openEMS</strong>, <strong>Palace</strong> &amp; FDTD and FEM field solvers for inductors, pads and package &amp; EM<br />
+<strong>Verilator</strong>, <strong>Icarus</strong>, <strong>cocotb</strong> &amp; Verilog simulation and lint; Python testbenches for PRBS, CDR, SPI &amp; RTL<br />
+<strong>Yosys</strong>, <strong>LibreLane</strong> &amp; synthesis to SG13G2 cells; RTL-to-GDS flow (successor of OpenLane 2) &amp; digital<br />
+<strong>OpenROAD</strong>, <strong>OpenSTA</strong> &amp; placement, clock tree, routing; static timing (inside <strong>LibreLane</strong>) &amp; digital<br />
+</p>
+</div>
+<h2 id="sec:model-loop"><span class="secnum">15.2</span>The model–circuit loop</h2>
+<p>The labs of <a href="{% endraw %}{{ '/chapters/16-hands-on-labs-with-serdespy/' | relative_url }}{% raw %}">Chapter 16</a> describe each block by an ideal transfer function. The circuits will not match those ideals, and the only way to know whether the difference matters is to put the circuit’s real response back into the model (<a href="#fig:ch15-loop">Figure 15.3</a>). Because the link is linear up to the sampler, each simulated block becomes one more factor in the cascade:</p>
+<div class="tbox tbox-keyeq">
+<div class="tbox-title">
+<p>Key equation · Back-annotating the link model</p>
+</div>
+<div id="eq:ch15-annot">
+
+</div>
+<p><span class="math display">\[H_\mathrm{link}(f) = H_\mathrm{TX}(f)\,H_\mathrm{ch}(f)\,H_\mathrm{CTLE,ckt}(f),\qquad
+  p_\mathrm{TX}(t) = s(t) - s(t-T_\mathrm{b}),\qquad
+  \sigma_\mathrm{n}^2 = \sum_i \sigma_{n,i}^2 . \tag{15.1}\]</span></p>
+</div>
+<p>Here <span class="math inline">\(s(t)\)</span> is the simulated step response of the driver into its load, so <span class="math inline">\(p_\mathrm{TX}(t)\)</span> is its real 1-UI pulse, with finite edges and any ringing; sampling it at <span class="math inline">\(T_\mathrm{b}\)</span> spacing gives the effective FIR taps. The CTLE enters through its <code>.ac</code> response, and each noise source through its rms value from <code>.noise</code> or Monte Carlo.</p>
+<div id="fig:ch15-loop">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/tikz/15_flow-1.svg' | relative_url }}{% raw %}" style="width:606px" alt="The model sets the specs; the circuits return their real responses; the model decides." loading="lazy" />
+<figcaption><span class="capnum">Figure 15.3.</span> <strong>The model sets the specs; the circuits return their real responses; the model decides.</strong> Each pass replaces one ideal block with a simulated one. The loop ends when the margin is positive at every corner with every block back-annotated.</figcaption>
+</figure>
+<p><a href="#lst:ch15-ac">Listing 15.1</a> loads an <strong>ngspice</strong> AC sweep into the Lab 4 model. In <strong>ngspice</strong>, <code>wrdata ctle_ac.txt v(outp,outn)</code> after an <code>ac dec 100 1meg 100g</code> writes frequency, real and imaginary parts in three columns. The sweep is resampled onto the model’s 10 MHz grid, the end values are held outside it, and the DC point is forced real, as <code>sdp.freq2impulse</code> requires.</p>
+<div id="lst:ch15-ac">
+
+</div>
+<div class="sourceCode" id="cb1" data-language="Python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> common <span class="im">import</span> <span class="op">*</span>                        <span class="co"># F grid, channel(), impulse(), ...</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>f_sp, re, im <span class="op">=</span> np.loadtxt(<span class="st">&quot;ctle_ac.txt&quot;</span>, usecols<span class="op">=</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">2</span>), unpack<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>H_sp <span class="op">=</span> re <span class="op">+</span> <span class="ot">1j</span> <span class="op">*</span> im                         <span class="co"># wrdata ctle_ac.txt v(outp,outn)</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>mag <span class="op">=</span> np.interp(F, f_sp, np.<span class="bu">abs</span>(H_sp))      <span class="co"># resample onto the model grid;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>phs <span class="op">=</span> np.interp(F, f_sp, np.unwrap(np.angle(H_sp)))  <span class="co"># holds end values</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>H_ckt <span class="op">=</span> mag <span class="op">*</span> np.exp(<span class="ot">1j</span> <span class="op">*</span> phs)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>H_ckt[<span class="dv">0</span>] <span class="op">=</span> mag[<span class="dv">0</span>]                           <span class="co"># DC must be real</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>h_link, t <span class="op">=</span> impulse(channel() <span class="op">*</span> H_ckt)      <span class="co"># REF x circuit CTLE</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>bits <span class="op">=</span> np.tile(sdp.prbs7(<span class="dv">1</span>), <span class="dv">40</span>)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>y <span class="op">=</span> through(tx_wave(bits), h_link)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>report_eye(<span class="st">&quot;REF + ngspice CTLE&quot;</span>, y, bits)</span></code></pre></div>
+<div class="tbox tbox-example">
+<div class="tbox-title">
+<p>Worked Example 15.1 · What a slow second pole costs</p>
+</div>
+<p><span id="we:ch15-pole"></span> <strong>Check:</strong> feed <a href="#lst:ch15-ac">Listing 15.1</a> the ideal <code>ctle(8)</code> response sampled from 1 MHz to 100 GHz. It returns 60.0 mV and 0.56 UI, exactly the Lab 5 pre-DFE eye, so the resampling loses nothing.</p>
+<p><strong>A realistic circuit:</strong> suppose the extracted CTLE has its output pole at <span class="math inline">\(f_{p2}=6\)</span> GHz instead of the 10 GHz of the model, because the four samplers load it more than planned. The 12 dB eye drops from 104.0 to 98.0 mV and the 14 dB eye from 113.3 to 107.4 mV, about 6 %. At 5 GHz the loss is 9 %. That is affordable against 76 mV of margin, but it is exactly the kind of number that only the loop reveals.</p>
+</div>
+<h2 id="sec:testbenches"><span class="secnum">15.3</span>Testbenches</h2>
+<p>Every specification in <a href="{% endraw %}{{ '/chapters/14-the-open-serdes-architecture/' | relative_url }}{% raw %}#tab:specs">Table 14.1</a> needs a testbench that measures it and a pass/fail limit. <a href="#tab:ch15-tb">Table 15.2</a> lists the key ones and <a href="#fig:ch15-tb">Figure 15.4</a> sketches two of them.</p>
+<div id="tab:ch15-tb">
+
+</div>
+<div class="tabularx">
+<p><span>@&gt;p<span>19mm</span> &gt;p<span>36mm</span> L &gt;p<span>30mm</span>@</span> <strong>Block</strong> &amp; <strong>Testbench</strong> &amp; <strong>Measure</strong> &amp; <strong>Pass</strong><br />
+TX serializer + driver &amp; <code>.tran</code>, PRBS7 into 100 Ω + <span class="math inline">\(C_p\)</span>; then through the channel model &amp; swing, edges, DCD, eye, every <span class="math inline">\(V_\mathrm{CE}\)</span> &amp; 0.8–1.0 Vppd; DCD + DDJ <span class="math inline">\(\le8\)</span> ps; <span class="math inline">\(V_\mathrm{CE}&lt;\mathrm{BV}_\mathrm{CEO}\)</span><br />
+Termination, pad &amp; <code>.ac</code> or <code>.sp</code> with ESD and pad parasitics &amp; <span class="math inline">\(S_{11}\)</span>, <span class="math inline">\(C_p\)</span> &amp; RL <span class="math inline">\(\ge10\)</span> dB at 2.5 GHz<br />
+CTLE &amp; <code>.ac</code> at every code; <code>.noise</code>; large-signal <code>.tran</code> &amp; peaking, <span class="math inline">\(f_z\)</span>, <span class="math inline">\(f_{p2}\)</span>, noise, linearity &amp; 0–12 dB; <span class="math inline">\(f_{p2}\ge7.5\)</span> GHz; <span class="math inline">\(\le0.25\)</span> mV<br />
+DFE summer &amp; <code>.tran</code> with tap 1 toggling every UI &amp; settling inside the tap-1 loop &amp; <span class="math inline">\(t_\mathrm{CK\to Q}+t_\mathrm{settle}+t_\mathrm{setup}\le\)</span> 1 UI<br />
+Sampler &amp; DC-step sweep counting <span class="math inline">\(P(1)\)</span>, Monte Carlo; tiny-input sweep; transient noise &amp; <span class="math inline">\(V_\mathrm{os}\)</span>, <span class="math inline">\(\sigma\)</span>, <span class="math inline">\(\tau\)</span> &amp; <span class="math inline">\(\sigma\le1\)</span> mV, <span class="math inline">\(\tau\le5\)</span> ps, trim range <span class="math inline">\(\ge\pm3\sigma\)</span><br />
+PLL &amp; lock transient; VCO phase noise (transient noise, or PSS/pnoise in <strong>VACASK</strong>); Python loop model &amp; lock time, <span class="math inline">\(\mathcal{L}(f)\)</span>, RJ &amp; RJ <span class="math inline">\(\le1\)</span> ps rms<br />
+PPF + PI &amp; <code>.tran</code> at all 64 codes &amp; phase vs. code, amplitude &amp; I/Q <span class="math inline">\(\le2^{\circ}\)</span>, INL <span class="math inline">\(\le1^{\circ}\)</span><br />
+CDR logic &amp; <strong>cocotb</strong> with a Python phase model driving the early/late inputs &amp; lock, ppm range, dither &amp; <span class="math inline">\(\pm300\)</span> ppm; <span class="math inline">\(\le20\)</span> ps pp<br />
+PRBS, SPI &amp; <strong>cocotb</strong> on <strong>Verilator</strong> or <strong>Icarus</strong>; error injection &amp; error count, resync &amp; exact counts<br />
+</p>
+</div>
+<div id="fig:ch15-tb">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/tikz/15_flow-2.svg' | relative_url }}{% raw %}" style="width:704px" alt="Two testbenches that decide whether the link works." loading="lazy" />
+<figcaption><span class="capnum">Figure 15.4.</span> <strong>Two testbenches that decide whether the link works.</strong> (a) The TX eye: PRBS bits drive the extracted serializer and driver into the pad and a channel model; the waveform goes back to Python for the eye measurement. (b) The sampler: a slow input step sweep under Monte Carlo gives <span class="math inline">\(P(1)\)</span> curves whose center is the offset and whose width is the noise, and a sweep of tiny inputs gives the regeneration time constant <span class="math inline">\(\tau\)</span> from the slope of <span class="math inline">\(t_\mathrm{CK\to Q}\)</span> against <span class="math inline">\(\ln V_\mathrm{in}\)</span> (<a href="{% endraw %}{{ '/chapters/10-receiver-front-end-and-samplers/' | relative_url }}{% raw %}#sec:metastability">Section 10.3</a>).</figcaption>
+</figure>
+<h5 id="the-channel-in-spice">The channel in SPICE</h5>
+<p>The REF channel has skin-effect loss that grows as <span class="math inline">\(\sqrt f\)</span> and dielectric loss that grows as <span class="math inline">\(f\)</span> (<a href="{% endraw %}{{ '/chapters/03-the-channel/' | relative_url }}{% raw %}#sec:loss">Section 3.3</a>). Neither open simulator models that directly in a transient. <strong>ngspice</strong> offers the lossless line (<code>T</code>), the SPICE3 lossy line LTRA (<code>O</code>), and the single and coupled lossy lines TXL and CPL; all of them take constant per-unit-length <span class="math inline">\(R\)</span>, <span class="math inline">\(L\)</span>, <span class="math inline">\(G\)</span>, <span class="math inline">\(C\)</span>. It has no HSPICE-style W-element with frequency-dependent tables and no element that reads a Touchstone file; its <code>.sp</code> analysis <em>computes</em> S-parameters of a circuit, it does not import them. <strong>Xyce</strong> has TRA, LTRA and a lumped line (YTRANSLINE), and a linear YLIN device that reads Touchstone data, documented mainly for harmonic-balance and other frequency-domain analyses. So there are three practical options: (i) a long ladder of RLGC sections, (ii) a behavioral source that convolves with <span class="math inline">\(h(t)\)</span>, or (iii) splitting the problem at the channel.</p>
+<div class="tbox tbox-keyeq">
+<div class="tbox-title">
+<p>Key equation · Sections needed for a lumped line model</p>
+</div>
+<div id="eq:ch15-seg">
+
+</div>
+<p><span class="math display">\[\Delta\ell\le\frac{\lambda_\mathrm{min}}{10}=\frac{v}{10\,f_\mathrm{max}}
+  \quad\Rightarrow\quad N\ge\frac{10\,\ell\,f_\mathrm{max}}{v} \tag{15.2}\]</span></p>
+</div>
+<p>For REF, <span class="math inline">\(\ell=1\)</span> m, <span class="math inline">\(v=c/\sqrt{4}=1.5\times10^8\)</span> m/s and <span class="math inline">\(f_\mathrm{max}=10\)</span> GHz give <span class="math inline">\(N\ge667\)</span> sections, each needing extra R–L branches to mimic the skin effect. That is slow and hard to fit. Option (iii) is exact for a matched link and is what Open-SERDES uses: simulate the TX into a 50 Ω-per-side load in SPICE, export the differential waveform, apply the channel in Python with <code>through(x, h)</code>, and feed the result back into the RX testbench as a PWL source behind 50 Ω per side.</p>
+<h5 id="corners-monte-carlo-and-cace">Corners, Monte Carlo and CACE</h5>
+<p>The SG13G2 model libraries have typical, best-case and worst-case sections for MOS devices, HBTs and resistors; combine them with supply <span class="math inline">\(\pm5\)</span> % and 0–85 <span class="math inline">\(^\circ\)</span>C. Mismatch-sensitive specs (sampler offset, I/Q phase, mirror ratios) need Monte Carlo, and the number of runs sets how well you know the answer.</p>
+<div class="tbox tbox-keyeq">
+<div class="tbox-title">
+<p>Key equation · How many Monte Carlo runs</p>
+</div>
+<div id="eq:ch15-mc">
+
+</div>
+<p><span class="math display">\[\frac{\Delta\hat\sigma}{\sigma}\approx\frac{1}{\sqrt{2N}} \tag{15.3}\]</span></p>
+</div>
+<p>Fifty runs know <span class="math inline">\(\sigma\)</span> to about 10 %, 200 runs to 5 % (for the sampler, <span class="math inline">\(4.9\pm0.25\)</span> mV). <strong>CACE</strong> turns all of this into a datasheet: a YAML file per block lists each parameter with its minimum, typical and maximum limits, the testbench that measures it and the conditions to sweep; <strong>CACE</strong> runs every combination and reports pass or fail, so <a href="{% endraw %}{{ '/chapters/14-the-open-serdes-architecture/' | relative_url }}{% raw %}#tab:specs">Table 14.1</a> becomes an executable checklist.</p>
+<h2 id="sec:layout-hs"><span class="secnum">15.4</span>Layout for high speed</h2>
+<p>At 5 Gb/s a layout can lose the margin that the schematic won. Six habits keep it.</p>
+<h5 id="symmetry">Symmetry</h5>
+<p>Draw every differential circuit as two mirror-image halves and route each pair as a pair. Place HBT pairs and mirror devices common-centroid (ABBA) with dummies at the ends. A 10 ps skew between FFE tap paths moves the de-emphasis edge by 0.05 UI (<a href="{% endraw %}{{ '/chapters/09-the-transmitter/' | relative_url }}{% raw %}#sec:ffe-impl">Section 9.5</a>); 1 % of clock duty-cycle error costs 4 ps (<a href="{% endraw %}{{ '/chapters/12-clock-generation-the-phase-locked-loop/' | relative_url }}{% raw %}#sec:quadrature">Section 12.5</a>).</p>
+<h5 id="current-density">Current density</h5>
+<p>An HBT reaches its peak <span class="math inline">\(f_T\)</span> at one collector current density. Size each emitter so that the switching transistors sit near that point at their tail current, from the npn13G2 <span class="math inline">\(f_T\)</span>-versus-<span class="math inline">\(J_C\)</span> curves of the PDK; past the peak, <span class="math inline">\(f_T\)</span> collapses.</p>
+<h5 id="metal-width">Metal width</h5>
+<p>Every DC path needs <span class="math inline">\(w\ge I/J_\mathrm{max}\)</span>, with the electromigration limit <span class="math inline">\(J_\mathrm{max}\)</span> of that layer and temperature from the SG13G2 rules. Route the 20 mA driver tail, its loads and the 2.5 V straps on TopMetal1 and TopMetal2; a few ohms of strap under 77 mA of CML current shift every common-mode level in the chip.</p>
+<h5 id="inductors-and-em">Inductors and EM</h5>
+<p>Put the 4 nH VCO inductor (and any T-coil) on TopMetal2, away from other metal. IHP’s <code>gds2openEMS</code> and <code>gds2palace</code> scripts take the GDS and a stackup file, run <strong>openEMS</strong> (FDTD) or <strong>Palace</strong> (FEM), and return S-parameters for a <span class="math inline">\(\pi\)</span>-model or a wideband fit [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-ihppdk">1</a>]. Match <span class="math inline">\(L\)</span> and <span class="math inline">\(Q\)</span> to the team’s measured inductor before trusting the flow.</p>
+<h5 id="extraction-and-isolation">Extraction and isolation</h5>
+<p>Extract every analog block with <strong>KLayout-PEX</strong> or <strong>Magic</strong> and resimulate; clock-to-data coupling and the wiring capacitance on the CTLE output are the usual surprises. Surround the CML blocks, the VCO and the samplers with substrate guard rings, away from the switching CMOS logic.</p>
+<h5 id="decoupling">Decoupling</h5>
+<p>CML draws constant current; CMOS draws its charge in spikes at the clock edges, and that charge must come from on-chip capacitors.</p>
+<div class="tbox tbox-example">
+<div class="tbox-title">
+<p>Worked Example 15.2 · Decoupling the deserializer</p>
+</div>
+<p><span id="we:ch15-decap"></span> <strong>Switched capacitance:</strong> the 1:16 deserializer burns 5 mW at 1.2 V and 312.5 MHz, so <span class="math inline">\(\alpha C_\mathrm{sw}=P/(V_\mathrm{DD}^2f)=5\,\mathrm{mW}/(1.44\times312.5\,\mathrm{MHz})=11\,\mathrm{pF}\)</span> is switched every cycle.</p>
+<p><strong>Worst case:</strong> if all of it switches on one edge, before the package can refill the rail, the droop is <span class="math inline">\(\Delta V/V\approx C_\mathrm{sw}/(C_\mathrm{sw}+C_\mathrm{dec})\)</span>. For 5 % droop, <span class="math inline">\(C_\mathrm{dec}\ge19\,C_\mathrm{sw}=210\,\mathrm{pF}\)</span>: about 0.14 mm<span class="math inline">\(^2\)</span> of MIM capacitor at roughly 1.5 fF/m<span class="math inline">\(^2\)</span> (check the PDK value). Inside the synthesized digital macros, <strong>LibreLane</strong> adds decap cells [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-jkutemplate">7</a>]; budget the rest as MIM next to the macro, and count it in the die area.</p>
+</div>
+<h5 id="the-digital-flow">The digital flow</h5>
+<p>The PRBS logic, the CDR loop filter, the SPI registers and the slow CMOS serializer and deserializer stages are Verilog, verified with <strong>cocotb</strong> and hardened by <strong>LibreLane</strong>. Synthesize what runs at 625 MHz or slower; place the 1.25 GHz deserializer stage and the CMOS-to-CML converters by hand from standard cells.</p>
+<h5 id="sign-off">Sign-off</h5>
+<p>DRC with the IHP <strong>KLayout</strong> decks (<strong>Magic</strong> as a second opinion), LVS with <strong>KLayout</strong> or <strong>Netgen</strong>, then antenna and density checks after fill, and the template’s full-chip LVS without black boxes [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-jkutemplate">7</a>]: run it whenever a macro changes.</p>
+<h3 id="sec:ch15-repo"><span class="secnum">15.4.1</span>Repository structure</h3>
+<p>The Open-SERDES repository follows the recursive layout of the JKU template: every macro has the same folders as the top level and its own Makefile, so a block can be built, simulated and verified alone.</p>
+<div class="sourceCode" id="cb2" data-language="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">open-serdes/</span>                  <span class="co"># from ihp-sg13g2-ams-chip-template</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">|</span><span class="ex">--</span> Makefile                  <span class="co"># make all: build, simulate, DRC, LVS, bond plan</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">|</span><span class="ex">--</span> model/                    <span class="co"># serdespy model, labs (Ch. 16), GUI demo</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">|</span><span class="ex">--</span> macros/</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">|</span>   <span class="kw">|</span><span class="ex">--</span> tx_driver/            <span class="co"># analog macro: one per block</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="kw">|</span>   <span class="kw">|</span>   <span class="kw">|</span><span class="ex">--</span> schematic/  testbenches/  layout/  netlist/</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="kw">|</span>   <span class="kw">|</span>   <span class="kw">|</span><span class="ex">--</span> verification/  scripts/  cace/  Makefile</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="kw">|</span>   <span class="kw">|</span><span class="ex">--</span> tx_serializer/  rx_frontend/  rx_sampler/  pll/  phase_interp/</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="kw">|</span>   <span class="kw">`</span><span class="ex">--</span> serdes_digital/       <span class="co"># PRBS, CDR loop filter, SPI</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="kw">|</span>       <span class="kw">|</span><span class="ex">--</span> rtl/  testbenches/          <span class="co"># cocotb + Verilator/Icarus</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="kw">|</span>       <span class="kw">`</span><span class="at">--</span> flow/librelane/             <span class="co"># hardening config</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="kw">|</span><span class="ex">--</span> flow/librelane/           <span class="co"># digital-on-top chip assembly</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="kw">|</span><span class="ex">--</span> layout/  netlist/  verification/  release/</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="kw">`</span><span class="ex">--</span> docs/                     <span class="co"># this tutorial, CACE datasheets</span></span></code></pre></div>
+<h2 id="sec:labtest"><span class="secnum">15.5</span>Testing the chip in the lab</h2>
+<p><a href="#fig:ch15-labsetup">Figure 15.5</a> shows the bring-up bench. The test board carries the chip, SMA connectors for TX<span class="math inline">\(\pm\)</span>, RX<span class="math inline">\(\pm\)</span>, the reference clock and a divided clock-monitor output, local regulators and decoupling, and an SPI header. Keep the 50 Ω traces from the pads to the SMAs short and identical within each pair, and de-embed them with <strong>scikit-rf</strong> from a measured test structure.</p>
+<div id="fig:ch15-labsetup">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/tikz/15_flow-3.svg' | relative_url }}{% raw %}" style="width:747px" alt="The chip tests itself; the instruments check that it tells the truth." loading="lazy" />
+<figcaption><span class="capnum">Figure 15.5.</span> <strong>The chip tests itself; the instruments check that it tells the truth.</strong> The baseline loop needs only a reference generator, supplies, a PC and a channel board: the on-chip PRBS generator drives TX, the channel board brings the signal back to RX, and the on-chip checker counts errors. A sampling scope on TX (eye and jitter), a BERT into RX (stressed eye, sinusoidal jitter for JTOL) and a phase-noise analyzer on the clock monitor are added when available.</figcaption>
+</figure>
+<h5 id="bring-up-order">Bring-up order</h5>
+<p>(1) Supplies and currents against <a href="{% endraw %}{{ '/chapters/14-the-open-serdes-architecture/' | relative_url }}{% raw %}#tab:ch14-power">Table 14.2</a>. (2) SPI read-back of every register. (3) PLL lock, seen on the clock monitor. (4) TX eye with PRBS7 on a scope. (5) Near-end loopback with the on-chip checker: this tests the chip without the board. (6) The external loop through the channel board, sweeping FFE presets and CTLE codes. (7) Freeze the CDR, step the PI code through the override register and count errors at each step: an on-chip bathtub, with the offset DACs giving the vertical scan.</p>
+<div class="tbox tbox-keyeq">
+<div class="tbox-title">
+<p>Key equation · Bits needed to claim a BER</p>
+</div>
+<div id="eq:ch15-bits">
+
+</div>
+<p><span class="math display">\[N_\mathrm{bits}\ge\frac{-\ln(1-\mathrm{CL})}{\mathrm{BER}}\approx\frac{3}{\mathrm{BER}}\quad\text{(zero errors, CL = 95\,\%)} \tag{15.4}\]</span></p>
+</div>
+<p>Claiming <span class="math inline">\(10^{-12}\)</span> at 95 % confidence takes <span class="math inline">\(3\times10^{12}\)</span> error-free bits, or 600 s at 5 Gb/s: ten minutes per setting, which is why the checker is on chip.</p>
+<div id="tab:ch15-meas">
+
+</div>
+<div class="tabularx">
+<p><span>@&gt;p<span>24mm</span> L &gt;p<span>40mm</span>@</span> <strong>Measurement</strong> &amp; <strong>Setup</strong> &amp; <strong>Target or comparison</strong><br />
+TX eye and jitter &amp; PRBS7, sampling scope at the TX SMAs &amp; 0.8–1.0 Vppd; edges, DCD vs. simulation<br />
+BER and bathtub &amp; loopback or channel board; on-chip checker; PI-code sweep &amp; BER <span class="math inline">\(\le10^{-12}\)</span> (10 min); bathtub vs. Lab 6<br />
+Equalizer sweep &amp; FFE presets <span class="math inline">\(\times\)</span> CTLE codes <span class="math inline">\(\times\)</span> DFE on/off &amp; best setting vs. <a href="{% endraw %}{{ '/chapters/08-decision-feedback-equalization-and-adaptation/' | relative_url }}{% raw %}#sec:eq-partition">Section 8.5</a><br />
+Jitter tolerance &amp; BERT with sinusoidal jitter into RX &amp; above the mask of <a href="{% endraw %}{{ '/chapters/13-clock-and-data-recovery/' | relative_url }}{% raw %}#sec:jtol">Section 13.5</a><br />
+PLL phase noise &amp; clock monitor into a phase-noise analyzer &amp; <span class="math inline">\(\mathcal{L}(1\,\mathrm{MHz})\)</span>; RJ <span class="math inline">\(\le1\)</span> ps rms<br />
+Return loss &amp; VNA at the RX SMAs, de-embedded &amp; RL <span class="math inline">\(\ge10\)</span> dB at 2.5 GHz<br />
+Power &amp; current per supply rail in each mode &amp; vs. <a href="{% endraw %}{{ '/chapters/14-the-open-serdes-architecture/' | relative_url }}{% raw %}#tab:ch14-power">Table 14.2</a><br />
+</p>
+</div>
+<p><a href="#tab:ch15-meas">Table 15.3</a> is the measurement plan. Each row ends in a comparison with a model number, which closes the last loop of the flow: when silicon and model disagree, the model is updated first, and the next design starts from it.</p>
+<div class="tbox tbox-takeaways">
+<div class="tbox-title">
+<p>Key takeaways</p>
+</div>
+<ul>
+<li><p>One container, IIC-OSIC-TOOLS, holds every tool and the SG13G2 PDK; the JKU template turns the whole flow into <code>make all</code> with regression on every commit.</p></li>
+<li><p>The system model is not finished when the circuits start: back-annotate the CTLE <code>.ac</code> response, the driver step and the noise and offset of every block, and rerun the eye at each corner.</p></li>
+<li><p>Open SPICE engines have only constant-RLGC lossy lines; for REF, simulate the TX into a matched load and apply the channel in Python.</p></li>
+<li><p>Run every analog testbench at PVT corners; <span class="math inline">\(N\)</span> Monte Carlo runs know <span class="math inline">\(\sigma\)</span> to <span class="math inline">\(1/\sqrt{2N}\)</span>; let <strong>CACE</strong> check every limit of the specification table.</p></li>
+<li><p>Layout for 5 Gb/s means mirror symmetry, HBTs at their peak-<span class="math inline">\(f_T\)</span> current density, metal sized for the DC current, EM-simulated inductors on TopMetal2, extraction, guard rings and real decoupling area.</p></li>
+<li><p>The chip tests itself: PRBS generator, checker and loopback verify <span class="math inline">\(10^{-12}\)</span> in ten minutes; instruments confirm the eye, jitter tolerance, phase noise and power against the model.</p></li>
+</ul>
+</div>
+
+<nav class="prev-next" aria-label="Chapter navigation"><a class="pn-link prev" href="{% endraw %}{{ '/chapters/14-the-open-serdes-architecture/' | relative_url }}{% raw %}"><small>← Previous</small>The Open-SERDES Architecture</a><a class="pn-link next" href="{% endraw %}{{ '/chapters/16-hands-on-labs-with-serdespy/' | relative_url }}{% raw %}"><small>Next →</small>Hands-on Labs with serdespy</a></nav>
+<p class="page-source">Generated from <a href="https://github.com/bricd-org/serdes-tutorial/blob/main/book/tutorial/chapters/15_flow.tex">book/tutorial/chapters/15_flow.tex</a>. Figure, table and equation numbers match the <a href="{% endraw %}{{ '/assets/pdf/Open-SERDES_Tutorial.pdf' | relative_url }}{% raw %}">PDF edition</a>.</p>
+{% endraw %}

@@ -1,0 +1,20 @@
+% ch02_lfsr.tex -- 7-stage Fibonacci LFSR for PRBS7, polynomial x^7 + x^6 + 1
+\begin{tikzpicture}[x=1cm,y=1cm,
+  ff/.style={blk,minimum width=11mm,minimum height=9mm,font=\sffamily\footnotesize,fill=btint}]
+\foreach \i in {1,...,7}{
+  \node[ff] (f\i) at ({1.65*\i},0) {D\quad Q};
+  \node[lbl,anchor=south] at ($(f\i.north)+(0,0.0)$) {stage \i};
+}
+\foreach \i [evaluate=\i as \j using int(\i+1)] in {1,...,6}{\draw[sig] (f\i.east) -- (f\j.west);}
+% clock
+\draw[clk,-] (1.0,-0.85) -- (11.75,-0.85);
+\foreach \i in {1,...,7}{\draw[clk] ({1.65*\i},-0.85) -- (f\i.south);}
+\node[lbl,text=golddk,anchor=east] at (1.0,-0.85) {clock $f_b$};
+% taps from stage 6 and 7 outputs into XOR, back to stage 1
+\node[sumnode,font=\small] (x) at (10.725,1.55) {$\oplus$};
+\draw[sig] ($(f6.east)!0.5!(f7.west)$) node[dot]{} -- (x.south);
+\draw[sig] (f7.east) -- ++(0.35,0) node[dot](o){} |- (x.east);
+\draw[sig] (x.north) -- ++(0,0.35) -| ($(f1.west)+(-0.45,0)$) -- (f1.west);
+\draw[sig] (o) -- ++(0.9,0) node[right,font=\sffamily\footnotesize,text=navy] {PRBS7 out};
+\node[lbl,text=navy,anchor=south] at (6.0,2.3) {feedback $=$ stage 6 $\oplus$ stage 7 \;\; $\Leftrightarrow$\;\; $x^7+x^6+1$};
+\end{tikzpicture}

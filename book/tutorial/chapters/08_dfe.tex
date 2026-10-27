@@ -1,0 +1,328 @@
+\tikzsetfigurename{08_dfe-}
+\chapter[Decision-Feedback Equalization and Adaptation]{Decision-Feedback Equalization\newline and Adaptation}\label{ch:dfe}
+\chapterlead{A DFE removes post-cursor ISI by subtracting what the past decisions predict. It equalizes without amplifying noise, and it can learn its own taps.}
+\suppressfloats[t]
+
+\begin{objectives}
+\begin{itemize}
+  \item Derive the DFE from a linear IIR equalizer, and explain why the slicer in the loop removes noise enhancement.
+  \item Compute DFE taps from a pulse response and combine a DFE with a TX pre-tap.
+  \item Budget the tap-1 timing loop, and choose between direct feedback, half-rate and loop unrolling.
+  \item Write the LMS and sign-sign LMS updates, and recognize when adaptation wanders.
+  \item Split the equalization work between TX FFE, CTLE and DFE for \OS{}, with numbers.
+\end{itemize}
+\end{objectives}
+
+\section{The DFE principle}\label{sec:ch8-principle}
+
+\paragraph{From IIR filter to DFE} Liu starts from a one-tap \emph{linear} feedback equalizer~\cite{liuEq}, $y(t)=x(t)-\alpha_1y(t-\Tb)$. Its transfer function is $H(z)=1/(1+\alpha_1z^{-1})$, with
+\begin{equation}
+  \lvert H\rvert=\frac{1}{\sqrt{1+\alpha_1^2+2\alpha_1\cos\omega\Tb}} .
+  \label{eq:ch8-iir}
+\end{equation}
+(The notes repeat the typo of \cref{sec:ffe-taps}.) For $0<\alpha_1<1$ it rises from $1/(1+\alpha_1)$ at DC to $1/(1-\alpha_1)$ at $\fN$, so it could equalize, but it boosts noise like any linear equalizer and is unstable for $\lvert\alpha_1\rvert\ge1$.
+
+Liu's key step is to put a \textbf{slicer} \emph{inside} the loop. The fed-back value is then a clean decision $\hat a_{n-1}\in\{-1,+1\}$, the noise on $y$ is never recirculated, and the DFE adds no noise. With $N$ taps (\cref{fig:ch8-dfe}):
+
+\begin{keyeq}[$N$-tap DFE]
+\begin{equation}
+  z_n=y_n-\sum_{k=1}^{N}w_k\,\hat a_{n-k},\qquad \hat a_n=\sgn(z_n),\qquad
+  w_k=A\,\pk{k}
+  \label{eq:ch8-dfe}
+\end{equation}
+\end{keyeq}
+
+Here $y_n$ is the summer input in volts and the slicer threshold is 0. In Liu's words, ``DFE coefficients = post-cursors'': the ideal $w_k$ is the post-cursor \emph{at the DFE input} (after TX FFE and CTLE) times $A$.
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[font=\sffamily\small]
+  \node[text=navy] (in) at (-0.2,0) {$y_n$};
+  \node[sumnode] (s) at (1.4,0) {$\Sigma$};
+  \node[blkg, minimum width=15mm, minimum height=8mm] (slc) at (3.6,0) {slicer\\[-2pt]\scriptsize latch};
+  \node[dot] (o) at (5.4,0) {};
+  \node[blk, minimum width=10mm, minimum height=7mm] (d1) at (6.6,-1.3) {FF};
+  \node[blk, minimum width=10mm, minimum height=7mm] (d2) at (8.8,-1.3) {FF};
+  \node[dot] (n1) at (7.7,-1.3) {};
+  \node[dot] (n2) at (9.9,-1.3) {};
+  \node[blkb, minimum width=10mm, minimum height=7mm] (w1) at (7.7,-2.6) {$w_1$};
+  \node[blkb, minimum width=10mm, minimum height=7mm] (w2) at (9.9,-2.6) {$w_2$};
+  \draw[sig] (in) -- (s);
+  \draw[sig] (s) -- node[above, lbl]{$z_n$} (slc);
+  \draw[line width=0.75pt, navy] (slc) -- (o);
+  \draw[sig] (o) -- (11.0,0) node[right, text=navy]{$\hat a_n$ to DES};
+  \draw[sig] (o) |- (d1);
+  \draw[line width=0.75pt, navy] (d1) -- (n1);
+  \draw[sig] (n1) -- (d2);
+  \draw[line width=0.75pt, navy] (d2) -- (n2);
+  \node[lbl, above] at (n1) {$\hat a_{n-1}$};
+  \node[lbl, above] at (n2) {$\hat a_{n-2}$};
+  \draw[sig] (n1) -- (w1);
+  \draw[sig] (n2) -- (w2);
+  \draw[line width=0.75pt, navy] (w1.south) -- (7.7,-3.4);
+  \draw[sig] (w2.south) -- (9.9,-3.4) -- (1.4,-3.4) -- node[pos=0.85, right, text=navy]{$-$} (s.south);
+  \node[dot] at (7.7,-3.4) {};
+  \draw[clk] (3.6,-1.5) node[below, lbl]{CK} -- (slc.south);
+  \draw[clk] (6.6,-2.3) -- (d1.south);
+  \draw[clk] (8.8,-2.3) -- (d2.south);
+  \draw[sigg, line width=1.2pt, -] ($(slc.east)+(0,0.08)$) -- ($(o)+(0,0.08)$);
+  \node[font=\sffamily\scriptsize, text=golddk, align=left, anchor=west] at (2.2,-2.35) {tap-1 loop: slicer $\to$ $w_1$ $\to$ summer\\must settle within 1\,UI};
+\end{tikzpicture}
+\caption{\textbf{A 2-tap DFE.} The slicer decision $\hat a_n$ is delayed by flip-flops, weighted by $w_1$ and $w_2$, and subtracted from the next samples at the summer. The fed-back values are clean $\pm1$ decisions, so noise is not recirculated. Tap~1 closes a loop that must settle within one UI (\cref{sec:dfe-timing}).}
+\label{fig:ch8-dfe}
+\end{figure}
+
+\paragraph{Post-cursors only} The DFE cancels only the ISI of bits already decided: the pre-cursor of bit $n+1$ hits $y_n$ before $\hat a_{n+1}$ exists. \Cref{fig:ch8-cancel} shows the feedback staircase on the REF pulse after an 8\,dB CTLE. It matches the pulse at $k=1,2$ and leaves the pre-cursor and the tail untouched.
+
+\begin{figure}[!tbp]
+  \centering
+  \includegraphics[width=\linewidth]{ch08_cancel}
+  \caption{\textbf{A DFE subtracts the post-cursors at the sampling instants.} REF + 8\,dB CTLE (the Lab~5 setup). (a)~Pulse at the DFE input, the 2-tap feedback held for one UI per tap, and the result. Only the sampling instants (dots) matter: $h_1$ and $h_2$ become zero, while the pre-cursor and the tail beyond $k=2$ remain. (b)~Cursors before and after the 2-tap DFE. The main cursor is unchanged, which is the advantage over linear equalization.}
+  \label{fig:ch8-cancel}
+\end{figure}
+
+\paragraph{Error propagation} Liu's warning that a DFE ``may be subject to instability'' applies to the linear prototype only. With a slicer in the loop the output is bounded, and the real risk is \textbf{error propagation}: a wrong decision adds $2w_1$ of error to the next sample instead of removing $w_1$. In the Lab~5 setup ($w_1=\qty{27.6}{\milli\volt}$, half-eye \qty{64.7}{\milli\volt} after two taps) that leaves only \qty{9.5}{\milli\volt} of margin on the next bit. At a BER near $10^{-12}$ first errors are so rare that this at most doubles the BER~\cite{palermo720eq}. Keep $\pk{1}/\pk{0}\lesssim0.5$ at the DFE input.
+
+\begin{example}{Liu's DFE, and a DFE with a TX pre-tap}\label{we:ch8-liu}
+Liu's pulse is $x_{-1}=0.2$, $x_0=0.85$, $x_1=-0.2$, $x_2=0.1$, $x_3=0.05$. Forcing the decision sequence $\hat y=\{\dots,0,1,0,0,\dots\}$ at $t=\Tb,2\Tb,3\Tb$ gives $-\alpha_k+x_k=0$, so the taps are the post-cursors: $\alpha=[-0.2,\ 0.1,\ 0.05]$. With $2A=1$ (so $w_k=x_k/2$ in volts), the PDA eye becomes $0.85-0.2=0.65$. Only the pre-cursor remains.
+
+Now add a TX pre-tap with $c_{-1}/c_0=-0.2/0.85$, normalized to $c=[-0.190,\,0.810]$. By \cref{eq:ch6-conv} the cursors for $k=-2..3$ become $-0.038$, 0, 0.726, $-0.181$, 0.071 and 0.041. The DFE re-adapts to the last three, and the eye is $0.726-0.038=\mathbf{0.688}$. That beats both the 3-tap ZF FFE alone (0.519, \cref{we:ch6-liu}) and the DFE alone (0.65). This is the canonical split: the TX takes the pre-cursor and the DFE takes the post-cursors.
+\end{example}
+
+\section{The tap-1 timing loop}\label{sec:dfe-timing}
+
+Decision $\hat a_{n-1}$ must be resolved, weighted and subtracted, and the summer settled, before $z_n$ is sampled one UI later:
+
+\begin{keyeq}[DFE tap-1 critical path]
+\begin{equation}
+  t_\mathrm{CK\to Q}+t_\mathrm{tap}+t_\mathrm{settle}+t_\mathrm{setup}\le\Tb=\qty{200}{\pico\second}
+  \label{eq:ch8-timing}
+\end{equation}
+\end{keyeq}
+
+Taps 2 and higher have one or more extra UIs, so tap~1 sets the speed limit.
+
+\paragraph{Half rate} \OS{} slices even bits on the rising and odd bits on the falling edge of the \qty{2.5}{\giga\hertz} clock, so each latch has 2\,UI to regenerate. Half rate does \emph{not} relax \cref{eq:ch8-timing}: the even decision must correct the odd sample one UI later, so the tap-1 path crosses between the halves and still has 1\,UI.
+
+\paragraph{Loop unrolling} \textbf{Loop unrolling} (\textbf{speculation}) removes the summer from the tap-1 path. Two comparators per half precompute both answers, against $+w_1$ and $-w_1$, and a multiplexer selected by the previous decision picks one~\cite{palermo720eq}:
+\begin{equation}
+  \hat a_n=\begin{cases}\sgn(y_n-w_1), & \hat a_{n-1}=+1\\ \sgn(y_n+w_1), & \hat a_{n-1}=-1\end{cases}
+  \qquad\Rightarrow\qquad t_\mathrm{CK\to Q}+t_\mathrm{mux}+t_\mathrm{setup}\le\Tb .
+  \label{eq:ch8-unroll}
+\end{equation}
+\Cref{fig:ch8-unroll} shows the half-rate version. The cost is $2^N$ comparators for $N$ unrolled taps, twice the load on the CTLE, and taps that live in comparator thresholds.
+
+\begin{figure}[!tbp]
+\centering
+\begin{tikzpicture}[font=\sffamily\small]
+  \node[text=navy] (in) at (-0.4,0) {$y$};
+  \draw[line width=0.75pt, navy] (in) -- (0.6,0);
+  \draw[line width=0.75pt, navy] (0.6,-2.2) -- (0.6,2.2);
+  \node[dot] at (0.6,0) {};
+  \foreach \y/\n/\t in {2.2/ep/{+w_1}, 1.2/em/{-w_1}, -1.2/op/{+w_1}, -2.2/om/{-w_1}}{
+    \node[blkg, minimum width=17mm, minimum height=7mm] (\n) at (2.4,\y) {$y\gtrless\t$};
+    \draw[sig] (0.6,\y) -- (\n.west);
+  }
+  \node[lbl, anchor=east] at (0.5,1.7) {CK};
+  \node[lbl, anchor=east] at (0.5,-1.7) {$\overline{\mathrm{CK}}$};
+  \node[lblb, anchor=south west] at (1.5,2.55) {even half};
+  \node[lblb, anchor=north west] at (1.5,-2.55) {odd half};
+  \node[blkb, minimum width=11mm, minimum height=14mm] (me) at (5.0,1.7) {MUX};
+  \node[blkb, minimum width=11mm, minimum height=14mm] (mo) at (5.0,-1.7) {MUX};
+  \draw[sig] (ep.east) -- ($(me.west)+(0,0.5)$);
+  \draw[sig] (em.east) -- ($(me.west)+(0,-0.5)$);
+  \draw[sig] (op.east) -- ($(mo.west)+(0,0.5)$);
+  \draw[sig] (om.east) -- ($(mo.west)+(0,-0.5)$);
+  \node[blkg, minimum width=12mm, minimum height=7mm] (le) at (7.4,1.7) {latch};
+  \node[blkg, minimum width=12mm, minimum height=7mm] (lo) at (7.4,-1.7) {latch};
+  \draw[sig] (me) -- (le);
+  \draw[sig] (mo) -- (lo);
+  \draw[sig] (le.east) -- (10.3,1.7) node[right, text=navy]{$\hat a_\mathrm{even}$};
+  \draw[sig] (lo.east) -- (10.3,-1.7) node[right, text=navy]{$\hat a_\mathrm{odd}$};
+  % cross-coupled selects (critical path)
+  \draw[sigg, line width=1.1pt] (8.6,1.7) node[dot, fill=golddk]{} -- (8.6,-0.4) -- (5.0,-0.4) -- (mo.north);
+  \draw[sigg, line width=1.1pt] (9.4,-1.7) node[dot, fill=golddk]{} -- (9.4,0.4) -- (5.0,0.4) -- (me.south);
+  \node[font=\sffamily\scriptsize, text=golddk, align=left, anchor=west] at (9.6,0.0) {select from the other half:\\$t_\mathrm{CK\to Q}+t_\mathrm{mux}+t_\mathrm{setup}<1\,\UI$};
+\end{tikzpicture}
+\caption{\textbf{Half-rate DFE with tap~1 unrolled.} Each half has two comparators with thresholds $\pm w_1$ and a multiplexer. The multiplexer is selected by the latest decision of the \emph{other} half (gold paths). These cross-coupled selects are the critical path and still have only 1\,UI, but there is no summer to settle. Tap~2 and higher would still be subtracted at a summer before the comparators.}
+\label{fig:ch8-unroll}
+\end{figure}
+
+\begin{example}{Tap-1 timing budget at 5\,Gb/s}\label{we:ch8-timing}
+Use illustrative \sgx{} CML numbers, to be confirmed post-layout: latch $t_\mathrm{CK\to Q}=\qtyrange{25}{35}{\pico\second}$; tap switch about \qty{10}{\pico\second}; summer with $R_L=\qty{250}{\ohm}$ and $C=\qty{80}{\femto\farad}$, so $\tau=\qty{20}{\pico\second}$ and 95\,\% settling takes $3\tau=\qty{60}{\pico\second}$; setup and aperture about \qty{20}{\pico\second}; skew and PVT margin about \qty{20}{\pico\second}. The total is about \qtyrange{135}{145}{\pico\second}, which is below \qty{200}{\pico\second}. Direct feedback works at 5\,Gb/s, including in the half-rate cross-coupled form, with 55--65\,ps to spare (\cref{fig:ch8-timing}).
+
+It does \emph{not} meet the \qty{100}{\pico\second} half-UI budget that would apply if the $90^\circ$/$270^\circ$ edge samplers also had to see a fully corrected signal. In \OS{} the edge samplers therefore see a partly settled correction, which works because TX and CTLE keep the pre-DFE eye open (\cref{sec:eq-partition}). If post-layout corners push the direct path past about 0.7\,UI, unroll tap~1: with an assumed \qty{15}{\pico\second} mux the unrolled path is \qty{85}{\pico\second}. Halving $C$ (fewer taps) or an integrating summer saves about \qty{30}{\pico\second}.
+\end{example}
+
+\begin{figure}[!tbp]
+\centering
+\begin{tikzpicture}[x=0.052cm, y=1cm, font=\sffamily\scriptsize]
+  \foreach \x in {0,50,100,150,200}{
+    \draw[gridc] (\x,-0.25) -- (\x,1.75);
+    \node[text=muted, below] at (\x,-0.25) {\x};
+  }
+  \node[text=navy, font=\sffamily\small] at (110,-0.95) {Time after the clock edge (ps)};
+  % direct feedback bar (y = 1.1)
+  \def\yy{1.15}
+  \foreach \a/\b/\c/\t in {0/30/c1/{$t_\mathrm{CK\to Q}$}, 30/40/c5/{}, 40/100/c2/{settle $3\tau$}, 100/120/c3/{setup}, 120/140/pale/{margin}}{
+    \fill[\c] (\a,\yy-0.22) rectangle (\b,\yy+0.22);
+    \node[text=white, font=\sffamily\scriptsize] at ({(\a+\b)/2},\yy) {\t};
+  }
+  \node[text=c5, font=\sffamily\scriptsize, above] at (35,\yy+0.22) {tap};
+  \node[text=navy, anchor=east, font=\sffamily\small] at (-4,\yy) {direct};
+  \node[text=navy, anchor=west] at (143,\yy) {140 ps};
+  % unrolled bar (y = 0.35)
+  \def\yy{0.35}
+  \foreach \a/\b/\c/\t in {0/30/c1/{$t_\mathrm{CK\to Q}$}, 30/45/c5/{mux}, 45/65/c3/{setup}, 65/85/pale/{margin}}{
+    \fill[\c] (\a,\yy-0.22) rectangle (\b,\yy+0.22);
+    \node[text=white, font=\sffamily\scriptsize] at ({(\a+\b)/2},\yy) {\t};
+  }
+  \node[text=navy, anchor=east, font=\sffamily\small] at (-4,\yy) {unrolled};
+  \node[text=navy, anchor=west] at (102,\yy) {85 ps};
+  \draw[c4, dashed, line width=0.8pt] (100,-0.25) -- (100,1.85) node[above, text=c4, align=center] {$\tfrac12$\,UI: edge samplers};
+  \draw[c4, line width=0.9pt] (200,-0.25) -- (200,1.85) node[above, text=c4] {1\,UI deadline};
+\end{tikzpicture}
+\caption{\textbf{The tap-1 budget fits in one UI with direct feedback.} Numbers from \cref{we:ch8-timing}. Direct feedback (\qty{140}{\pico\second}) meets the 1\,UI deadline but not the half-UI one. Unrolling removes the summer settling and fits both.}
+\label{fig:ch8-timing}
+\end{figure}
+
+\section{Adapting the taps}\label{sec:adaptation}
+
+The ideal taps depend on channel, temperature and supply, so the receiver should find them itself. Define the slicer error $e_n=z_n-d_\mathrm{lev}\,\hat a_n$, where $d_\mathrm{lev}$ is the expected signal level (ideally $A\pk{0}$). Since $\partial E[e_n^2]/\partial w_k=-2E[e_n\hat a_{n-k}]$, stepping against the gradient gives the \textbf{LMS} update. Hardware prefers the \textbf{sign-sign} form (SS-LMS), which needs only signs~\cite{palermo720eq,stojanovic2005}:
+
+\begin{keyeq}[LMS and sign-sign LMS]
+\begin{equation}
+  \begin{gathered}
+  \text{LMS:}\quad w_k\leftarrow w_k+\mu\,e_n\,\hat a_{n-k}\\[2pt]
+  \text{SS-LMS:}\quad w_k\leftarrow w_k+\mu\,\sgn(e_n)\,\hat a_{n-k},\qquad
+  d_\mathrm{lev}\leftarrow d_\mathrm{lev}+\mu\,\sgn(e_n)\,\hat a_n
+  \end{gathered}
+  \label{eq:ch8-sslms}
+\end{equation}
+\end{keyeq}
+
+$\sgn(e_n)$ comes from one extra comparator, the \textbf{error sampler}, with threshold $\pm d_\mathrm{lev}$ chosen by $\hat a_n$. The updates are digital counters decimated to the deserialized rate: slow compared with the data, fast compared with temperature drift.
+
+\begin{example}{Sign-sign LMS on the REF channel}\label{we:ch8-sslms}
+Simulate the Lab~5 setup (REF + 8\,dB CTLE) with PRBS13, \qty{4}{\milli\volt} rms noise and a 2-tap DFE adapted by \cref{eq:ch8-sslms} with $\mu=\qty{0.25}{\milli\volt}$, starting from $w=0$ and $d_\mathrm{lev}=\qty{50}{\milli\volt}$. The pre-DFE eye is open (\qty{60}{\milli\volt}), so decisions are correct from the first bit. $w_1$ comes within \qty{2}{\milli\volt} of $A\pk{1}=\qty{27.6}{\milli\volt}$ after about 310\,UI and $w_2$ reaches $A\pk{2}=\qty{11.8}{\milli\volt}$ after about 170\,UI (\cref{fig:ch8-sslms}a). Both then dither by a few $\mu$; after 6000\,UI they read 29.8 and \qty{11.5}{\milli\volt}, with $d_\mathrm{lev}=\qty{94.0}{\milli\volt}$ (target 91.6). A larger $\mu$ converges faster but dithers more, and dither is a tap error that costs eye.
+\end{example}
+
+\begin{figure}[!tbp]
+  \centering
+  \includegraphics[width=\linewidth]{ch08_sslms}
+  \caption{\textbf{Sign-sign LMS finds the taps, unless a pre-cursor is left in.} (a)~REF + 8\,dB CTLE, 2-tap DFE ($\mu=\qty{0.25}{\milli\volt}$, \qty{4}{\milli\volt} noise). The taps and the data level settle within a few hundred UI onto their zero-forcing values (dashed: 91.6, 27.6 and \qty{11.8}{\milli\volt}). (b)~Liu's pulse with a 3-tap DFE ($\mu=\qty{2}{\milli\volt}$, \qty{10}{\milli\volt} noise). With its 0.2 pre-cursor removed, $w_2$ stays within 36--\qty{62}{\milli\volt} of its \qty{50}{\milli\volt} target. With the pre-cursor left in, it wanders between $-6$ and \qty{92}{\milli\volt}.}
+  \label{fig:ch8-sslms}
+\end{figure}
+
+\begin{pitfall}[An uncancelled pre-cursor makes SS-LMS wander]
+Liu's pre-cursor puts $\pm Ax_{-1}=\pm\qty{100}{\milli\volt}$ into every error sample. Once the tap errors are smaller than that, $\sgn(e_n)$ is set by $Ax_{-1}\hat a_{n+1}$ alone, which is uncorrelated with $\hat a_{n-k}$: the average update vanishes and the taps random-walk (\cref{fig:ch8-sslms}b). Cancel the pre-cursor first (TX pre-tap or CTLE), or use a smaller $\mu$ and average.
+\end{pitfall}
+
+\section{The DFE on the REF channel}\label{sec:ch8-ref}
+
+Lab~5 adds DFE taps one at a time after an 8\,dB CTLE (\cref{fig:ch8-taps}). The taps are the post-cursors at the DFE input, 0.0552, 0.0235 and 0.0160, so $w_k=27.6$, 11.8 and \qty{8.0}{\milli\volt}. The first tap lifts the PRBS7 eye from 60.0 to \qty{110.7}{\milli\volt}, the second adds 19 and the third \qty{13.5}{\milli\volt}. Beyond four taps nothing more is gained (153.6, 152.1 and \qty{156.4}{\milli\volt} for 4, 5 and 8 taps). At \qty{10}{\milli\volt} rms slicer noise the estimated BER is $3.2\times10^{-14}$ with three taps and $4.5\times10^{-12}$ with two.
+
+\begin{figure}[!tbp]
+  \centering
+  \includegraphics[width=\linewidth]{ch08_taps}
+  \caption{\textbf{The first DFE taps do most of the work.} REF + 8\,dB CTLE, PRBS7 (Lab~5). (a)~Eye height against the number of ideal DFE taps. The first two taps add 70\,mV, and beyond four taps the gain is lost in the simulation's resolution. (b,\,c)~Summer output before and after a 2-tap DFE. The feedback switches half a UI after each decision, so the eye shows steps at $\pm0.5$\,UI. Only the sampling instant at 0\,UI matters.}
+  \label{fig:ch8-taps}
+\end{figure}
+
+\begin{tryit}[Lab 5: DFE]
+\code{lab5\_dfe.py} reads the taps off the pulse response, runs \code{sdp.Receiver.nrz\_DFE} with 0--8 taps and estimates the BER. Then try a $-6$\,dB TX preset with 2 taps (\cref{sec:lab5}).
+\end{tryit}
+
+\section{Splitting the work}\label{sec:eq-partition}
+
+How should \OS{} divide the work between TX FFE, CTLE and DFE (\cref{sec:ch5-preview})? \Cref{tab:eq-partition} and \cref{fig:ch8-partition} compare seven strategies on the \code{link.py} channel family.
+
+\paragraph{Method} Channels are \code{channel(LOSS\_FAMILY[d])} for 5--30\,dB at $\fN$, plus REF. The CTLE is \code{ctle(pk)}, 0--20\,dB in 1\,dB steps. The TX FFE is a grid search over $c_{-1}\in[-0.2,0]$ and $c_1\in[-0.5,0]$ (step 0.02) with $c_0=1-\lvert c_{-1}\rvert-\lvert c_1\rvert$. The DFE is ideal: it removes the first $N$ post-cursors exactly. Each strategy is scored by its PDA eye over $k=-4..40$, maximized over sampling phase and free settings, and also normalized to $2A\pk{0}$ of the \emph{unequalized} pulse, which exposes the swing cost of TX equalization. The ``\OS{} limits'' rows add $\lvert c_1\rvert\le0.25$ (6\,dB post-tap de-emphasis), $\lvert c_{-1}\rvert\le0.1$, CTLE $\le12$\,dB, and an eye open \emph{before} the DFE (for start-up adaptation and the edge samplers). Because the tail is summed to 40\,UI, the unequalized REF eye is $-0.23$\,V rather than the 13-cursor $-0.161$\,V of \cref{tab:ref-cursors}.
+
+\begin{table}[!tbp]
+\centering\footnotesize
+\caption{\textbf{PDA eye height (mV) and eye normalized to the unequalized main cursor, by strategy and channel loss.} Regenerated with \code{link.py}; method in the text. $^\ast$\OS{} limits: $\lvert c_1\rvert\le0.25$, $\lvert c_{-1}\rvert\le0.1$, CTLE $\le12$\,dB, open pre-DFE eye.}
+\label{tab:eq-partition}
+\setlength{\tabcolsep}{4.2pt}
+\begin{tabular}{@{}l rr rr rr rr rr@{}}
+\toprule
+ & \multicolumn{2}{c}{\textbf{10\,dB}} & \multicolumn{2}{c}{\textbf{15\,dB}} & \multicolumn{2}{c}{\textbf{REF 17.4\,dB}} & \multicolumn{2}{c}{\textbf{20\,dB}} & \multicolumn{2}{c}{\textbf{25\,dB}}\\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}\cmidrule(lr){8-9}\cmidrule(l){10-11}
+\textbf{Strategy} & mV & norm & mV & norm & mV & norm & mV & norm & mV & norm\\
+\midrule
+No equalization            & 165 & 0.30 & \multicolumn{2}{c}{\textcolor{c4}{closed}} & \multicolumn{2}{c}{\textcolor{c4}{closed}} & \multicolumn{2}{c}{\textcolor{c4}{closed}} & \multicolumn{2}{c}{\textcolor{c4}{closed}}\\
+TX 2-tap FFE               & 341 & 0.61 & 189 & 0.48 & 141 & 0.42 & 100 & 0.34 & 44 & 0.20\\
+CTLE (0--20\,dB)           & 236 & 0.42 & 132 & 0.33 & 99 & 0.29 & 70 & 0.24 & 32 & 0.15\\
+CTLE + 2-tap DFE           & 395 & 0.71 & 146 & 0.37 & 110 & 0.32 & 84 & 0.29 & 51 & 0.23\\
+TX 3-tap + CTLE + 2-tap DFE & 396 & 0.71 & 204 & 0.52 & 160 & 0.47 & 123 & 0.42 & 75 & 0.34\\
+\midrule
+\OS{} limits, 2-tap DFE$^\ast$ & 396 & 0.71 & 190 & 0.48 & 134 & 0.40 & 87 & 0.30 & 35 & 0.16\\
+\OS{} limits, 5-tap DFE$^\ast$ & 467 & 0.84 & 239 & 0.60 & 170 & 0.50 & 120 & 0.41 & 43 & 0.19\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+\paragraph{What the numbers say}
+\begin{itemize}
+  \item \textbf{No single equalizer is enough at REF.} The TX FFE alone reaches \qty{141}{\milli\volt} but needs 12\,dB of de-emphasis; the CTLE alone needs 16\,dB of peaking, outside our range, for \qty{99}{\milli\volt}.
+  \item \textbf{With a DFE present, the noise-free optimum moves the linear work into the TX} (CTLE at 0\,dB, 11--16\,dB of de-emphasis). In a PDA our normalized CTLE and the TX FFE pay the same price, a lower low-frequency level, and the 1-UI FIR fits a sampled channel better. The PDA cannot see noise, crosstalk, sampler sensitivity or adaptivity, which are what limit large de-emphasis in practice.
+  \item \textbf{Within practical limits} the REF eye is \qty{134}{\milli\volt} (0.40 of the unequalized main cursor). Three more DFE taps add \qty{36}{\milli\volt}.
+  \item \textbf{Above about 22\,dB the 12\,dB CTLE limit binds.} At 25\,dB, CTLE + 2-tap DFE with 19\,dB of peaking (\qty{51}{\milli\volt}) beats both \OS{} rows; more DFE taps help less than more CTLE.
+\end{itemize}
+
+\begin{figure}[!tbp]
+  \centering
+  \includegraphics[width=\linewidth]{ch08_partition}
+  \caption{\textbf{Every strategy loses about a factor of two in eye per 5\,dB of loss; combinations lose less.} PDA eye against loss at $\fN$ (log scale, data of \cref{tab:eq-partition}). At REF (dotted) the \OS{} partition gives \qty{134}{\milli\volt}. Above about 22\,dB, a CTLE with more than 12\,dB of peaking (purple) overtakes it, which signals when \OS{} would need more equalization.}
+  \label{fig:ch8-partition}
+\end{figure}
+
+\begin{example}{The REF operating point in the time domain}\label{we:ch8-refop}
+Check the partition with the Lab~5 machinery: PRBS7 through REF, a TX preset, \code{ctle(pk)} and an ideal 2-tap DFE. The BER is estimated at \qty{10}{\milli\volt} rms slicer noise.
+\begin{center}\small
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+TX preset, CTLE & pre-DFE eye & + 2-tap DFE & $\pk{1}/\pk{0}$ & $w_1$, $w_2$ (mV) & BER \\
+\midrule
+none, 8\,dB (Lab 5) & 60.0 & 129.5 & 0.30 & 27.6, 11.8 & $4.5\times10^{-12}$\\
+none, 0\,dB         & $-84.0$ & 167.1 & 0.54 & 91.2, 45.6 & $1.3\times10^{-15}$\\
+$-3.5$\,dB, 0\,dB   & 35.4 & 169.5 & 0.37 & 51.1, 23.5 & $3.5\times10^{-17}$\\
+$-6$\,dB, 0\,dB     & 96.9 & \textbf{171.8} & 0.26 & 31.1, 11.7 & $3.0\times10^{-18}$\\
+$-6$\,dB, 4\,dB     & 103.0 & 132.6 & 0.15 & 12.7, 5.9 & $1.4\times10^{-12}$\\
+\bottomrule
+\end{tabular}
+\end{center}
+A DFE alone (row 2) opens the eye, but with a closed pre-DFE eye it cannot adapt from start-up, and $\pk{1}/\pk{0}=0.54$ invites error propagation. The $-6$\,dB preset with the CTLE near 0\,dB gives the best eye, an open pre-DFE eye (\qty{97}{\milli\volt}) for the edge samplers, and $\pk{1}/\pk{0}=0.26$: a wrong decision costs $2w_1=\qty{62}{\milli\volt}$ of the \qty{86}{\milli\volt} half-eye.
+\end{example}
+
+\paragraph{The \OS{} partition, and why}
+\begin{itemize}
+  \item \textbf{TX: 3-tap FFE, mostly de-emphasis} ($-3.5$/$-6$\,dB presets, pre-tap up to $\lvert c_{-1}\rvert=0.1$; REF uses $-6$\,dB). It is the only block that removes the pre-cursor without noise, and it lowers the long-run level that would overload the CTLE (\cref{sec:ctle-hbt}). It stays moderate because it cannot adapt without a back-channel and because lost launch swing is lost SNR.
+  \item \textbf{RX: CTLE, 0--12\,dB.} On REF it sits near 0--4\,dB and acts mainly as the front-end gain stage. Its range covers longer channels and board-to-board and temperature variation, keeps the pre-DFE eye open for the CDR, and, unlike the TX presets, adapts at the receiver.
+  \item \textbf{RX: 2-tap half-rate DFE, direct feedback.} It removes $\pk{1}$ and $\pk{2}$ without noise, with 55--65\,ps of tap-1 slack (\cref{we:ch8-timing}). Each extra tap adds summer capacitance and slows tap~1 for about \qty{10}{\milli\volt} more eye.
+\end{itemize}
+\textbf{When we would need more.} Beyond about 22\,dB of loss, add a second CTLE stage ($>12$\,dB), 3--5 DFE taps or an IIR tail tap, and a larger pre-tap. Unroll tap~1 if post-layout timing exceeds about 0.7\,UI.
+
+\begin{insight}
+The partition follows the pulse anatomy of \cref{fig:ch5-anatomy}: the TX pre-tap takes the pre-cursor, de-emphasis and the CTLE take the long tail and keep the pre-DFE eye open, and the DFE takes $\pk{1}$ and $\pk{2}$ without noise. A noise-free PDA would push all linear work into the TX; noise, crosstalk and adaptation pull some of it back into the receiver. Always report the result in millivolts against the noise budget of \cref{sec:noisebudget}.
+\end{insight}
+
+\section*{Exercises}\addcontentsline{toc}{section}{Exercises}
+\begin{enumerate}[label=\textbf{8.\arabic*}, leftmargin=2.2em]
+  \item Liu's DFE (\cref{we:ch8-liu}) with one tap only: what is the PDA eye? If $\hat a_{n-1}$ is wrong, how much margin is left on bit $n$?
+  \item Redo \cref{we:ch8-timing} with \qty{120}{\femto\farad} of summer capacitance (more taps). Does direct feedback still fit? What $R_L$ restores it, and at what cost in summer gain?
+  \item Show that the SS-LMS update $E[\sgn(e_n)\hat a_{n-1}]$ is zero at $w_1=A\pk{1}$ if the remaining ISI plus noise is symmetric. Why does this not stop the wandering in \cref{fig:ch8-sslms}(b)?
+  \item From the cursors in \cref{sec:ch8-ref} ($\pk{-1}=0.0138$, $\pk{0}=0.1832$, tail to $\pk{8}$), compute the PDA eye after 0, 1 and 2 DFE taps. Why is it lower than the PRBS7 numbers of \cref{fig:ch8-taps}? Then use \cref{tab:eq-partition}: at 25\,dB, which buys more, three extra taps or a 19\,dB CTLE?
+\end{enumerate}
+
+\begin{takeaways}
+\begin{itemize}
+  \item A DFE is an IIR equalizer with a slicer in the loop: it cancels post-cursors without amplifying noise, with taps equal to the post-cursors at its input. It cannot touch pre-cursors, so a TX pre-tap plus a DFE beats either alone (0.688 vs 0.519 and 0.65 in Liu's example).
+  \item Tap~1 must settle within 1\,UI even at half rate. At 5\,Gb/s direct feedback fits in about 140\,ps. Unrolling is the fallback if it does not.
+  \item SS-LMS adapts taps with one error sampler and counters. It wanders if a large pre-cursor is left uncancelled.
+  \item On REF + 8\,dB CTLE, DFE taps give $60\to111\to130\to143$\,mV for 0--3 taps. Beyond four taps the gain is negligible.
+  \item The \OS{} partition is a TX 3-tap FFE ($-6$\,dB on REF), a CTLE with 0--12\,dB and a 2-tap half-rate DFE. On REF it gives \qty{172}{\milli\volt} (PRBS7) and \qty{134}{\milli\volt} (PDA).
+  \item Beyond about 22\,dB of loss, more CTLE peaking and more DFE taps become necessary.
+\end{itemize}
+\end{takeaways}

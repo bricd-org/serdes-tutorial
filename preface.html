@@ -1,0 +1,84 @@
+---
+title: "Preface"
+nav_order: 1
+permalink: "/preface/"
+---
+{% raw %}
+<h1 id="ch:preface">Preface</h1>
+<p>Every fast interface, from a PCIe slot to the backplane of an Ethernet switch, moves its data over a <strong>serial link</strong>: a transmitter, a lossy wire and a receiver that recovers both the bits and the clock. This book teaches you to design one by following a single, concrete chip, the <strong>Open-SERDES</strong> transceiver: a 5 Gb/s NRZ link built in the open-source IHP SG13G2 130 nm SiGe BiCMOS process [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-ihppdk">1</a>] with open-source tools [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-iicosic">2</a>].</p>
+<h5 id="who-this-book-is-for">Who this book is for</h5>
+<p>Third- and fourth-year electrical engineering undergraduates who will help design the Open-SERDES chip, and anyone who wants a practical first course in high-speed links. After reading it you should be able to:</p>
+<ul>
+<li><p>predict the eye a channel will produce from its loss and pulse response;</p></li>
+<li><p>choose and size the TX FFE, CTLE and DFE for a channel, and defend the split;</p></li>
+<li><p>turn a link budget into specifications for the driver, front end, samplers, PLL and CDR;</p></li>
+<li><p>model the link in Python, then carry it through schematic, layout and sign-off with open tools.</p></li>
+</ul>
+<h5 id="prerequisites">Prerequisites</h5>
+<p>Basic circuits (KCL, small-signal MOS and BJT models, the differential pair), signals and systems (Fourier, Laplace, convolution) and some Python. Transmission lines, equalization, jitter, PLLs and CDRs are built up from first principles.</p>
+<h2 class="unnumbered" id="how-the-book-is-organized">How the book is organized</h2>
+<p>The book has five parts, shown in <a href="#fig:pre-roadmap">Figure 1</a>. <strong>Part I, Foundations</strong> (Chapters 1–4), gives you the vocabulary of links (pulse response, eye diagram, bit-error rate), the physics of the channel and the tools for a link budget. <strong>Part II, Equalization</strong> (Chapters 5–8), shows how the TX FFE, the CTLE and the DFE undo the channel, and how to split the work between them. <strong>Part III, Transceiver Circuits</strong> (Chapters 9–10), turns the system model into HBT and CMOS circuits. <strong>Part IV, Clocking</strong> (Chapters 11–13), covers jitter, the PLL and clock and data recovery. <strong>Part V, Putting It Together</strong> (Chapters 14–16), assembles the full architecture, walks through the open-source design flow and collects the hands-on labs.</p>
+<div id="fig:pre-roadmap">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/canva_roadmap.png' | relative_url }}{% raw %}" style="width:800px" alt="Your path through this tutorial." loading="lazy" />
+<figcaption><span class="capnum">Figure 1.</span> <strong>Your path through this tutorial.</strong> The five parts are milestones: Foundations, Equalization, Transceiver circuits, Clocking, and Putting it together. Each part builds on the numbers and models of the one before it.</figcaption>
+</figure>
+<h5 id="two-reading-paths">Two reading paths</h5>
+<p>Everyone should read Part I first. After that, <a href="#fig:pre-paths">Figure 2</a> suggests two routes. The <strong>system and modeling path</strong> suits readers who will own the link budget and the serdespy model. The <strong>circuit path</strong> suits readers who will design transistors and layout. Both paths meet again at the architecture chapter and the labs.</p>
+<div id="fig:pre-paths">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/tikz/00_preface-0.svg' | relative_url }}{% raw %}" style="width:549px" alt="Two ways to read the book after Part I." loading="lazy" />
+<figcaption><span class="capnum">Figure 2.</span> <strong>Two ways to read the book after Part I.</strong> Circles are chapter numbers. The system path (blue) follows the equalization theory, jitter and the CDR; the circuit path (gold) follows the CTLE circuits, the TX and RX, the PLL and the design flow. Both meet at the architecture (<a href="{% endraw %}{{ '/chapters/14-the-open-serdes-architecture/' | relative_url }}{% raw %}">Chapter 14</a>) and the labs (<a href="{% endraw %}{{ '/chapters/16-hands-on-labs-with-serdespy/' | relative_url }}{% raw %}">Chapter 16</a>).</figcaption>
+</figure>
+<h2 class="unnumbered" id="how-to-read-the-boxes">How to read the boxes</h2>
+<p>Chapters open with what you will learn and close with key takeaways. In between, six kinds of boxes mark the role of each piece of text:</p>
+<div class="tbox tbox-keyeq">
+<div class="tbox-title">
+<p>Key equation · Bit period</p>
+</div>
+<p><span class="math display">\[T_\mathrm{b}= \frac{1}{f_\mathrm{b}} = \frac{1}{5\,\mathrm{Gb}/\mathrm{s}} = 200\,\mathrm{ps}\]</span></p>
+</div>
+<div class="tbox tbox-example">
+<div class="tbox-title">
+<p>Worked Example P.1 · A number you will use on every page</p>
+</div>
+<p>At 5 Gb/s, <span class="math inline">\(f_\mathrm{N}= f_\mathrm{b}/2 = 2.5\,\mathrm{GHz}\)</span>; channel loss is quoted there.</p>
+</div>
+<div class="tbox tbox-insight">
+<div class="tbox-title">
+<p>What this means for your design</p>
+</div>
+<p>An <em>insight</em> box says what a result means for the Open-SERDES design.</p>
+</div>
+<div class="tbox tbox-pitfall">
+<div class="tbox-title">
+<p>Common pitfall</p>
+</div>
+<p>A <em>pitfall</em> box warns about a common mistake, such as quoting loss at 5 GHz.</p>
+</div>
+<div class="tbox tbox-tryit">
+<div class="tbox-title">
+<p>Lab 0: set-up</p>
+</div>
+<p>A <em>try-it</em> box points to a lab script (<a href="{% endraw %}{{ '/chapters/16-hands-on-labs-with-serdespy/' | relative_url }}{% raw %}#sec:lab0">Section 16.1</a>).</p>
+</div>
+<div class="tbox tbox-specnote">
+<div class="tbox-title">
+<p>Open-SERDES target</p>
+</div>
+<p>A <em>specnote</em> box states an Open-SERDES target: 5 Gb/s NRZ at <span class="math inline">\(\mathrm{BER}\le 10^{-12}\)</span>.</p>
+</div>
+<p>Longer algebra sits in grey <em>derivation</em> boxes.</p>
+<h2 class="unnumbered" id="how-the-labs-work">How the labs work</h2>
+<p>The labs of <a href="{% endraw %}{{ '/chapters/16-hands-on-labs-with-serdespy/' | relative_url }}{% raw %}">Chapter 16</a> reproduce the key plots of the book with <strong>serdespy</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-serdespy">3</a>], a Python library for system-level SerDes modeling, plus NumPy and SciPy. The scripts live in <code>tutorial/code/</code> and share one file, <code>common.py</code>, that defines the link, the reference channel and the helpers; the figure scripts in <code>tutorial/figsrc/</code> import the same model, so labs and figures use the same numbers. Run a lab, change a parameter and compare your plot with the text.</p>
+<h2 class="unnumbered" id="sources-and-acknowledgments">Sources and acknowledgments</h2>
+<p>The link-modeling chapters follow the structure of Prof. Sam Palermo’s ECEN 720 <em>High-Speed Links</em> course at Texas A&amp;M University [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-palermo720">4</a>]. The equalizer and CDR chapters draw on Benjamin Liu’s lecture notes [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-liuEq">5</a>, <a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-liuCDR">6</a>]. The labs are built on serdespy by Richard Barrie and colleagues at the University of Toronto [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-serdespy">3</a>]. The chip itself is possible because IHP opened its SG13G2 process design kit [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-ihppdk">1</a>] and the Institute for Integrated Circuits at JKU Linz maintains the IIC-OSIC-TOOLS container and the analog chip template [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-iicosic">2</a>, <a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-jkutemplate">7</a>]. The project is supervised by Avishka Herath (ENTC, University of Moratuwa), Udara Mendis (TUHH) and Kithmin Wickremasinghe (UBC), within BRICD (thebricd.org).</p>
+<p>This is a <strong>living draft (v0.1)</strong>; numbers will be refined as the design matures. If you find an error, an unclear derivation or a figure that does not explain what it should, please open an issue or a pull request on the project’s GitHub repository, linked from thebricd.org.</p>
+
+<nav class="prev-next" aria-label="Chapter navigation"><span></span><a class="pn-link next" href="{% endraw %}{{ '/chapters/01-why-serial-links/' | relative_url }}{% raw %}"><small>Next →</small>Why Serial Links?</a></nav>
+<p class="page-source">Generated from <a href="https://github.com/bricd-org/serdes-tutorial/blob/main/book/tutorial/chapters/00_preface.tex">book/tutorial/chapters/00_preface.tex</a>. Figure, table and equation numbers match the <a href="{% endraw %}{{ '/assets/pdf/Open-SERDES_Tutorial.pdf' | relative_url }}{% raw %}">PDF edition</a>.</p>
+{% endraw %}

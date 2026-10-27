@@ -1,0 +1,30 @@
+% ch15_tb.tex -- fig:ch15-tb : two key testbenches
+\begin{tikzpicture}[x=1cm,y=1cm,font=\sffamily\scriptsize,
+  b/.style={blk,minimum height=11mm,minimum width=18mm,font=\sffamily\scriptsize,inner sep=2pt,align=center},
+  ba/.style={b,fill=btint}, bd/.style={b,fill=gtint,draw=golddk}, bw/.style={b,fill=white},
+  pl/.style={font=\sffamily\footnotesize\bfseries,text=golddk,anchor=west}]
+% ---------------- (a) TX eye testbench
+\node[pl] at (-0.4,1.25) {(a) TX eye through the channel};
+\node[bd] (src) at (0.75,0) {PRBS7 bits\\PWL file or\\XSPICE source};
+\node[ba,minimum width=22mm,line width=1pt] (dut) at (3.4,0) {\textbf{DUT:} 2:1 muxes\\+ 3-tap driver\\(extracted)};
+\node[ba] (pad) at (5.95,0) {pad + ESD\\$C_p\approx$ 0.6\,pF};
+\node[bw,minimum width=24mm] (ch) at (8.6,0) {channel model\\RLGC ladder / LTRA,\\or $h(t)$ as FIR};
+\node[ba] (rx) at (11.2,0) {\qty{100}{\ohm} load\\+ 300\,fF};
+\node[bd] (py) at (13.6,0) {\texttt{wrdata} $\to$\\Python eye,\\\texttt{eye\_scan}};
+\foreach \u/\v in {src/dut,dut/pad,pad/ch,ch/rx,rx/py}{\draw[sig] (\u) -- (\v);}
+\node[b,minimum width=16mm,minimum height=7mm] (ck) at (3.4,-1.35) {ideal 2.5\,GHz\\clock (or PLL)};
+\draw[clk] (ck) -- (dut);
+\node[font=\sffamily\scriptsize,text=muted,anchor=north,align=center] at (8.6,-0.75) {pass: eye $\ge$ model eye $-$10\%\\at all corners};
+% ---------------- (b) sampler offset / sensitivity / metastability
+\node[pl] at (-0.4,-2.45) {(b) Sampler offset, noise and metastability};
+\node[bd] (vin) at (0.75,-3.7) {$V_\mathrm{in}$ steps\\$-5\ldots+5$\,mV\\around $V_\mathrm{CM}$};
+\node[ba,minimum width=24mm,line width=1pt] (sa) at (3.6,-3.7) {\textbf{DUT:} CML sampler\\+ offset DAC\\Monte Carlo mismatch};
+\node[bd] (cnt) at (6.65,-3.7) {count 1s over\\$N$ clocks $\to$\\$P(1)$ vs $V_\mathrm{in}$};
+\node[bw,minimum width=30mm] (fit) at (9.75,-3.7) {fit $P(1)=\Phi\!\left(\frac{V_\mathrm{in}-V_\mathrm{os}}{\sigma}\right)$\\$\to$ $V_\mathrm{os}$ histogram, $\sigma$};
+\node[bw,minimum width=24mm] (met) at (13.2,-3.7) {tiny $V_\mathrm{in}$ sweep:\\$t_\mathrm{CK\to Q}$ vs $\ln V_\mathrm{in}$\\slope $\to$ $\tau$};
+\node[b,minimum width=16mm,minimum height=7mm] (ck2) at (3.6,-5.05) {2.5\,GHz clock\\(transient noise on)};
+\draw[clk] (ck2) -- (sa);
+\foreach \u/\v in {vin/sa,sa/cnt,cnt/fit}{\draw[sig] (\u) -- (\v);}
+\draw[sig] (4.6,-3.7 |- sa.south) -- (4.6,-4.7) -| (met.south);
+\node[font=\sffamily\scriptsize,text=muted,anchor=north] at (9.0,-4.75) {pass: $\sigma\le1$\,mV, $\lvert V_\mathrm{os}\rvert\le0.5$\,mV after trim, $\tau\le5$\,ps};
+\end{tikzpicture}

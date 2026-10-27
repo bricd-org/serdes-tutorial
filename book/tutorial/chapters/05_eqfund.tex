@@ -1,0 +1,185 @@
+\tikzsetfigurename{05_eqfund-}
+\chapter{Equalization Fundamentals}\label{ch:eqfund}
+\chapterlead{The channel is a low-pass filter. An equalizer is the filter we add so that channel and equalizer together look flat out to the Nyquist frequency.}
+\suppressfloats[t]
+
+\begin{objectives}
+\begin{itemize}
+  \item Explain how loss at $\fN$ turns into inter-symbol interference and closes the REF eye.
+  \item State the zero-forcing idea and quantify why an ideal channel inverse amplifies noise.
+  \item Use Liu's cable model to connect a loss in dB to the size of the main cursor.
+  \item Name the four places an equalizer can sit in a link, and what each one can and cannot fix.
+  \item Frame the partition question that \cref{sec:eq-partition} answers for \OS{}.
+\end{itemize}
+\end{objectives}
+
+\section{Why equalize?}\label{sec:ch5-why}
+
+\Cref{sec:refchannel} showed that the REF channel loses \qty{17.4}{\deci\bel} at $\fN=\qty{2.5}{\giga\hertz}$ but only \qty{0.6}{\deci\bel} at DC. A single 1-UI pulse therefore comes out smeared. Its main cursor is only $\pk{0}=\qty{0.340}{\volt}$ instead of \qty{1}{\volt}, and its energy leaks into the neighbouring bits: $\pk{1}=0.182$, $\pk{2}=0.091$ and a long tail after it, plus a small pre-cursor $\pk{-1}=0.049$ (\cref{tab:ref-cursors}). Summed over all bits, this \textbf{inter-symbol interference} (ISI) exceeds the main cursor, so the peak-distortion eye of \cref{eq:pda} is $-0.161$\,V. The eye is closed.
+
+An \textbf{equalizer} is a filter $H_\mathrm{eq}(f)$ placed somewhere in the link so that the cascade $\Hch(f)\,H_\mathrm{eq}(f)$ is flat, at least up to $\fN$~\cite{liuEq,palermo720eq}. Flat to $\fN$ is enough. A pulse sampled once per UI is free of ISI when its spectrum, folded around multiples of $1/\Tb$, adds up to a constant. A response that is flat to $\fN$ and rolls off smoothly above it comes close to meeting that condition. In the time domain, the same goal reads: \emph{make every cursor except $\pk{0}$ zero}. \Cref{fig:ch5-inverse}(a) shows the most direct way to do it, which is to build the exact inverse of the channel.
+
+\begin{figure}[tbp]
+  \centering
+  \includegraphics[width=\linewidth]{ch05_inverse}
+  \caption{\textbf{Inverting the channel removes ISI but amplifies noise.} (a)~REF $|\Hch|$, its ideal inverse and their flat product. The inverse needs $+17.4$\,dB at $\fN$ and keeps rising beyond it. (b)~For white noise at the equalizer input, the noise power spectrum is multiplied by $|H_\mathrm{eq}|^2$. The rms noise gain is \qty{12.1}{\deci\bel} if equalization stops at $\fN$ and \qty{22.5}{\deci\bel} if it extends to $2\fN$.}
+  \label{fig:ch5-inverse}
+\end{figure}
+
+\section{The zero-forcing idea}\label{sec:zf}
+
+A \textbf{zero-forcing} (ZF) equalizer chooses $H_\mathrm{eq}=1/\Hch$ over the band of interest, which forces all ISI to zero. It ignores noise, and that is its weakness. Thermal noise from the termination and from the first amplifier enters \emph{before} the equalizer and is filtered by it. By the Wiener--Khinchin theorem, a noise process with power spectral density $S_n(f)$ passing through $H_\mathrm{eq}$ comes out with variance:
+
+\begin{keyeq}[Noise at the equalizer output]
+\begin{equation}
+  \sigma_\mathrm{out}^2=\int_0^{B}\lvert H_\mathrm{eq}(f)\rvert^2\,S_n(f)\,\mathrm{d}f
+  \quad\xrightarrow{\;H_\mathrm{eq}=1/\Hch,\ S_n=N_0\;}\quad
+  \sigma_\mathrm{out}^2=N_0B\cdot\underbrace{\frac{1}{B}\int_0^{B}\frac{\mathrm{d}f}{\lvert\Hch(f)\rvert^2}}_{\text{noise enhancement}}
+  \label{eq:ch5-noise}
+\end{equation}
+\end{keyeq}
+
+For REF the enhancement factor is \qty{12.1}{\deci\bel} for $B=\fN$ (\cref{fig:ch5-inverse}b). The signal is not boosted by that much on average. The main cursor recovers, but the noise integrated over the whole band grows faster than the signal does. Extending the inverse to $2\fN$ costs another \qty{10}{\deci\bel} of noise for almost no gain in eye opening. Practical equalizers are therefore \emph{partial} inverses. They stop near $\fN$ and limit their peak boost, or, like the DFE of \cref{ch:dfe}, they avoid linear filtering of the noise altogether.
+
+\paragraph{Liu's cable model} A model with a closed-form pulse helps build intuition~\cite{liuEq}. In a cable, dielectric loss dominates, and the transfer function is close to $C(f)=\exp(-k_d\,l\,\lvert f\rvert)$, with $l$ the length and $k_d$ a loss coefficient. Write $a=k_dl$. The inverse Fourier transform is a Lorentzian,
+\begin{equation}
+  c(t)=\int_{-\infty}^{\infty}e^{-a\lvert f\rvert}e^{j2\pi ft}\,\mathrm{d}f=2\int_0^\infty e^{-af}\cos(2\pi ft)\,\mathrm{d}f=\frac{2a}{a^2+4\pi^2t^2}.
+  \label{eq:ch5-lorentz}
+\end{equation}
+Convolving with a pulse of height $V_0$ on $0\le t\le\Tb$, and using the antiderivative $\int c(u)\,\mathrm{d}u=\tfrac1\pi\arctan(2\pi u/a)$, gives
+\begin{equation}
+  y(t)=\frac{V_0}{\pi}\left[\arctan\frac{2\pi t}{a}-\arctan\frac{2\pi(t-\Tb)}{a}\right].
+  \label{eq:ch5-cablepulse}
+\end{equation}
+The pulse is symmetric about $t=\Tb/2$, so setting $\mathrm{d}y/\mathrm{d}t=0$ puts the peak there:
+
+\begin{keyeq}[Main cursor of a dielectric-loss cable]
+\begin{equation}
+  y_{\max}=\frac{2V_0}{\pi}\arctan\frac{\pi\Tb}{k_d\,l},\qquad
+  \text{loss at }\fN\ (\mathrm{dB})=20\log_{10}(e)\,k_dl\,\fN=8.686\,k_dl\,\fN .
+  \label{eq:ch5-ymax}
+\end{equation}
+\end{keyeq}
+
+\begin{example}{How much does \qty{15}{\deci\bel} of cable loss cost?}\label{we:ch5-cable}
+Take a cable with \qty{15}{\deci\bel} of loss at $\fN=\qty{2.5}{\giga\hertz}$. Then $k_dl=15/(8.686\times\qty{2.5}{\giga\hertz})=\qty{691}{\pico\second}$, and $\pi\Tb/(k_dl)=\pi\cdot200/691=0.909$. \Cref{eq:ch5-ymax} gives $y_{\max}=(2/\pi)\arctan(0.909)=(2/\pi)(0.738)=0.470\,V_0$, so the main cursor has fallen to less than half.
+
+The neighbours follow from \cref{eq:ch5-cablepulse} at $t=\Tb/2+k\Tb$: $y_{\pm1}=0.153$, $y_{\pm2}=0.043$ and $y_{\pm3}=0.019$, in units of $V_0$. Summing all cursors out to $\pm100$\,UI gives $\sum\lvert y_k\rvert=0.527>0.470$, so the PDA eye is closed. \Cref{fig:ch5-cable}(b) shows that the eye of this model closes at about \qty{14}{\deci\bel}.
+
+A zero-forcing inverse needs $+15$\,dB at $\fN$. By \cref{eq:ch5-noise} with $\lvert C\rvert^{-2}=e^{2af}$, its noise enhancement is $(e^{2a\fN}-1)/(2a\fN)=$ \qty{9.5}{\deci\bel} up to $\fN$. Up to $2\fN$ it would be \qty{21.6}{\deci\bel}.
+\end{example}
+
+\begin{figure}[!tbp]
+  \centering
+  \includegraphics[width=\linewidth]{ch05_cable}
+  \caption{\textbf{Liu's cable model ties loss in dB to the pulse.} (a)~Pulse responses from \cref{eq:ch5-cablepulse} for 5--20\,dB of loss at $\fN$. The dots mark the cursors of the 15\,dB case. The model has zero phase, so the pre-cursors equal the post-cursors. (b)~Main cursor from \cref{eq:ch5-ymax} and PDA half-eye against loss. The tails close the eye at about \qty{14}{\deci\bel}, while the main cursor is still about half its lossless value.}
+  \label{fig:ch5-cable}
+\end{figure}
+
+\begin{pitfall}[A zero-phase model is not a real channel]
+$C(f)=e^{-k_dl\lvert f\rvert}$ is real and even, so its impulse response starts before $t=0$ and is not causal. That is why its pre- and post-cursors are equal in \cref{fig:ch5-cable}. A real channel such as REF is causal, and its post-cursors dominate ($\pk{1}=0.182$ against $\pk{-1}=0.049$). Use the cable model for intuition about loss and the main cursor, and use REF (\cref{sec:refchannel}) for design numbers.
+\end{pitfall}
+
+\begin{insight}
+\begin{itemize}
+  \item Every 5\,dB of loss at $\fN$ costs a large share of the main cursor and adds tail ISI. Near 15\,dB the tails, not the main cursor, are what close the eye.
+  \item Equalize to about $\fN$ and no further. A full inverse to $2\fN$ roughly doubles the noise penalty in dB (\qty{12.1}{\deci\bel} becomes \qty{22.5}{\deci\bel} on REF) and buys almost no eye.
+  \item Zero forcing ignores noise and swing. Every practical equalizer in this part of the book is a constrained version of it.
+\end{itemize}
+\end{insight}
+
+\section{Where equalizers live}\label{sec:eq-taxonomy}
+
+An equalizer can be placed at the transmitter, at the receiver input, or after the receiver's decision. \Cref{fig:ch5-eqmap} places the options in the \OS{} link, and \cref{tab:ch5-eqcompare} compares them.
+
+\begin{figure}[!tbp]
+\centering
+\begin{tikzpicture}[font=\sffamily\small, node distance=4mm and 5mm]
+  \node[blkg, minimum width=14mm] (ser) {SER\\[-1pt]\scriptsize 16:1};
+  \node[blkb, right=5mm of ser, minimum width=19mm] (ffe) {TX FFE\\[-1pt]\scriptsize + CML driver};
+  \node[blk, right=7mm of ffe, minimum width=17mm, fill=bgpale] (ch) {channel\\[-1pt]\scriptsize pkg, PCB, pkg};
+  \node[blkb, right=7mm of ch, minimum width=14mm] (ctle) {CTLE};
+  \node[sumnode, right=5mm of ctle] (sum) {$\Sigma$};
+  \node[blkg, right=5mm of sum, minimum width=15mm] (slc) {slicers\\[-1pt]\scriptsize half-rate};
+  \node[blkg, right=5mm of slc, minimum width=13mm] (des) {DES\\[-1pt]\scriptsize 1:16};
+  \node[blkb, below=7mm of slc, minimum width=15mm, minimum height=7mm] (dfe) {DFE taps};
+  \draw[sig] (ser) -- (ffe);
+  \draw[sig] (ffe) -- (ch);
+  \draw[sig] (ch) -- (ctle);
+  \draw[sig] (ctle) -- (sum);
+  \draw[sig] (sum) -- (slc);
+  \draw[sig] (slc) -- (des);
+  \draw[sig] ($(slc.east)+(2.5mm,0)$) |- (dfe.east);
+  \draw[sig] (dfe.west) -| node[pos=0.92, right, font=\sffamily\footnotesize, text=navy]{$-$} (sum.south);
+  \node[blk, dashed, draw=muted, text=muted, above=4mm of ctle, minimum width=14mm, minimum height=6mm, font=\sffamily\scriptsize] (rxffe) {RX FFE (not used)};
+  % clocks
+  \node[blkg, below=7mm of ser, minimum width=12mm, minimum height=7mm] (pll) {PLL};
+  \node[blkg, above=4mm of slc, minimum width=12mm, minimum height=6mm] (cdr) {CDR};
+  \draw[clk] (pll) -- (ser);
+  \draw[clk] (cdr) -- (slc);
+  % tags
+  \node[lbl, align=center, below=1mm of ch] {loss turns\\into ISI};
+  \node[font=\sffamily\scriptsize, text=c3, align=left, anchor=north] (txtag) at ($(ffe.south)+(0,-1.5mm)$) {linear, pre + post\\no RX noise gain\\costs launch swing};
+  \node[font=\sffamily\scriptsize, text=c4, align=left, anchor=north] at ($(ctle.south)+(0,-1mm)$) {linear, analog\\boosts HF noise\\and crosstalk};
+  \node[font=\sffamily\scriptsize, text=c3, align=left, anchor=west] (dfetag) at ($(dfe.east)+(3mm,0)$) {nonlinear\\post-cursors only\\no noise gain};
+  % regions
+  \begin{scope}[on background layer]
+    \node[region, fit=(ser)(ffe)(pll)(txtag), inner sep=2.5mm, label={[lbl]above:transmitter}] {};
+    \node[region, fit=(ctle)(sum)(slc)(des)(dfe)(cdr)(rxffe)(dfetag), inner sep=2.5mm, label={[lbl]above:receiver}] {};
+  \end{scope}
+\end{tikzpicture}
+\caption{\textbf{Equalization can sit at the TX, at the RX input, or after the decision.} The \OS{} link uses a TX FFE in the driver, a CTLE as the first receiver stage and a DFE that feeds back from the half-rate slicers. A receiver FIR (RX FFE) is the fourth option. We do not use it.}
+\label{fig:ch5-eqmap}
+\end{figure}
+
+\paragraph{TX FFE} A FIR filter in the driver pre-distorts the waveform (\cref{ch:txffe}). It handles pre- and post-cursors and cannot amplify receiver noise, but with a fixed peak swing it can only \emph{lower} the low-frequency level, so the eye arrives smaller.
+
+\paragraph{RX CTLE} An analog high-pass stage at the receiver input (\cref{ch:ctle}). It is cheap, fast and adaptable, and reshapes the long tail and part of the pre-cursor, but it boosts high-frequency noise and crosstalk with the signal.
+
+\paragraph{RX FFE} A receiver FIR, from analog delay cells or after an ADC. It amplifies noise like a CTLE, and needs accurate \qty{200}{\pico\second} analog delays or a power-hungry ADC. \OS{} does not use it.
+
+\paragraph{DFE} Subtracts the ISI that already-decided bits will cause (\cref{ch:dfe}). Its feedback is a clean $\pm1$ decision, so it adds no noise, but it cancels only \emph{post}-cursors and its first tap must close a loop within one UI.
+
+\Cref{fig:ch5-anatomy} reads the REF pulse in these terms. Each zone of cursors has a natural owner.
+
+\begin{figure}[!tbp]
+  \centering
+  \includegraphics[width=\linewidth]{ch05_anatomy}
+  \caption{\textbf{Each part of the pulse response has a natural owner.} The pre-cursor (red) can only be removed by linear equalization, either the TX pre-tap or the CTLE. The first post-cursors (blue) are the DFE's job, which it does without noise. The long tail (teal) is best flattened by the CTLE or the TX post-tap, because removing it with DFE taps would take many taps. Shown is the unequalized REF pulse with $\pk{-1}..\pk{10}$.}
+  \label{fig:ch5-anatomy}
+\end{figure}
+
+\begin{table}[!tbp]
+\centering\small
+\caption{\textbf{Four equalizers, four sets of costs.} Power and complexity are relative, for a 5\,Gb/s link.}
+\label{tab:ch5-eqcompare}
+\begin{tabularx}{\linewidth}{@{}l L L L l L@{}}
+\toprule
+ & \textbf{Cursors it fixes} & \textbf{Frequency view} & \textbf{Noise, crosstalk} & \textbf{Power} & \textbf{Main limit} \\
+\midrule
+TX FFE  & pre + post (as many as taps) & lowers LF, Nyquist kept & no RX noise gain; launch swing lost & low & peak swing; not adaptive without a back-channel \\
+RX CTLE & long tail, some pre-cursor & boosts HF over LF & amplifies HF noise and crosstalk & low & peaking range and linearity \\
+RX FFE  & pre + post & like a CTLE, discrete taps & amplifies noise & high & analog delays or ADC power \\
+DFE     & post only (one per tap) & nonlinear (no $H(f)$) & no noise gain & medium & tap-1 timing, error propagation \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Preview: who does how much?}\label{sec:ch5-preview}
+
+None of the four is free: the TX FFE costs swing, the CTLE noise and linearity, the DFE timing margin and loop power. The design question is how to \emph{split} the work of undoing \qty{17.4}{\deci\bel} between them. Chapters~\ref{ch:txffe}--\ref{ch:dfe} build each equalizer, and \cref{sec:eq-partition} answers the split with numbers for REF and for 5--30\,dB channels.
+
+\begin{insight}[Design rule of thumb]
+Give each equalizer the job it does most cheaply. The TX pre-tap takes the pre-cursor, the DFE takes the first one or two post-cursors without adding noise, and a linear equalizer (CTLE or TX post-tap) flattens the long tail. Any equalizer pushed far beyond its natural job costs more than it returns.
+\end{insight}
+
+\begin{takeaways}
+\begin{itemize}
+  \item Loss at $\fN$ spreads each bit into its neighbours. On REF the ISI sum exceeds the main cursor, so the PDA eye is $-0.161$\,V.
+  \item Equalization aims for a cascade that is flat up to $\fN$. In the time domain that means zero ISI cursors.
+  \item A zero-forcing inverse multiplies the noise by $\int\lvert H_\mathrm{eq}\rvert^2$. That is \qty{12.1}{\deci\bel} on REF up to $\fN$ and \qty{22.5}{\deci\bel} up to $2\fN$.
+  \item In Liu's cable model, $y_{\max}=(2V_0/\pi)\arctan(\pi\Tb/k_dl)$. At 15\,dB of loss the main cursor is 0.47 and the eye is already closed.
+  \item The TX FFE, CTLE, RX FFE and DFE differ in which cursors they fix, whether they amplify noise, and what limits them.
+  \item The partition between them is a design decision. \Cref{sec:eq-partition} makes it for \OS{}.
+\end{itemize}
+\end{takeaways}

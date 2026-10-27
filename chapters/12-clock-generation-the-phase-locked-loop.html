@@ -1,0 +1,268 @@
+---
+title: "12. Clock Generation: The Phase-Locked Loop"
+parent: "Part IV · Clocking"
+nav_order: 12
+permalink: "/chapters/12-clock-generation-the-phase-locked-loop/"
+---
+{% raw %}
+<h1 id="ch:pll"><span class="chapnum">Chapter 12</span>Clock Generation:<br />
+The Phase-Locked Loop</h1>
+<div class="chapterlead">
+<p>A crystal gives a clean 50 MHz; the link needs a clean 2.5 GHz in four phases. The charge-pump PLL with an LC VCO bridges the two.</p>
+</div>
+<div class="tbox tbox-objectives">
+<div class="tbox-title">
+<p>In this chapter you will learn</p>
+</div>
+<ul>
+<li><p>Explain how a phase-frequency detector and charge pump turn a timing error into charge, and why the reset delay removes the dead zone.</p></li>
+<li><p>Derive the type-II loop’s <span class="math inline">\(\omega_n\)</span> and <span class="math inline">\(\zeta\)</span>, and design the Open-SERDES loop filter for a given bandwidth and phase margin.</p></li>
+<li><p>Use noise transfer functions to choose the loop bandwidth that minimizes output jitter.</p></li>
+<li><p>Size an LC tank, state the oscillation condition, and use Leeson’s model to sanity-check a phase-noise number.</p></li>
+<li><p>Generate and distribute quadrature (I/Q) clocks, and budget their phase and duty-cycle errors.</p></li>
+</ul>
+</div>
+<h2 id="sec:cppll"><span class="secnum">12.1</span>The charge-pump PLL</h2>
+<p>A free-running VCO drifts: its TIE random-walks (<a href="{% endraw %}{{ '/chapters/11-jitter/' | relative_url }}{% raw %}#fig:ch11-tie">Figure 11.1</a>b) and its frequency wanders with temperature and supply. A <strong>phase-locked loop</strong> (PLL) fixes both by comparing the divided VCO output with a crystal reference and steering the VCO until the two are aligned. Locked, the output frequency is exactly <span class="math inline">\(N f_\mathrm{ref}\)</span>. Open-SERDES uses an integer-N charge-pump PLL (<a href="#fig:ch12-arch">Figure 12.1</a>) with <span class="math inline">\(f_\mathrm{ref} = 50\)</span> MHz and <span class="math inline">\(N = 50\)</span>, reusing the team’s LC-VCO PLL design [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-smacd2026pll">11</a>] retuned from 2.4 to 2.5 GHz.</p>
+<div id="fig:ch12-arch">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/tikz/12_pll-0.svg' | relative_url }}{% raw %}" style="width:671px" alt="The Open-SERDES integer-N charge-pump PLL." loading="lazy" />
+<figcaption><span class="capnum">Figure 12.1.</span> <strong>The Open-SERDES integer-N charge-pump PLL.</strong> The phase-frequency detector (PFD) compares the 50 MHz reference with the VCO divided by 50; the charge pump (CP) turns the timing difference into charge; the loop filter turns charge into the control voltage. At lock <span class="math inline">\(f_\mathrm{out} = N f_\mathrm{ref} = 2.5\)</span> GHz.</figcaption>
+</figure>
+<h5 id="phase-frequency-detector-and-charge-pump">Phase-frequency detector and charge pump</h5>
+<p>The <strong>PFD</strong> is two flip-flops with their D inputs tied high (<a href="#fig:ch12-pfd">Figure 12.2</a>). A rising reference edge sets UP, a rising divider edge sets DN, and when both are high an AND gate resets them after a short delay <span class="math inline">\(T_\mathrm{rst}\)</span>. The width of UP minus the width of DN equals the timing difference <span class="math inline">\(\Delta t\)</span> between the edges. If the frequencies differ, one output dominates for many cycles, so the PFD also pulls the frequency in: it is a phase <em>and</em> frequency detector. The <strong>charge pump</strong> switches a current <span class="math inline">\(I_\mathrm{CP}\)</span> into the loop filter during UP and out during DN. The average current is <span class="math inline">\(I_\mathrm{CP}\,\Delta t/T_\mathrm{ref} = I_\mathrm{CP}\,\Delta\phi/2\pi\)</span>, so the PFD-plus-CP gain is <span class="math inline">\(I_\mathrm{CP}/2\pi\)</span> amperes per radian of reference phase.</p>
+<div id="fig:ch12-pfd">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/tikz/12_pll-1.svg' | relative_url }}{% raw %}" style="width:433px" alt="The PFD measures the edge offset as a pulse width; the charge pump turns it into charge." loading="lazy" />
+<img src="{% endraw %}{{ '/assets/figs/tikz/12_pll-2.svg' | relative_url }}{% raw %}" style="width:597px" alt="The PFD measures the edge offset as a pulse width; the charge pump turns it into charge." loading="lazy" />
+<figcaption><span class="capnum">Figure 12.2.</span> <strong>The PFD measures the edge offset as a pulse width; the charge pump turns it into charge.</strong> Top: two reset flip-flops, an AND gate with reset delay <span class="math inline">\(T_\mathrm{rst}\)</span>, and the up/down current sources. Bottom: REF leads DIV by <span class="math inline">\(\Delta t\)</span>, so UP is wider than DN by <span class="math inline">\(\Delta t\)</span>; both are on together for <span class="math inline">\(T_\mathrm{rst}\)</span> and cancel. Each cycle the control voltage jumps by <span class="math inline">\(I_\mathrm{CP}R\)</span> while current flows and keeps a net step of <span class="math inline">\(I_\mathrm{CP}\Delta t/C_1\)</span>.</figcaption>
+</figure>
+<h5 id="dead-zone-and-mismatch">Dead zone and mismatch</h5>
+<p>Without the reset delay, a tiny <span class="math inline">\(\Delta t\)</span> would give UP and DN pulses too short to switch the charge pump on, so near lock the loop would get no correction: a <strong>dead zone</strong> in which the VCO drifts. With <span class="math inline">\(T_\mathrm{rst}\)</span> of 100–200 ps both pulses always last at least <span class="math inline">\(T_\mathrm{rst}\)</span>, and the net charge stays proportional to <span class="math inline">\(\Delta t\)</span> down to zero. The price is mismatch: if the currents differ by <span class="math inline">\(\Delta I\)</span>, the loop locks at a static offset <span class="math inline">\(\Delta t = (\Delta I/I_\mathrm{CP})\,T_\mathrm{rst}\)</span> (7.5 ps for 5% and 150 ps), and the current pulses every 20 ns create a <strong>reference spur</strong>, a periodic jitter that <span class="math inline">\(C_2\)</span> and the loop must filter.</p>
+<h2 id="sec:pll-loop"><span class="secnum">12.2</span>Loop dynamics</h2>
+<p>Near lock every block is linear in <em>phase</em>, which gives the model of <a href="#fig:ch12-linmodel">Figure 12.3</a>. The PFD and CP give <span class="math inline">\(I_\mathrm{CP}/2\pi\)</span> (A/rad); the loop filter impedance <span class="math inline">\(Z(s)\)</span> turns current into <span class="math inline">\(V_\mathrm{ctrl}\)</span>; the VCO integrates frequency into phase, <span class="math inline">\(K_\mathrm{VCO}/s\)</span> (rad/s/V divided by <span class="math inline">\(s\)</span>); and the divider scales phase by <span class="math inline">\(1/N\)</span>. The same figure marks where each noise source enters.</p>
+<div id="fig:ch12-linmodel">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/tikz/12_pll-3.svg' | relative_url }}{% raw %}" style="width:607px" alt="Linear phase model of the CP-PLL, with its noise sources." loading="lazy" />
+<figcaption><span class="capnum">Figure 12.3.</span> <strong>Linear phase model of the CP-PLL, with its noise sources.</strong> Each source reaches the output through a different filter: reference and charge-pump noise are low-pass filtered (and multiplied by <span class="math inline">\(N\)</span>), loop-filter resistor noise is band-pass, and VCO noise is high-pass. The loop bandwidth sets the crossover between “trust the reference” and “trust the VCO”.</figcaption>
+</figure>
+<h5 id="type-ii-second-order-loop">Type-II second-order loop</h5>
+<p>Ignore <span class="math inline">\(C_2\)</span> for now, so <span class="math inline">\(Z(s) = R + 1/(sC_1)\)</span>. The open-loop gain is <span class="math display">\[LG(s) = \frac{I_\mathrm{CP}}{2\pi}\,Z(s)\,\frac{K_\mathrm{VCO}}{s}\,\frac1N = \frac{I_\mathrm{CP}K_\mathrm{VCO}}{2\pi N C_1}\cdot\frac{1 + sRC_1}{s^2} .\]</span> It has two integrators (the VCO and <span class="math inline">\(C_1\)</span>), so it is a <strong>type-II</strong> loop: it settles to zero phase error even after a frequency step. The closed-loop transfer <span class="math inline">\(\phi_\mathrm{out}/\phi_\mathrm{ref} = N\,LG/(1+LG)\)</span> becomes, after multiplying through by <span class="math inline">\(s^2\)</span>,</p>
+<div class="tbox tbox-keyeq">
+<div class="tbox-title">
+<p>Key equation · CP-PLL natural frequency and damping</p>
+</div>
+<div id="eq:ch12-wnz">
+
+</div>
+<p><span class="math display">\[\frac{\phi_\mathrm{out}}{\phi_\mathrm{ref}} = N\,\frac{2\zeta\omega_n s + \omega_n^2}{s^2 + 2\zeta\omega_n s + \omega_n^2},
+  \qquad
+  \omega_n = \sqrt{\frac{I_\mathrm{CP}K_\mathrm{VCO}}{2\pi N C_1}}, \qquad
+  \zeta = \frac{R}{2}\sqrt{\frac{I_\mathrm{CP}K_\mathrm{VCO}C_1}{2\pi N}} . \tag{12.1}\]</span></p>
+</div>
+<p>Matching coefficients gives <span class="math inline">\(\omega_n^2 = I_\mathrm{CP}K_\mathrm{VCO}/(2\pi N C_1)\)</span> and <span class="math inline">\(2\zeta\omega_n = I_\mathrm{CP}K_\mathrm{VCO}R/(2\pi N)\)</span>. Raising <span class="math inline">\(R\)</span> raises the damping without changing <span class="math inline">\(\omega_n\)</span>; raising <span class="math inline">\(C_1\)</span> lowers <span class="math inline">\(\omega_n\)</span> and raises <span class="math inline">\(\zeta\)</span>. The zero in the numerator causes some <strong>jitter peaking</strong> at every damping (<a href="#fig:ch12-resp">Figure 12.4</a>, <a href="#tab:ch12-zeta">Table 12.1</a>): the loop amplifies reference jitter near <span class="math inline">\(\omega_n\)</span>. The <span class="math inline">\(-3\)</span> dB bandwidth is <span class="math inline">\(\omega_{-3\mathrm{dB}} = \omega_n\big[1 + 2\zeta^2 + \sqrt{(1+2\zeta^2)^2 + 1}\,\big]^{1/2}\)</span>, which tends to <span class="math inline">\(2\zeta\omega_n\)</span> for large <span class="math inline">\(\zeta\)</span>.</p>
+<div id="tab:ch12-zeta">
+
+</div>
+<div>
+<table>
+<caption><span class="capnum">Table 12.1.</span> Bandwidth and peaking of the type-II loop of <a href="#eq:ch12-wnz">Equation (12.1)</a> (computed).</caption>
+<thead>
+<tr class="header">
+<th style="text-align: left;"><span class="math inline">\(\zeta\)</span></th>
+<th style="text-align: center;">0.5</th>
+<th style="text-align: center;">0.707</th>
+<th style="text-align: center;">1</th>
+<th style="text-align: center;">2</th>
+<th style="text-align: center;">4</th>
+<th style="text-align: center;">4.5</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><span class="math inline">\(\omega_{-3\mathrm{dB}}/\omega_n\)</span></td>
+<td style="text-align: center;">1.82</td>
+<td style="text-align: center;">2.06</td>
+<td style="text-align: center;">2.48</td>
+<td style="text-align: center;">4.25</td>
+<td style="text-align: center;">8.13</td>
+<td style="text-align: center;">9.11</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Peaking (dB)</td>
+<td style="text-align: center;">3.3</td>
+<td style="text-align: center;">2.1</td>
+<td style="text-align: center;">1.25</td>
+<td style="text-align: center;">0.40</td>
+<td style="text-align: center;">0.12</td>
+<td style="text-align: center;">0.09</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="fig:ch12-resp">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch12_resp.svg' | relative_url }}{% raw %}" style="width:753px" alt="Damping trades peaking and overshoot for bandwidth." loading="lazy" />
+<figcaption><span class="capnum">Figure 12.4.</span> <strong>Damping trades peaking and overshoot for bandwidth.</strong> (a) Closed-loop <span class="math inline">\(|H|/N\)</span>: low damping gives a sharp, peaky response; high damping a wide, flat one. (b) Output phase after a reference phase step: <span class="math inline">\(\zeta = 0.5\)</span> overshoots by 30%, <span class="math inline">\(\zeta = 1\)</span> by 13%. Transmit PLLs use <span class="math inline">\(\zeta \approx 0.7\)</span>–1; CDRs, which must not amplify jitter, use <span class="math inline">\(\zeta \gg 1\)</span> (<a href="{% endraw %}{{ '/chapters/13-clock-and-data-recovery/' | relative_url }}{% raw %}">Chapter 13</a>).</figcaption>
+</figure>
+<h5 id="the-third-pole-and-phase-margin">The third pole and phase margin</h5>
+<p>The capacitor <span class="math inline">\(C_2\)</span> in parallel smooths the voltage step <span class="math inline">\(I_\mathrm{CP}R\)</span> seen in <a href="#fig:ch12-pfd">Figure 12.2</a>, which would otherwise modulate the VCO every reference cycle. It adds a pole at <span class="math inline">\(\omega_{p3} = 1/(R C_s)\)</span> with <span class="math inline">\(C_s = C_1C_2/(C_1+C_2)\)</span>, and the loop becomes third order. The usual design places the unity-gain frequency <span class="math inline">\(\omega_u\)</span> at the geometric mean of the zero <span class="math inline">\(\omega_z = 1/(RC_1)\)</span> and <span class="math inline">\(\omega_{p3}\)</span>, where the phase margin <span class="math inline">\(\Phi_m\)</span> is largest. With <span class="math inline">\(K_C = C_1/C_2\)</span>: <span id="eq:ch12-design"></span><span class="math display">\[\begin{gathered}
+  K_C = 2\tan^2\Phi_m + 2\tan\Phi_m\sqrt{\tan^2\Phi_m + 1}, \qquad
+  \omega_z = \frac{\omega_u}{\sqrt{1+K_C}}, \qquad
+  \omega_{p3} = \omega_u\sqrt{1+K_C}, \\
+  C_2 = \frac{I_\mathrm{CP}K_\mathrm{VCO}}{2\pi N\omega_u^2}\sqrt{\frac{\omega_u^2+\omega_z^2}{\omega_u^2+\omega_{p3}^2}}, \qquad C_1 = K_C C_2, \qquad R = \frac{1}{\omega_z C_1} .
+\end{gathered} \tag{12.2}\]</span> For <span class="math inline">\(\Phi_m = 60^\circ\)</span>, <span class="math inline">\(K_C = 12.9\)</span>. Keep <span class="math inline">\(f_u \le f_\mathrm{ref}/10\)</span>, or the sampled nature of the PFD makes the continuous-time model wrong.</p>
+<div class="tbox tbox-example">
+<div class="tbox-title">
+<p>Worked Example 12.1 · Loop filter for the Open-SERDES PLL</p>
+</div>
+<p><span id="we:ch12-lf"></span> <strong>Given:</strong> <span class="math inline">\(f_\mathrm{ref} = 50\)</span> MHz, <span class="math inline">\(N = 50\)</span>, <span class="math inline">\(K_\mathrm{VCO}= 2\pi\times150\)</span> MHz/V, <span class="math inline">\(I_\mathrm{CP}= 200\)</span> A, <span class="math inline">\(f_u = 1\)</span> MHz, <span class="math inline">\(\Phi_m = 60^\circ\)</span>.</p>
+<p><strong>Pole and zero:</strong> <span class="math inline">\(K_C = 12.93\)</span>, so <span class="math inline">\(f_z = 1\,\mathrm{MHz}/\sqrt{13.93} = 268\)</span> kHz and <span class="math inline">\(f_{p3} = 3.73\)</span> MHz. <strong>Components</strong> from <a href="#eq:ch12-design">Equation (12.2)</a>: <span class="math inline">\(C_2 = \mathbf{4.07}\)</span> pF, <span class="math inline">\(C_1 = K_C C_2 = \mathbf{52.6}\)</span> pF, <span class="math inline">\(R = 1/(\omega_z C_1) = \mathbf{11.3}\)</span> k<span class="math inline">\(\Omega\)</span>. <strong>Check</strong> with <a href="#eq:ch12-wnz">Equation (12.1)</a>: <span class="math inline">\(f_n = 537\)</span> kHz and <span class="math inline">\(\zeta = 1.00\)</span>. The full third-order loop, simulated in Python (<a href="#fig:ch12-loop">Figure 12.5</a>), crosses unity gain at 1.00 MHz with 60.0<span class="math inline">\(^\circ\)</span> margin and has <span class="math inline">\(f_{-3\mathrm{dB}} = 1.56\)</span> MHz with 1.7 dB peaking. <strong>Practical:</strong> <span class="math inline">\(f_\mathrm{ref}/f_u = 50\)</span>, comfortably above 10. <span class="math inline">\(C_1\)</span> is 0.035 mm<span class="math inline">\(^2\)</span> of MIM at about 1.5 fF/m<span class="math inline">\(^2\)</span> (check the PDK value), the largest item in the PLL layout. <span class="math inline">\(R\)</span> adds <span class="math inline">\(\sqrt{4kTR} = 13.7\)</span> nV/<span class="math inline">\(\sqrt{\mathrm{Hz}}\)</span> of band-pass noise.</p>
+</div>
+<div id="fig:ch12-loop">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch12_loop.svg' | relative_url }}{% raw %}" style="width:753px" alt="The designed loop has 60^\circ of phase margin at 1 MHz." loading="lazy" />
+<figcaption><span class="capnum">Figure 12.5.</span> <strong>The designed loop has 60<span class="math inline">\(^\circ\)</span> of phase margin at 1 MHz.</strong> (a) Open-loop gain and phase of <a href="#we:ch12-lf">Worked Example 12.1</a>: the phase is closest to <span class="math inline">\(-180^\circ\)</span> furthest from it at <span class="math inline">\(f_u\)</span>, midway between <span class="math inline">\(f_z\)</span> and <span class="math inline">\(f_{p3}\)</span> on a log scale. (b) The third-order closed loop (navy) against the second-order fit with <span class="math inline">\(\zeta = 1\)</span>: they agree up to the bandwidth, and <span class="math inline">\(C_2\)</span> adds extra roll-off above it.</figcaption>
+</figure>
+<h2 id="sec:ch12-noise"><span class="secnum">12.3</span>PLL noise and the optimum bandwidth</h2>
+<p>From <a href="#fig:ch12-linmodel">Figure 12.3</a>, each noise source sees its own transfer function: <span class="math display">\[\mathrm{NTF}_\mathrm{ref} = N\frac{LG}{1+LG}, \quad
+  \mathrm{NTF}_\mathrm{CP} = \frac{2\pi}{I_\mathrm{CP}}\,N\frac{LG}{1+LG}, \quad
+  \mathrm{NTF}_\mathrm{VCO} = \frac{1}{1+LG}, \quad
+  \mathrm{NTF}_R = \frac{K_\mathrm{VCO}/s}{1+LG} .\]</span> Reference and charge-pump noise pass at low frequency and are multiplied by <span class="math inline">\(N\)</span> (<span class="math inline">\(+34\)</span> dB for <span class="math inline">\(N = 50\)</span>); VCO noise is suppressed at low frequency and passes above the bandwidth (<a href="#fig:ch12-noise">Figure 12.6</a>a). Widening the loop therefore lets in more reference noise and keeps out more VCO noise. The best bandwidth is roughly where the free-running VCO noise crosses the in-band floor.</p>
+<div id="fig:ch12-noise">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch12_noise.svg' | relative_url }}{% raw %}" style="width:753px" alt="The loop bandwidth trades reference noise against VCO noise." loading="lazy" />
+<figcaption><span class="capnum">Figure 12.6.</span> <strong>The loop bandwidth trades reference noise against VCO noise.</strong> (a) Noise transfer for <span class="math inline">\(f_u\)</span> = 1 and 3 MHz: the reference and CP path is low-pass, the VCO path high-pass. (b) Integrated output jitter (10 kHz to 1.25 GHz) against <span class="math inline">\(f_u\)</span>, for the VCO of <a href="{% endraw %}{{ '/chapters/11-jitter/' | relative_url }}{% raw %}#we:ch11-pn">Worked Example 11.2</a> and a <span class="math inline">\(-110\)</span> dBc/Hz in-band floor. The total is flat near its 3 MHz minimum of 1.01 ps. If the VCO is 22 dB quieter (<a href="#sec:lcvco">Section 12.4</a>), the optimum moves below 0.3 MHz (dotted).</figcaption>
+</figure>
+<div class="tbox tbox-example">
+<div class="tbox-title">
+<p>Worked Example 12.2 · Choosing the PLL bandwidth</p>
+</div>
+<p><span id="we:ch12-bw"></span> <strong>Given:</strong> the VCO noise of <a href="{% endraw %}{{ '/chapters/11-jitter/' | relative_url }}{% raw %}#we:ch11-pn">Worked Example 11.2</a> (<span class="math inline">\(-100.8\)</span> dBc/Hz at 1 MHz), and an in-band floor of <span class="math inline">\(-110\)</span> dBc/Hz at the output. That floor corresponds to a normalized PLL figure of merit of <span class="math inline">\(-110 - 10\log_{10}(50\,\mathrm{MHz}) - 20\log_{10}50 = -221\)</span> dBc/Hz, typical of a good CP-PLL.</p>
+<p><strong>Sweep</strong> (60<span class="math inline">\(^\circ\)</span> loops of <a href="#eq:ch12-design">Equation (12.2)</a>, <a href="#fig:ch12-noise">Figure 12.6</a>b): <span class="math inline">\(f_u\)</span> = 0.5, 1, 2, 3, 6 MHz gives 1.91, 1.34, 1.06, <strong>1.01</strong>, 1.14 ps rms. At 3 MHz the VCO and in-band terms are equal (0.71 and 0.72 ps).</p>
+<p><strong>Redesign at 3 MHz:</strong> capacitors scale as <span class="math inline">\(I_\mathrm{CP}/f_u^2\)</span> and <span class="math inline">\(R\)</span> as <span class="math inline">\(f_u/I_\mathrm{CP}\)</span>. Tripling <span class="math inline">\(I_\mathrm{CP}\)</span> to 600 A keeps <span class="math inline">\(R = 11.3\)</span> k<span class="math inline">\(\Omega\)</span> and gives <span class="math inline">\(C_1 = 17.5\)</span> pF, <span class="math inline">\(C_2 = 1.36\)</span> pF (a third of the area), <span class="math inline">\(f_{-3\mathrm{dB}} = 4.7\)</span> MHz and <span class="math inline">\(f_\mathrm{ref}/f_u = 17\)</span>. The resistor noise adds only 0.11 ps in RSS. (Keeping 200 A would need <span class="math inline">\(R = 34\)</span> k<span class="math inline">\(\Omega\)</span> and a 0.45 pF <span class="math inline">\(C_2\)</span> that parasitics would swamp.)</p>
+</div>
+<div class="tbox tbox-insight">
+<div class="tbox-title">
+<p>What this means for your design</p>
+</div>
+<p>Choose <span class="math inline">\(f_u \approx 3\)</span> MHz with <span class="math inline">\(I_\mathrm{CP}= 600\)</span> A. The minimum is shallow (within 15% from 2 to 6 MHz), so bandwidth can be traded for area or settling time. But it depends on the VCO’s free-running noise, which is uncertain (<a href="#sec:lcvco">Section 12.4</a>): pin that down before freezing <span class="math inline">\(f_u\)</span>.</p>
+</div>
+<h2 id="sec:lcvco"><span class="secnum">12.4</span>The LC VCO</h2>
+<p>An LC tank stores energy and loses a little of it each cycle in the tank resistance. The <strong>cross-coupled pair</strong> of <a href="#fig:ch12-vco">Figure 12.7</a> replaces that loss: looking into the two drains, the pair presents a negative resistance <span class="math inline">\(-2/g_\mathrm{m}\)</span>. The tank’s loss is a parallel resistance <span class="math inline">\(R_p = Q\omega_0 L\)</span> (differential), so</p>
+<div class="tbox tbox-keyeq">
+<div class="tbox-title">
+<p>Key equation · LC oscillator: frequency and start-up</p>
+</div>
+<div id="eq:ch12-lc">
+
+</div>
+<p><span class="math display">\[f_0 = \frac{1}{2\pi\sqrt{L\,C_\mathrm{tot}}}, \qquad
+  R_p = Q\,\omega_0 L, \qquad
+  \text{oscillation if}\ \ \frac{g_\mathrm{m}R_p}{2} \ge 1 \ \ (\text{design for 2--3}). \tag{12.4}\]</span></p>
+</div>
+<p>The amplitude grows until the pair limits, at about <span class="math inline">\((4/\pi)\,I_\mathrm{tail}R_p/2\)</span> (differential). <span class="math inline">\(C_\mathrm{tot}\)</span> sums the varactors (fine tuning, which sets <span class="math inline">\(K_\mathrm{VCO}\)</span>), a switched-capacitor bank (coarse bands for process corners) and all parasitics.</p>
+<div id="fig:ch12-vco">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/tikz/12_pll-4.svg' | relative_url }}{% raw %}" style="width:420px" alt="Cross-coupled LC VCO." loading="lazy" />
+<figcaption><span class="capnum">Figure 12.7.</span> <strong>Cross-coupled LC VCO.</strong> A center-tapped inductor and the capacitors set <span class="math inline">\(f_0\)</span>; varactors <span class="math inline">\(C_v\)</span> give fine tuning through <span class="math inline">\(V_\mathrm{ctrl}\)</span>, and switched capacitors <span class="math inline">\(C_s\)</span> (bits <span class="math inline">\(b_k\)</span>) select coarse bands. The cross-coupled pair cancels the tank loss when <span class="math inline">\(g_\mathrm{m}R_p/2 \ge 1\)</span>, and the tail current sets the amplitude. Drawn with MOSFETs; npn13G2 HBTs work the same way, with capacitive cross-coupling to keep <span class="math inline">\(V_\mathrm{CE}\)</span> below BV<span class="math inline">\(_\mathrm{CEO}\)</span>.</figcaption>
+</figure>
+<div class="tbox tbox-example">
+<div class="tbox-title">
+<p>Worked Example 12.3 · The 2.5 GHz tank</p>
+</div>
+<p><span id="we:ch12-tank"></span> <strong>Given:</strong> the team’s 4 nH differential inductor with <span class="math inline">\(Q = 16.8\)</span> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-smacd2026pll">11</a>], <span class="math inline">\(f_0 = 2.5\)</span> GHz. <strong>Capacitance:</strong> <span class="math inline">\(C_\mathrm{tot} = 1/(\omega_0^2L) = 1/\big((2\pi\cdot2.5\times10^9)^2\cdot4\times10^{-9}\big) = \mathbf{1.01}\)</span> pF, including all parasitics. <strong>Loss:</strong> <span class="math inline">\(R_p = 16.8\times2\pi\cdot2.5\times10^9\times4\times10^{-9} = \mathbf{1.06}\)</span> k<span class="math inline">\(\Omega\)</span>. <strong>Start-up:</strong> <span class="math inline">\(g_\mathrm{m}\ge 2/R_p = 1.89\)</span> mS; with a 3<span class="math inline">\(\times\)</span> margin, 5.7 mS per device (about 0.15 mA of collector current for an HBT, more for a MOSFET). <strong>Tuning:</strong> <span class="math inline">\(\pm10\%\)</span> in frequency needs <span class="math inline">\(C_\mathrm{max}/C_\mathrm{min} = (1.1/0.9)^2 = 1.49\)</span> across varactors and bank together, with the fixed parasitics counted in both.</p>
+</div>
+<h5 id="phase-noise-leesons-model">Phase noise: Leeson’s model</h5>
+<p>Leeson’s empirical model captures the three regions of an oscillator’s phase noise (<a href="#fig:ch12-leeson">Figure 12.8</a>a): <span id="eq:ch12-leeson"></span><span class="math display">\[\mathcal{L}(\Delta f) = 10\log_{10}\!\left[\frac{2FkT}{P_\mathrm{sig}}\left(1 + \Big(\frac{f_0}{2Q\,\Delta f}\Big)^2\right)\left(1 + \frac{f_{1/f^3}}{\Delta f}\right)\right] , \tag{12.5}\]</span> where <span class="math inline">\(P_\mathrm{sig} = V_\mathrm{pk}^2/(2R_p)\)</span> is the power in the tank and <span class="math inline">\(F\)</span> an excess-noise factor of the active devices. Thermal noise near the carrier is shaped by the tank into a <span class="math inline">\(1/\Delta f^2\)</span> slope, flicker noise adds <span class="math inline">\(1/\Delta f^3\)</span> close in, and far out the noise is flat. For a fixed inductor, <span class="math inline">\(\mathcal{L} \propto 1/(Q\,V_\mathrm{pk}^2)\)</span>: a higher <span class="math inline">\(Q\)</span> and a larger swing both help (<a href="#fig:ch12-leeson">Figure 12.8</a>b).</p>
+<div id="fig:ch12-leeson">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch12_leeson.svg' | relative_url }}{% raw %}" style="width:753px" alt="Leeson’s model says the team’s tank should be about 21 dB quieter than the quoted number." loading="lazy" />
+<figcaption><span class="capnum">Figure 12.8.</span> <strong>Leeson’s model says the team’s tank should be about 21 dB quieter than the quoted number.</strong> (a) Leeson’s model for the 2.5 GHz tank (<span class="math inline">\(Q = 16.8\)</span>, 0.6 V peak, <span class="math inline">\(F = 2\)</span>): <span class="math inline">\(-122\)</span> dBc/Hz at 1 MHz. Matching <span class="math inline">\(-100.8\)</span> dBc/Hz would need 22 dB of excess noise (dashed). (b) <span class="math inline">\(\mathcal{L}\)</span>(1 MHz) against tank amplitude: even 50 mV of swing would beat the quoted value.</figcaption>
+</figure>
+<div class="tbox tbox-pitfall">
+<div class="tbox-title">
+<p>Is <span class="math inline">\(-100.8\)</span> dBc/Hz the VCO, or the PLL?</p>
+</div>
+<p>With <span class="math inline">\(Q = 16.8\)</span>, <span class="math inline">\(R_p = 1.06\)</span> k<span class="math inline">\(\Omega\)</span>, 0.6 V of swing and <span class="math inline">\(F = 2\)</span>, <a href="#eq:ch12-leeson">Equation (12.5)</a> predicts <span class="math inline">\(-122\)</span> dBc/Hz at 1 MHz. The common oscillator figure of merit, <span class="math display">\[\mathrm{FoM} = -\mathcal{L}(\Delta f) + 20\log_{10}(f_0/\Delta f) - 10\log_{10}(P/1\,\mathrm{mW}),\]</span> would be only 162 dB for <span class="math inline">\(-100.8\)</span> dBc/Hz at 5 mW of VCO power, against 180–190 dB for typical LC VCOs. The quoted value is probably the <em>closed-loop</em> PLL output near the loop bandwidth, or the VCO has excess noise (tail noise, low swing). This book uses it as free-running VCO noise, the pessimistic reading; resolving it is a Phase 0 task, because it moves the optimum of <a href="#we:ch12-bw">Worked Example 12.2</a>.</p>
+</div>
+<div class="tbox tbox-insight">
+<div class="tbox-title">
+<p>Retuning the team’s 2.4 GHz design to 2.5 GHz</p>
+</div>
+<p>Keep the 4 nH inductor: its <span class="math inline">\(Q\)</span> and layout are proven. The tank capacitance must fall from 1.10 to 1.01 pF, by 86 fF or 8%: remove one switched-capacitor unit or shift the band code, and re-check that <span class="math inline">\(V_\mathrm{ctrl}\)</span> sits mid-range at all corners. <span class="math inline">\(R_p\)</span> rises by 4% with frequency, so the start-up margin improves slightly. Replace the fractional-N divider with an integer <span class="math inline">\(\div50\)</span> and redesign the loop filter for <span class="math inline">\(f_u \approx 3\)</span> MHz (<a href="#we:ch12-bw">Worked Example 12.2</a>). Target <span class="math inline">\(K_\mathrm{VCO}\approx 2\pi\times150\)</span> MHz/V, so that supply and control noise stay small, and cover PVT with a 3–5 bit capacitor bank.</p>
+</div>
+<h2 id="sec:quadrature"><span class="secnum">12.5</span>Quadrature clocks and distribution</h2>
+<p>The half-rate receiver samples data on the 0<span class="math inline">\(^\circ\)</span> and 180<span class="math inline">\(^\circ\)</span> edges of the 2.5 GHz clock and the data transitions on the 90<span class="math inline">\(^\circ\)</span> and 270<span class="math inline">\(^\circ\)</span> edges, with four samplers D0, E0, D1, E1 (<a href="{% endraw %}{{ '/chapters/10-receiver-front-end-and-samplers/' | relative_url }}{% raw %}#sec:sampler">Section 10.2</a>). It needs four phases, I, Q, <span class="math inline">\(\bar{\mathrm{I}}\)</span> and <span class="math inline">\(\bar{\mathrm{Q}}\)</span>, spaced by exactly 100 ps. Open-SERDES derives them from the 2.5 GHz VCO with an <strong>RC polyphase filter</strong> (PPF); the alternative is a 5 GHz VCO followed by a <span class="math inline">\(\div2\)</span> (<a href="#fig:ch12-quad">Figure 12.9</a>).</p>
+<div id="fig:ch12-quad">
+
+</div>
+<figure>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/tikz/12_pll-5.svg' | relative_url }}{% raw %}" style="width:255px" alt="(a) Two-stage RC polyphase filter" loading="lazy" />
+<figcaption><span class="capnum">(a)</span> Two-stage RC polyphase filter</figcaption>
+</figure>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/tikz/12_pll-6.svg' | relative_url }}{% raw %}" style="width:270px" alt="(b) Alternative: \div2 from a 5 GHz VCO" loading="lazy" />
+<figcaption><span class="capnum">(b)</span> Alternative: <span class="math inline">\(\div2\)</span> from a 5 GHz VCO</figcaption>
+</figure>
+<figcaption><span class="capnum">Figure 12.9.</span> <strong>Two ways to make quadrature.</strong> (a) Each PPF stage has an <span class="math inline">\(R\)</span> from each input phase and a <span class="math inline">\(C\)</span> from the previous phase (the last capacitor wraps around to the 0<span class="math inline">\(^\circ\)</span> output). Driven differentially, one stage gives outputs exactly 90<span class="math inline">\(^\circ\)</span> apart, with equal amplitude only at <span class="math inline">\(f = 1/(2\pi RC)\)</span>; a second stage with a staggered pole keeps them equal across process. (b) A master-slave <span class="math inline">\(\div2\)</span> gives I and Q at 2.5 GHz from both edges of a 5 GHz clock; its accuracy depends on the 5 GHz duty cycle, and it needs a VCO at twice the frequency.</figcaption>
+</figure>
+<h5 id="how-accurate-is-the-polyphase-filter">How accurate is the polyphase filter?</h5>
+<p>For a single stage driven differentially, the outputs are <span class="math inline">\(V/(1 + j\omega RC)\)</span> and <span class="math inline">\(j\omega RC\,V/(1 + j\omega RC)\)</span>: always 90<span class="math inline">\(^\circ\)</span> apart, with amplitude ratio <span class="math inline">\(\omega RC\)</span>. A <span class="math inline">\(\pm20\%\)</span> process shift of <span class="math inline">\(RC\)</span> therefore leaves 1.6–1.9 dB of amplitude imbalance, while two stages with poles at 2.0 and 3.1 GHz keep it below 0.07 dB (<a href="#fig:ch12-poly">Figure 12.10</a>a). Phase errors come from random mismatch instead: with 1% mismatch on every <span class="math inline">\(R\)</span> and <span class="math inline">\(C\)</span>, Monte Carlo gives 0.57<span class="math inline">\(^\circ\)</span> rms for one stage and 0.59<span class="math inline">\(^\circ\)</span> for two (<a href="#fig:ch12-poly">Figure 12.10</a>b). The last stage sets the phase error, so it needs large, well-matched resistors and MIM capacitors in a common-centroid layout. The PPF is passive and lossy, <span class="math inline">\(-5.2\)</span> dB for two unloaded stages, so CML buffers must restore the swing.</p>
+<div id="fig:ch12-poly">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch12_poly.svg' | relative_url }}{% raw %}" style="width:753px" alt="Two PPF stages fix the amplitude; matching sets the phase." loading="lazy" />
+<figcaption><span class="capnum">Figure 12.10.</span> <strong>Two PPF stages fix the amplitude; matching sets the phase.</strong> (a) I/Q amplitude imbalance against frequency. One stage is balanced only at its pole; two staggered stages stay within 0.07 dB over the whole <span class="math inline">\(\pm20\%\)</span> <span class="math inline">\(RC\)</span> range (shaded) at 2.5 GHz. (b) Quadrature phase error over 3000 Monte Carlo runs with 1% <span class="math inline">\(R\)</span> and <span class="math inline">\(C\)</span> mismatch: about 0.6<span class="math inline">\(^\circ\)</span> rms (0.66 ps) either way.</figcaption>
+</figure>
+<h5 id="what-the-errors-do-to-the-half-rate-samplers">What the errors do to the half-rate samplers</h5>
+<p>At 2.5 GHz one degree is 1.11 ps. The CDR locks the edge samplers (Q, <span class="math inline">\(\bar{\mathrm{Q}}\)</span>) onto the data transitions, so an I/Q error <span class="math inline">\(\delta\)</span> moves the data samplers <span class="math inline">\(\delta\times1.11\)</span> ps away from the eye centre: a static offset that eats timing margin. A duty-cycle error is worse, because the D1 and E1 samplers fire on the falling edges: a 1% duty error shifts them by 4 ps relative to D0 and E0, a two-valued DCD seen by every other bit.</p>
+<h5 id="distribution">Distribution</h5>
+<p>CML limiting buffers after the PPF restore the swing, remove the residual imbalance and keep the slew rate high (<a href="{% endraw %}{{ '/chapters/11-jitter/' | relative_url }}{% raw %}#eq:ch11-slope">Equation (11.2)</a>). Give them 2–3<span class="math inline">\(\times f_\mathrm{clk}\)</span> of bandwidth (shunt peaking or tuned loads): a buffer near <span class="math inline">\(f_\mathrm{clk}\)</span> amplifies jitter and duty-cycle error. A duty-cycle correction (DCC) loop that servoes the clock’s average to zero holds the duty cycle within about <span class="math inline">\(\pm0.5\%\)</span>.</p>
+<div class="tbox tbox-example">
+<div class="tbox-title">
+<p>Worked Example 12.4 · The RX clock-path line of the jitter budget</p>
+</div>
+<p><span id="we:ch12-iq"></span> <strong>I/Q error:</strong> two-stage PPF, 1% mismatch: <span class="math inline">\(3\sigma = 3\times0.59^\circ = 1.8^\circ \to\)</span> <strong>2.0 ps</strong>. <strong>Duty cycle:</strong> <span class="math inline">\(\pm0.5\%\)</span> after DCC: <span class="math inline">\(0.5\% \times 400\)</span> ps <span class="math inline">\(\to\)</span> <strong>2.0 ps</strong>. <strong>PI nonlinearity:</strong> <span class="math inline">\(\pm0.6\)</span> ps with corrected weights (<a href="{% endraw %}{{ '/chapters/13-clock-and-data-recovery/' | relative_url }}{% raw %}#sec:picdr">Section 13.6</a>) <span class="math inline">\(\to\)</span> <strong>1.2 ps</strong>. <strong>Total</strong> <span class="math inline">\(5.2\)</span> ps, inside the 6 ps allocated in <a href="{% endraw %}{{ '/chapters/11-jitter/' | relative_url }}{% raw %}#tab:ch11-budget">Table 11.1</a>, with 0.8 ps of margin. Without DCC, a 52% duty cycle alone would cost 8 ps.</p>
+</div>
+<div class="tbox tbox-specnote">
+<div class="tbox-title">
+<p>Open-SERDES clock generation targets</p>
+</div>
+<p>Integer-N CP-PLL, <span class="math inline">\(f_\mathrm{ref} = 50\)</span> MHz, <span class="math inline">\(N = 50\)</span>, <span class="math inline">\(K_\mathrm{VCO}\approx 2\pi\times150\)</span> MHz/V, <span class="math inline">\(I_\mathrm{CP}= 600\)</span> A, <span class="math inline">\(f_u \approx 3\)</span> MHz (<span class="math inline">\(f_{-3\mathrm{dB}} \approx 4.7\)</span> MHz), 60<span class="math inline">\(^\circ\)</span> phase margin. Jitter <span class="math inline">\(\le 1.0\)</span> ps rms from 10 kHz and <span class="math inline">\(\le 0.6\)</span> ps above 4 MHz. Quadrature from a two-stage PPF and CML buffers: I/Q error <span class="math inline">\(\le 2^\circ\)</span> (<span class="math inline">\(3\sigma\)</span>), duty cycle <span class="math inline">\(50 \pm 0.5\%\)</span>. Power estimate: PLL about 13 mW (the team’s design draws 12.73 mW); PPF buffers and distribution 10–15 mW (four CML stages of about 1.5 mA at 2.5 V).</p>
+</div>
+<div class="tbox tbox-takeaways">
+<div class="tbox-title">
+<p>Key takeaways</p>
+</div>
+<ul>
+<li><p>The PFD turns the edge offset into an UP/DN width difference; the charge pump gives <span class="math inline">\(I_\mathrm{CP}/2\pi\)</span> A/rad. The reset delay removes the dead zone; current mismatch causes a static offset and reference spurs.</p></li>
+<li><p>Type-II loop: <span class="math inline">\(\omega_n = \sqrt{I_\mathrm{CP}K_\mathrm{VCO}/(2\pi NC_1)}\)</span>, <span class="math inline">\(\zeta = (R/2)\sqrt{I_\mathrm{CP}K_\mathrm{VCO}C_1/(2\pi N)}\)</span>; peaking is 2.1 dB at <span class="math inline">\(\zeta = 0.707\)</span> and 0.4 dB at <span class="math inline">\(\zeta = 2\)</span>.</p></li>
+<li><p>For 60<span class="math inline">\(^\circ\)</span> margin at 1 MHz: <span class="math inline">\(C_2\)</span> = 4.07 pF, <span class="math inline">\(C_1\)</span> = 52.6 pF, <span class="math inline">\(R\)</span> = 11.3 k<span class="math inline">\(\Omega\)</span> (<span class="math inline">\(f_{-3\mathrm{dB}}\)</span> = 1.56 MHz); at the 3 MHz optimum, <span class="math inline">\(I_\mathrm{CP}\)</span> = 600 A, <span class="math inline">\(C_1\)</span> = 17.5 pF.</p></li>
+<li><p>Reference noise is low-pass and VCO noise high-pass; the bandwidth that equalizes them, about 3 MHz here, minimizes jitter at 1.0 ps rms.</p></li>
+<li><p>The 4 nH, <span class="math inline">\(Q = 16.8\)</span> tank needs 1.01 pF at 2.5 GHz, has <span class="math inline">\(R_p\)</span> = 1.06 k<span class="math inline">\(\Omega\)</span>, and oscillates if <span class="math inline">\(g_\mathrm{m}R_p/2 \ge 1\)</span>. Leeson suggests the quoted <span class="math inline">\(-100.8\)</span> dBc/Hz is closed-loop: check it.</p></li>
+<li><p>A two-stage PPF plus CML buffers gives I/Q within about 2<span class="math inline">\(^\circ\)</span>; every degree is 1.11 ps and every 1% of duty cycle is 4 ps at the half-rate samplers.</p></li>
+</ul>
+</div>
+
+<nav class="prev-next" aria-label="Chapter navigation"><a class="pn-link prev" href="{% endraw %}{{ '/chapters/11-jitter/' | relative_url }}{% raw %}"><small>← Previous</small>Jitter</a><a class="pn-link next" href="{% endraw %}{{ '/chapters/13-clock-and-data-recovery/' | relative_url }}{% raw %}"><small>Next →</small>Clock and Data Recovery</a></nav>
+<p class="page-source">Generated from <a href="https://github.com/bricd-org/serdes-tutorial/blob/main/book/tutorial/chapters/12_pll.tex">book/tutorial/chapters/12_pll.tex</a>. Figure, table and equation numbers match the <a href="{% endraw %}{{ '/assets/pdf/Open-SERDES_Tutorial.pdf' | relative_url }}{% raw %}">PDF edition</a>.</p>
+{% endraw %}

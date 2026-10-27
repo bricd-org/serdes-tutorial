@@ -1,0 +1,68 @@
+% ch01_anatomy.tex -- fig:link-anatomy : the Open-SERDES link, TX -> channel -> RX, with clocking
+\begin{tikzpicture}[x=1cm,y=1cm,
+  b/.style={blk,minimum width=12mm,minimum height=10mm,font=\sffamily\footnotesize,inner sep=2pt},
+  bb/.style={b,fill=btint},
+  bg/.style={b,fill=gtint,draw=golddk},
+  bn/.style={b,fill=navy,text=white},
+  seg/.style={draw=navy,line width=0.5pt,minimum height=6mm,inner sep=0pt,font=\sffamily\scriptsize},
+  rate/.style={font=\sffamily\footnotesize\bfseries,text=golddk,align=center},
+  ann/.style={font=\sffamily\scriptsize,text=muted,align=center}]
+% ---------------- regions
+\draw[region,fill=bgpale!60] (-0.05,-2.85) rectangle (5.0,1.05);
+\draw[region,fill=gtint!35]  (5.15,-2.85) rectangle (9.05,1.05);
+\draw[region,fill=bgpale!60] (9.2,-2.85) rectangle (16.0,1.05);
+\node[lblb,anchor=north west] at (0.0,1.0) {TRANSMITTER (TX)};
+\node[lblb,anchor=north west] at (5.2,1.0) {CHANNEL};
+\node[lblb,anchor=north west] at (9.25,1.0) {RECEIVER (RX)};
+% ---------------- rate annotations (above the regions)
+\node[rate,anchor=west] at (-0.05,1.55) {16 $\times$ 312.5\,Mb/s};
+\node[rate] at (7.1,1.55) {5\,Gb/s serial NRZ \;(1\,UI = 200\,ps)};
+\node[rate,anchor=east] at (16.0,1.55) {16 $\times$ 312.5\,Mb/s};
+% ---------------- TX data path
+\node[bg] (ser) at (1.75,0) {Serializer\\16:1};
+\node[bb,minimum width=15mm] (drv) at (3.75,0) {3-tap FFE\\CML driver};
+\draw[sig,line width=1.6pt] (0.05,0) -- (ser.west);
+\draw[navy] (0.45,-0.14) -- (0.62,0.14); \node[lbl,anchor=south] at (0.53,0.12) {16};
+\draw[sig] (ser.east) -- (drv.west);
+\node[draw=navy,fill=navy,minimum size=1.6mm,inner sep=0pt] (padt) at (4.85,0) {};
+\draw[navy,line width=0.75pt] (drv.east) -- (padt.west);
+% ---------------- channel: package | PCB | connector | PCB | package
+\begin{scope}
+  \draw[navy,line width=0.6pt] (4.93,0.07) -- (9.12,0.07);
+  \draw[navy,line width=0.6pt] (4.93,-0.07) -- (9.12,-0.07);
+  \node[seg,fill=gtint,minimum width=4.5mm]  (pk1) at (5.525,0) {};
+  \node[seg,fill=btint,minimum width=8.5mm] (pc1) at (6.275,0) {};
+  \node[seg,fill=pale,minimum width=4.5mm]   (cn)  at (7.025,0) {};
+  \node[seg,fill=btint,minimum width=8.5mm] (pc2) at (7.775,0) {};
+  \node[seg,fill=gtint,minimum width=4.5mm]  (pk2) at (8.525,0) {};
+  \foreach \n/\t in {pk1/pkg,pc1/PCB,cn/conn.,pc2/PCB,pk2/pkg}{\node[ann,anchor=base] at (\n.center |- 0,-0.58) {\t};}
+  \node[ann] at (7.05,-1.3) {REF channel: 1\,m FR-4 + pads\\[-1pt]\textbf{\textcolor{c4}{$-$17.4\,dB at 2.5\,GHz}}};
+\end{scope}
+\node[draw=navy,fill=navy,minimum size=1.6mm,inner sep=0pt] (padr) at (9.3,0) {};
+% ---------------- RX data path
+\draw[navy,line width=0.75pt] (padr.east) -- (9.75,0);
+\node[dot] at (9.75,0) {};
+\draw[navy,line width=0.7pt] (9.75,0) -- (9.75,-0.25);
+\draw[navy,line width=0.7pt] (9.75,-0.25) -- ++(0.09,-0.05) -- ++(-0.18,-0.1) -- ++(0.18,-0.1) -- ++(-0.18,-0.1) -- ++(0.18,-0.1) -- ++(-0.09,-0.05) -- ++(0,-0.15);
+\draw[navy,line width=0.7pt] (9.6,-1.05) -- (9.9,-1.05) (9.66,-1.12) -- (9.84,-1.12) (9.72,-1.19) -- (9.78,-1.19);
+\draw[navy,line width=0.7pt] (9.75,-0.9) -- (9.75,-1.05);
+\node[ann,anchor=north] at (9.75,-1.22) {100\,$\Omega$\\[-1pt]+ ESD};
+\node[bb] (ctle) at (10.85,0) {CTLE\\0--12\,dB};
+\node[bb,minimum width=16mm] (smp) at (12.65,0) {Samplers\\+ 2-tap DFE};
+\node[bg] (des) at (14.5,0) {Deser.\\1:16};
+\draw[sig] (9.75,0) -- (ctle.west);
+\draw[sig] (ctle.east) -- (smp.west);
+\draw[sig] (smp.east) -- (des.west);
+\draw[sig,line width=1.6pt] (des.east) -- (15.95,0);
+\draw[navy] (15.45,-0.14) -- (15.62,0.14); \node[lbl,anchor=south] at (15.53,0.12) {16};
+% ---------------- clocking
+\node[bn,minimum width=15mm] (pll) at (1.75,-2.0) {PLL\\LC VCO};
+\draw[sig] (0.05,-2.0) -- node[lbl,above,pos=0.42] {ref} node[lbl,below,pos=0.42] {50\,MHz} (pll.west);
+\draw[clk] (pll.north) -- node[lbl,right,text=golddk,align=left] {2.5\,GHz\\(+ divided\\clocks)} (ser.south);
+\node[lbl,align=left,anchor=west] at (2.65,-2.0) {$f_\mathrm{ref}\times N$\\$= 50\,\mathrm{MHz}\times 50$};
+\node[bn,minimum width=26mm] (cdr) at (12.65,-2.0) {CDR: BB-PD +\\loop filter + PI};
+\draw[sig] ([xshift=-4mm]smp.south) -- node[lbl,left,align=right] {data +\\edge} ([xshift=-4mm]cdr.north);
+\draw[clk] ([xshift=4mm]cdr.north) -- node[lbl,right,text=golddk,align=left] {4-phase\\2.5\,GHz} ([xshift=4mm]smp.south);
+\draw[clk] (cdr.east) -| node[lbl,text=golddk,pos=0.75,right] {$\div$8} (des.south);
+\draw[clk] (15.95,-2.45) -- node[lbl,text=golddk,below,pos=0.45] {I/Q from PLL} (cdr.east |- 0,-2.45) ;
+\end{tikzpicture}

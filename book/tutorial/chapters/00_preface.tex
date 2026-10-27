@@ -1,0 +1,87 @@
+\tikzsetfigurename{00_preface-}
+%% 00_preface.tex -- Preface (front matter, unnumbered). Author: p1
+\chapter{Preface}\label{ch:preface}
+
+Every fast interface, from a PCIe slot to the backplane of an Ethernet switch, moves its data over a \textbf{serial link}: a transmitter, a lossy wire and a receiver that recovers both the bits and the clock. This book teaches you to design one by following a single, concrete chip, the \textbf{\OS{}} transceiver: a \qty{5}{\giga\bit\per\second} NRZ link built in the open-source IHP \sgx{} \qty{130}{\nano\meter} SiGe BiCMOS process~\cite{ihppdk} with open-source tools~\cite{iicosic}.
+
+\paragraph{Who this book is for} Third- and fourth-year electrical engineering undergraduates who will help design the \OS{} chip, and anyone who wants a practical first course in high-speed links. After reading it you should be able to:
+\begin{itemize}
+  \item predict the eye a channel will produce from its loss and pulse response;
+  \item choose and size the TX FFE, CTLE and DFE for a channel, and defend the split;
+  \item turn a link budget into specifications for the driver, front end, samplers, PLL and CDR;
+  \item model the link in Python, then carry it through schematic, layout and sign-off with open tools.
+\end{itemize}
+
+\paragraph{Prerequisites} Basic circuits (KCL, small-signal MOS and BJT models, the differential pair), signals and systems (Fourier, Laplace, convolution) and some Python. Transmission lines, equalization, jitter, PLLs and CDRs are built up from first principles.
+
+\section*{How the book is organized}
+The book has five parts, shown in \cref{fig:pre-roadmap}. \textbf{Part~I, Foundations} (Chapters~1--4), gives you the vocabulary of links (pulse response, eye diagram, bit-error rate), the physics of the channel and the tools for a link budget. \textbf{Part~II, Equalization} (Chapters~5--8), shows how the TX FFE, the CTLE and the DFE undo the channel, and how to split the work between them. \textbf{Part~III, Transceiver Circuits} (Chapters~9--10), turns the system model into HBT and CMOS circuits. \textbf{Part~IV, Clocking} (Chapters~11--13), covers jitter, the PLL and clock and data recovery. \textbf{Part~V, Putting It Together} (Chapters~14--16), assembles the full architecture, walks through the open-source design flow and collects the hands-on labs.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{canva_roadmap}
+  \caption{\textbf{Your path through this tutorial.} The five parts are milestones: Foundations, Equalization, Transceiver circuits, Clocking, and Putting it together. Each part builds on the numbers and models of the one before it.}
+  \label{fig:pre-roadmap}
+\end{figure}
+
+\paragraph{Two reading paths} Everyone should read Part~I first. After that, \cref{fig:pre-paths} suggests two routes. The \textbf{system and modeling path} suits readers who will own the link budget and the serdespy model. The \textbf{circuit path} suits readers who will design transistors and layout. Both paths meet again at the architecture chapter and the labs.
+
+\begin{figure}[htbp]
+\centering
+\tikzset{prech/.style={circle,draw=#1,fill=white,line width=0.8pt,minimum size=6.4mm,inner sep=0pt,font=\sffamily\footnotesize\bfseries,text=#1},
+  prelk/.style={line width=1.1pt,draw=#1}}
+\begin{tikzpicture}[x=1cm,y=1cm]
+% trunk
+\foreach \n [count=\i] in {1,2,3,4}{\node[prech=navy] (t\n) at ({0.95*(\i-1)},0) {\n};}
+\foreach \a/\b in {1/2,2/3,3/4}{\draw[prelk=navy] (t\a) -- (t\b);}
+% system path (top)
+\foreach \n [count=\i] in {5,6,8,11,13}{\node[prech=bblue] (s\n) at ({3.65+0.95*\i},0.75) {\n};}
+\draw[prelk=bblue] (t4) -- (s5); \foreach \a/\b in {5/6,6/8,8/11,11/13}{\draw[prelk=bblue] (s\a) -- (s\b);}
+% circuit path (bottom)
+\foreach \n [count=\i] in {7,9,10,12,15}{\node[prech=golddk] (c\n) at ({3.65+0.95*\i},-0.75) {\n};}
+\draw[prelk=golddk] (t4) -- (c7); \foreach \a/\b in {7/9,9/10,10/12,12/15}{\draw[prelk=golddk] (c\a) -- (c\b);}
+% merge
+\node[prech=navy] (m14) at (10.0,0) {14};
+\node[prech=navy] (m16) at (10.95,0) {16};
+\draw[prelk=bblue] (s13) -- (m14); \draw[prelk=golddk] (c15) -- (m14); \draw[prelk=navy] (m14) -- (m16);
+\node[font=\sffamily\scriptsize,text=navy,anchor=north] at (1.42,-0.42) {Part I: everyone};
+\node[font=\sffamily\scriptsize\bfseries,text=bblue,anchor=south] at (6.5,1.1) {system and modeling path};
+\node[font=\sffamily\scriptsize\bfseries,text=golddk,anchor=north] at (6.5,-1.1) {circuit path};
+\node[font=\sffamily\scriptsize,text=navy,anchor=north,align=center] at (10.48,-0.42) {architecture\\[-1pt]and labs};
+\end{tikzpicture}
+\caption{\textbf{Two ways to read the book after Part~I.} Circles are chapter numbers. The system path (blue) follows the equalization theory, jitter and the CDR; the circuit path (gold) follows the CTLE circuits, the TX and RX, the PLL and the design flow. Both meet at the architecture (\cref{ch:arch}) and the labs (\cref{ch:labs}).}
+\label{fig:pre-paths}
+\end{figure}
+
+\section*{How to read the boxes}
+Chapters open with what you will learn and close with key takeaways. In between, six kinds of boxes mark the role of each piece of text:
+
+{\renewcommand{\thewexample}{P.1}%
+\begin{keyeq}[Bit period]
+\[ \Tb = \frac{1}{\fb} = \frac{1}{\qty{5}{\giga\bit\per\second}} = \qty{200}{\pico\second} \]
+\end{keyeq}
+\begin{example}{A number you will use on every page}
+At \qty{5}{\giga\bit\per\second}, $\fN = \fb/2 = \qty{2.5}{\giga\hertz}$; channel loss is quoted there.
+\end{example}}
+\setcounter{wexample}{0}
+\begin{insight}
+An \emph{insight} box says what a result means for the \OS{} design.
+\end{insight}
+\begin{pitfall}
+A \emph{pitfall} box warns about a common mistake, such as quoting loss at \qty{5}{\giga\hertz}.
+\end{pitfall}
+\begin{tryit}[Lab 0: set-up]
+A \emph{try-it} box points to a lab script (\cref{sec:lab0}).
+\end{tryit}
+\begin{specnote}
+A \emph{specnote} box states an \OS{} target: \qty{5}{\giga\bit\per\second} NRZ at $\BER \le 10^{-12}$.
+\end{specnote}
+Longer algebra sits in grey \emph{derivation} boxes.
+
+\section*{How the labs work}
+The labs of \cref{ch:labs} reproduce the key plots of the book with \tool{serdespy}~\cite{serdespy}, a Python library for system-level SerDes modeling, plus NumPy and SciPy. The scripts live in \code{tutorial/code/} and share one file, \code{common.py}, that defines the link, the reference channel and the helpers; the figure scripts in \code{tutorial/figsrc/} import the same model, so labs and figures use the same numbers. Run a lab, change a parameter and compare your plot with the text.
+
+\section*{Sources and acknowledgments}
+The link-modeling chapters follow the structure of Prof.\ Sam Palermo's ECEN~720 \emph{High-Speed Links} course at Texas A\&M University~\cite{palermo720}. The equalizer and CDR chapters draw on Benjamin Liu's lecture notes~\cite{liuEq,liuCDR}. The labs are built on serdespy by Richard Barrie and colleagues at the University of Toronto~\cite{serdespy}. The chip itself is possible because IHP opened its \sgx{} process design kit~\cite{ihppdk} and the Institute for Integrated Circuits at JKU Linz maintains the IIC-OSIC-TOOLS container and the analog chip template~\cite{iicosic,jkutemplate}. The project is supervised by Avishka Herath (ENTC, University of Moratuwa), Udara Mendis (TUHH) and Kithmin Wickremasinghe (UBC), within BRICD (thebricd.org).
+
+This is a \textbf{living draft (v0.1)}; numbers will be refined as the design matures. If you find an error, an unclear derivation or a figure that does not explain what it should, please open an issue or a pull request on the project's GitHub repository, linked from thebricd.org.

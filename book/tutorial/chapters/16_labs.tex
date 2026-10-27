@@ -1,0 +1,319 @@
+\tikzsetfigurename{16_labs-}
+\chapter{Hands-on Labs with serdespy}\label{ch:labs}
+
+\chapterlead{Seven short Python scripts reproduce the key numbers of this tutorial, from the closed eye of the bare channel to a bang-bang CDR locking onto real data.}
+
+\begin{objectives}
+\begin{itemize}
+  \item Set up serdespy on a current Python and run every lab from \code{tutorial/code/}.
+  \item Turn the REF channel into a pulse response, cursors and eye, and see why it must be equalized.
+  \item Design a TX FFE, a CTLE and a DFE in the model and measure what each buys.
+  \item Count bit errors with jitter and noise, and compare them with the semi-analytic BER and the bathtub.
+  \item Build a behavioral half-rate bang-bang PI-CDR and watch it track a frequency offset.
+\end{itemize}
+\end{objectives}
+
+Every lab has the same shape: a goal, the few lines of code that matter, the figure and numbers you should get, and questions that push past the script. The figures here are drawn by \code{figsrc/ch16\_labN.py} with exactly the computations of the labs, so your printed numbers must match to the last digit; each lab also writes its own PNGs.
+
+%% =====================================================================
+\section{Lab 0: set-up}\label{sec:lab0}
+
+\paragraph{Goal} A working serdespy environment, and a map of the labs.
+
+\begin{lstlisting}[style=shell]
+python3 -m venv ~/serdes-venv           # tested with Python 3.13
+source ~/serdes-venv/bin/activate
+pip install serdespy                     # pulls numpy, scipy, matplotlib, scikit-rf
+cd tutorial/code
+python lab1_channel.py                   # PNGs appear in this folder
+\end{lstlisting}
+
+serdespy~1.0 still uses \code{np.complex\_}, which NumPy~2 removed; \code{common.py}, imported by every lab, restores it with \code{np.complex\_ = np.complex128} before serdespy is imported. It also defines the simulation grid (64 samples per UI, $\Delta t=3.125$\,ps, 0--160\,GHz in 10\,MHz steps) and the shared functions: \code{channel()} for REF, \code{ctle()}, \code{impulse()}, \code{pulse()}, \code{tx\_wave()}, \code{through()}, the eye measurement \code{eye\_scan()} (serdespy has none) and the Gaussian BER estimate \code{ber\_q()}. \Cref{tab:ch16-labs} maps the labs to the chapters.
+
+\begin{table}[!tbp]
+\centering
+\caption{\textbf{The labs.} Run times on a laptop; every script is self-contained apart from \code{common.py}.}
+\label{tab:ch16-labs}
+\footnotesize
+\begin{tabularx}{\linewidth}{@{}c l L l r@{}}
+\toprule
+\textbf{Lab} & \textbf{Script} & \textbf{What it shows (key number)} & \textbf{Theory} & \textbf{Time}\\
+\midrule
+1 & \code{lab1\_channel.py} & REF $S_{21}$, $h(t)$, $p(t)$, cursors ($-17.38$\,dB; PDA $-0.161$\,V) & \cref{sec:pulse-response,sec:refchannel} & 3\,s\\
+2 & \code{lab2\_prbs\_eye.py} & PRBS7 eye before and after REF ($-77.8$\,mV) & \cref{sec:eye} & 2\,s\\
+3 & \code{lab3\_tx\_ffe.py} & zero-forcing TX FFE (2-tap 162.7\,mV, 3-tap 144.8\,mV) & \cref{ch:txffe} & 3\,s\\
+4 & \code{lab4\_ctle.py} & CTLE peaking sweep (113.3\,mV at 14\,dB) & \cref{ch:ctle} & 4\,s\\
+5 & \code{lab5\_dfe.py} & DFE taps and BER ($3.2\times10^{-14}$ at 10\,mV) & \cref{ch:dfe} & 3\,s\\
+6 & \code{lab6\_jitter\_ber.py} & counted vs.\ estimated BER, bathtub (0.45\,UI) & \cref{ch:jitter} & 21\,s\\
+7 & \code{lab7\_bbcdr.py} & bang-bang PI-CDR (lock in 0.13\,\textmu{}s, 0 errors) & \cref{ch:cdr} & 7\,s\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{pitfall}[serdespy quirks that cost an afternoon each]
+\begin{itemize}
+  \item \code{sdp.Transmitter(data, levels, f)}: \code{f} is the \emph{Nyquist} frequency (pass 2.5e9 for 5\,Gb/s), whatever the docstring says.
+  \item Call \code{Transmitter.FIR()} before \code{oversample()}, with taps \code{[pre, main, post]} or \code{[main, post]}.
+  \item \code{sdp.channel\_coefficients()} always plots, at 1200\,dpi by default: pass \code{res=150}.
+  \item \code{sdp.forcing\_ffe()} sets the main tap to 1: rescale to $\sum\lvert c_k\rvert=1$ yourself.
+  \item \code{Receiver.noise()} discards any FFE or DFE already applied: add noise first, then equalize. Use \code{Receiver.FFE()}, not \code{FFE\_BR()}, which misaligns the data.
+  \item serdespy has no CDR and no MLSE, whatever the README lists; Lab 7 builds the CDR.
+\end{itemize}
+\end{pitfall}
+
+%% =====================================================================
+\section{Lab 1: the channel}\label{sec:lab1}
+
+\paragraph{Goal} Build REF from serdespy's ABCD-matrix functions, plot $\lvert S_{21}\rvert$, and turn it into the impulse response, the pulse response and its cursors (\cref{sec:pulse-response,sec:refchannel}).
+
+\begin{lstlisting}
+from common import *
+
+H = channel()                                  # complex S21 on the grid F
+h, t = impulse(H)                              # h is per-sample: sum(h) = H(0)
+p = pulse(h)
+n_pre, n_post = 2, 10
+cur = sdp.channel_coefficients(p, t, SPS, n_pre, n_post, res=150,
+                               title="Pulse response and cursors")
+isi = np.sum(np.abs(cur)) - cur[n_pre]
+print(f"Peak-distortion eye (1 V swing, {n_pre}+{n_post} cursors) = "
+      f"{cur[n_pre] - isi:+.4f} V  (negative = closed)")
+\end{lstlisting}
+
+\paragraph{What you should see} \Cref{fig:ch16-lab1}. The loss is $-0.59$\,dB at DC, $-10.40$\,dB at 1.25\,GHz, \textbf{$-17.38$\,dB at 2.5\,GHz} and $-30.07$\,dB at 5\,GHz. The cursors are $p_{-1}=0.0486$, $p_0=0.3396$, $p_1=0.1817$, $p_2=0.0909$, $p_3=0.0537$\,V, with $p_1/p_0=0.535$. The ISI magnitudes add to 0.5008\,V, more than the main cursor, so the peak-distortion eye is \textbf{$-0.161$\,V}: closed.
+
+\begin{figure}[!tbp]
+\centering
+\includegraphics[width=\linewidth]{ch16_lab1}
+\caption{\textbf{Lab 1: a third of the pulse arrives in its own UI, and the tail outweighs it.} (a) $\lvert S_{21}\rvert$ of REF; the dot is the 2.5\,GHz Nyquist loss. (b) The 1-UI, 1\,V pulse response (pale) and its cursors at 1\,UI spacing from the peak: pre-cursor red, main gold, post-cursors blue.}
+\label{fig:ch16-lab1}
+\end{figure}
+
+\paragraph{Questions and extensions} (1)~Call \code{channel(LOSS\_FAMILY[10])} and \code{channel(LOSS\_FAMILY[25])} (0.572 and 1.441\,m). How do $p_1/p_0$ and the PDA eye change with loss? (2)~Set \code{c\_pad=1e-12}. Where in the tail do the pad reflections appear, and why can a short DFE not cancel them?
+
+%% =====================================================================
+\section{Lab 2: a PRBS eye through the channel}\label{sec:lab2}
+
+\paragraph{Goal} Send PRBS7 NRZ through REF and measure the eye at both ends (\cref{sec:prbs,sec:eye}).
+
+\begin{lstlisting}
+prbs = sdp.prbs7(1)                       # one period: 127 bits, seed = 1
+bits = np.tile(prbs, 40)                  # 5080 bits = 1.016 us of data
+tx = sdp.Transmitter(bits, LEVELS, F_NYQ)  # NB: 3rd argument = Nyquist frequency
+tx.oversample(SPS)
+x = tx.signal_ideal
+H = channel()
+h, t = impulse(H)
+y = through(x, h)
+hts_tx, ph_tx, _, _ = report_eye("TX output", x, bits)
+hts_rx, ph_rx, S, A = report_eye("Channel output", y, bits)
+save_eye(y, ph_rx, "Eye after 1 m channel (17.4 dB @ 2.5 GHz)", "lab2_eye_rx.png")
+\end{lstlisting}
+
+\paragraph{What you should see} \Cref{fig:ch16-lab2}. The TX eye is 1000\,mV and 1.00\,UI. After REF the eye is \textbf{$-77.8$\,mV} and 0\,UI wide: closed at every phase. The mean levels are $+169.8$ and $-165.3$\,mV, at a best phase of 6/64 UI, and the channel delay is 6.722\,ns.
+
+\begin{figure}[!tbp]
+\centering
+\includegraphics[width=\linewidth]{ch16_lab2}
+\caption{\textbf{Lab 2: the levels survive, the eye does not.} (a) 40 bits of PRBS7 at the TX (amber) and after REF with the 6.7\,ns delay removed (blue): single bits barely cross zero. (b) Density eye at the channel output, centerd on the best phase: the inner eye is closed by 77.8\,mV.}
+\label{fig:ch16-lab2}
+\end{figure}
+
+\paragraph{Questions and extensions} (1)~Repeat with \code{sdp.prbs13(1)} (tile it 2 times). \Cref{sec:pda} quotes $-181$\,mV: why is PRBS7 optimistic? (2)~Count the longest run of identical bits in PRBS7 and in PRBS13. Which cursor sum does each run length expose?
+
+%% =====================================================================
+\section{Lab 3: TX FFE}\label{sec:lab3}
+
+\paragraph{Goal} Compute zero-forcing 2-tap and 3-tap TX FFEs from the cursors, impose the peak-swing constraint, and measure the eyes (\cref{ch:txffe}).
+
+\begin{lstlisting}
+cur = sdp.channel_coefficients(p, t, SPS, 1, 1, res=150)
+c3 = sdp.forcing_ffe(1, cur)              # [c-1, c0, c+1], c0 = 1
+c3 = c3 / np.sum(np.abs(c3))              # peak-swing constraint sum|c| = 1
+c2 = sdp.forcing_ffe(0, cur[1:])          # [c0, c+1]: classic de-emphasis
+c2 = c2 / np.sum(np.abs(c2))
+# ...
+bits = np.tile(sdp.prbs7(1), 40)
+for name, c, png in ((None, None, None), ("2-tap", c2, None),
+                     ("3-tap", c3, "lab3_eye_ffe3.png")):
+    y = through(tx_wave(bits, fir=c), h)
+    hts, ph, S, A = report_eye(f"Channel + {name or 'no'} FFE", y, bits)
+\end{lstlisting}
+
+\paragraph{What you should see} \Cref{fig:ch16-lab3}. The 3-tap taps are $[-0.0853, 0.5959, -0.3188]$ (DC gain 0.192, 14.34\,dB of Nyquist boost), the 2-tap taps $[0.6515, -0.3485]$ (10.37\,dB). The main cursor drops from 0.3396 to 0.1749\,V, the price of equalizing at the TX. The eyes are \textbf{162.7\,mV, 0.89\,UI with 2 taps} and \textbf{144.8\,mV, 0.83\,UI with 3 taps}.
+
+\begin{figure}[!tbp]
+\centering
+\includegraphics[width=\linewidth]{ch16_lab3}
+\caption{\textbf{Lab 3: zero-forcing flattens the channel to Nyquist, but the pre-tap costs more than it gives.} (a) REF (blue), the 3-tap FFE (amber, 0\,dB at Nyquist and $-14.3$\,dB at DC) and their product (teal), flat to about 2.5\,GHz. (b), (c) PRBS7 eyes with the 2-tap and the 3-tap FFE.}
+\label{fig:ch16-lab3}
+\end{figure}
+
+\paragraph{Questions and extensions} (1)~Zero-forcing does not maximize the eye. Hold $c_1$ and sweep $c_{-1}$ from 0 to $-0.1$, renormalizing each time: where is the best eye, and why does the pre-tap lose under $\sum\lvert c_k\rvert=1$? (2)~Quantize the taps to multiples of 1/32 (the 5-bit driver of \cref{sec:ffe-impl}). How much eye is lost?
+
+%% =====================================================================
+\section{Lab 4: CTLE}\label{sec:lab4}
+
+\paragraph{Goal} Sweep the peaking of a one-zero, two-pole CTLE, find the best eye, and translate it into a degenerated differential pair (\cref{sec:ctle-degen}).
+
+\begin{lstlisting}
+FP1, FP2 = 2.5e9, 10e9                    # pole 1 at Nyquist, output pole 10 GHz
+H = channel()
+bits = np.tile(sdp.prbs7(1), 40)
+x = tx_wave(bits)
+peaks, eh, ew = np.arange(0, 21, 2), [], []
+for pk in peaks:
+    h_link, t = impulse(H * ctle(pk, FP1, FP2))   # channel x CTLE
+    hts, ph, S, A = eye_scan(through(x, h_link), bits)
+    eh.append(hts[ph]); ew.append(np.sum(hts > 0) / SPS)
+best = peaks[int(np.argmax(eh))]
+# ...
+gm, a = 20e-3, 10**(best / 20)            # example: gm = 20 mS per side
+RS = 2 * (a - 1) / gm                     # A = 1 + gm*RS/2
+CS = 1 / (RS * 2 * np.pi * FP1 / a)       # wz = 1/(RS*CS)
+RD, CL = 1 / gm, 1 / (2 * np.pi * FP2 / gm)   # gm*RD = 1, wp2 = 1/(RD*CL)
+\end{lstlisting}
+
+\paragraph{What you should see} \Cref{fig:ch16-lab4}. The eye opens at 6\,dB (31.6\,mV), reaches 104.0\,mV at 12\,dB, peaks at \textbf{113.3\,mV, 0.94\,UI at 14\,dB} and falls again beyond. With 14\,dB nominal, the real peak-to-DC gain is only 12.11\,dB because the second pole eats some of it; the CTLE is $-14.00$\,dB at DC and $-3.10$\,dB at Nyquist. The circuit values are $R_S=\qty{401}{\ohm}$, $C_S=0.795$\,pF, $R_D=\qty{50}{\ohm}$ and $\CL=318$\,fF.
+
+\begin{figure}[!tbp]
+\centering
+\includegraphics[width=\linewidth]{ch16_lab4}
+\caption{\textbf{Lab 4: more peaking opens the eye until the CTLE starts making ISI of its own.} (a) CTLE responses for 4, 8 and 14\,dB, all 0\,dB at high frequency. (b) Eye height against peaking; the shaded band is the 0--12\,dB range of the \OS{} CTLE. (c) The eye at the 14\,dB optimum.}
+\label{fig:ch16-lab4}
+\end{figure}
+
+\paragraph{Questions and extensions} (1)~The optimum lies outside the \OS{} range. What does the DFE of Lab~5 do with the 8\,dB eye that the CTLE alone cannot? (2)~Move \code{FP2} to 6\,GHz and re-sweep; compare with \cref{we:ch15-pole}.
+
+%% =====================================================================
+\section{Lab 5: DFE}\label{sec:lab5}
+
+\paragraph{Goal} Take the post-cursors left by a moderate 8\,dB CTLE as DFE taps, measure the eye against the number of taps, and estimate the BER (\cref{ch:dfe}).
+
+\begin{lstlisting}
+PEAK = 8                                   # CTLE peaking [dB] (lab 4 model)
+h_link, t = impulse(H * ctle(PEAK))        # channel x CTLE
+y = through(tx_wave(bits), h_link)         # CTLE output waveform
+cur = sdp.channel_coefficients(pulse(h_link), t, SPS, 1, 8, res=150)
+h_pre, h0, post = cur[0], cur[1], cur[2:]
+for n in (0, 1, 2, 3, 4, 5, 8):
+    rx = sdp.Receiver(y, SPS, F_NYQ, LEVELS, shift=True)  # centre eye at 0
+    if n:
+        rx.nrz_DFE(post[:n])
+    report_eye(f"CTLE {PEAK} dB + {n}-tap DFE", rx.signal, bits)
+# ... final design: 3 taps, then ber_q(S[ph], A[ph], sigma) for 5..20 mV
+\end{lstlisting}
+
+\paragraph{What you should see} \Cref{fig:ch16-lab5}. With the 8\,dB CTLE, $p_{-1}=0.0138$, $p_0=0.1832$ and $p_1$--$p_3$ = 0.0552, 0.0235, 0.0160\,V. The eye grows from 60.0\,mV with no DFE to 110.7, 129.5 and \textbf{143.0\,mV} with 1, 2 and 3 taps, then saturates near 155\,mV. With 3 taps the feedback is $\pm27.6$, $\pm11.8$ and $\pm8.0$\,mV, and the estimated BER is $5.9\times10^{-46}$, \textbf{$3.2\times10^{-14}$}, $6.0\times10^{-8}$ and $1.8\times10^{-5}$ at $\sigma$ = 5, 10, 15 and 20\,mV. A noise-free run through \code{sdp.prbs\_checker} gives 0 errors in 5024 bits. The lab uses 3 taps; the chip has 2, which gives 129.5\,mV here.
+
+\begin{figure}[!tbp]
+\centering
+\includegraphics[width=\linewidth]{ch16_lab5}
+\caption{\textbf{Lab 5: the first DFE tap is worth more than the next five together.} (a) Eye height against the number of DFE taps after an 8\,dB CTLE; teal is the \OS{} choice, gold the lab's. (b), (c) The eye before and after a 3-tap DFE. The steps at $\pm0.5$\,UI in (c) are an artifact of serdespy's per-UI feedback; only the sampling instant is meaningful.}
+\label{fig:ch16-lab5}
+\end{figure}
+
+\paragraph{Questions and extensions} (1)~Reproduce the \OS{} operating point of \cref{sec:eq-partition}: TX taps $[0.75, -0.25]$ ($-6$\,dB), a 0\,dB CTLE and 2 DFE taps. You should get 171.8\,mV. (2)~The worst-case $Q$ at 10\,mV is $143.0/2/10=7.15$, yet the BER is $3.2\times10^{-14}$, not $Q(7.15)$. Why is \code{ber\_q} more optimistic than the worst case?
+
+%% =====================================================================
+\section{Lab 6: jitter, noise and BER}\label{sec:lab6}
+
+\paragraph{Goal} Add 5\,ps rms TX random jitter and RX noise to the Lab~5 link, count real bit errors, and compare them with the estimate and the bathtub (\cref{sec:dualdirac}).
+
+\begin{lstlisting}
+np.random.seed(2026)                       # repeatable jitter and noise
+PEAK, N_TAPS, RJ_UI = 8, 3, 0.025          # RJ = 2.5 % UI = 5 ps rms
+bits = np.tile(sdp.prbs7(1), 800)          # 101 600 bits
+y = through(tx_wave(bits, jitter_ui=RJ_UI), h_link)   # TX RJ -> channel -> CTLE
+rx = sdp.Receiver(y, SPS, F_NYQ, LEVELS, shift=True)  # sampling phase -> index 0
+rx.nrz_DFE(taps)
+hts, ph, S, A = report_eye("With 5 ps TX RJ, no noise", rx.signal, bits)
+for sigma in (10e-3, 15e-3, 20e-3, 25e-3):
+    rx.noise(sigma)                        # resets to pre-DFE signal + AWGN
+    rx.nrz_DFE(taps)                       # real decisions: error propagation
+    d = sdp.nrz_a2d(rx.signal, SPS, 0.0)[skip:-5]
+    n_err = sdp.prbs_checker(7, sdp.prbs7(1), d)[0]
+    est = ber_q(S[0], A[0], sigma)
+# ... bathtub: ber_q(S[o % SPS], A[o % SPS], sigma) at every phase offset o
+\end{lstlisting}
+
+\paragraph{What you should see} \Cref{fig:ch16-lab6}. With jitter but no noise the eye is 115.6\,mV and 0.73\,UI. Counting over 101\,544 bits:
+\begin{center}\small
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+$\sigma$ (mV) & 10 & 15 & 20 & 25\\
+\midrule
+errors counted & 0 & 1 & 6 & 43\\
+counted BER & $<3\times10^{-5}$ & $9.9\times10^{-6}$ & $5.9\times10^{-5}$ & $4.2\times10^{-4}$\\
+estimated BER & $1.4\times10^{-12}$ & $1.4\times10^{-7}$ & $2.4\times10^{-5}$ & $3.9\times10^{-4}$\\
+\bottomrule
+\end{tabular}
+\end{center}
+At 25\,mV count and estimate agree within 10\,\%; the single 15\,mV error is a true rare event (a 63.6\,mV margin hit by $4.25\sigma$ of noise). With $\sigma=5$\,mV the bathtub is open \textbf{0.45\,UI at $10^{-12}$} (0.66\,UI at $10^{-5}$); at 20\,mV it never reaches $10^{-5}$, and the counted points fall on the estimate.
+
+\begin{figure}[!tbp]
+\centering
+\includegraphics[width=\linewidth]{ch16_lab6}
+\caption{\textbf{Lab 6: counted errors confirm the estimate where counting is possible; the estimate takes over below $10^{-5}$.} (a) Bathtubs from \code{ber\_q} for 5 and 20\,mV of noise, with error counts at 20\,mV (dots) at offsets up to $\pm0.375$\,UI. (b) BER at the eye center against noise. The open triangle at 10\,mV is the 95\,\% bound $3/N$ of \cref{eq:ch15-bits} for zero errors in $N$ bits.}
+\label{fig:ch16-lab6}
+\end{figure}
+
+\paragraph{Questions and extensions} (1)~How many bits would you have to simulate to see one error at $\sigma=10$\,mV? How long would that take? (2)~Raise the RJ to 6\,ps rms (\code{RJ\_UI = 0.03}). How much does the $10^{-12}$ opening at 5\,mV shrink? Compare with the 14$\sigma$ rule of \cref{eq:tj}.
+
+%% =====================================================================
+\section{Lab 7: a bang-bang PI-CDR}\label{sec:lab7}
+
+\paragraph{Goal} serdespy has no CDR, so \code{lab7\_bbcdr.py} builds one on the Lab~4 link (REF + 14\,dB CTLE, 5\,ps RJ, 5\,mV noise): a half-rate Alexander detector, a P+I loop filter at 625\,MHz and a 64-step PI, with the RX clock 200\,ppm fast and starting 74\,ps off the eye center, as in \cref{fig:ch13-sim}. It samples the real waveform where the PI says: per UI one data sample D and one edge sample E half a UI earlier, as the four half-rate samplers deliver. A transition with $E$ equal to the previous $D$ means the clock is early (the loop body below is excerpted; the script also counts errors and has a fixed-clock mode).
+
+\begin{lstlisting}
+for k in range(n_upd):
+    n = k * UPD + np.arange(UPD)                      # RX bit indices of this update
+    # ... phi_d = data phase: phi0 + ppm offset + optional sinusoidal jitter
+    phi_c = np.round(acc) * LSB                       # PI phase (UI)
+    t_d = t0 + SPS * (n - phi_d + phi_c)              # data-sampler instants
+    d = sample(y, t_d) + sigma * rng.standard_normal(UPD) > 0
+    e = sample(y, t_d - SPS / 2) + sigma * rng.standard_normal(UPD) > 0
+    prev = np.concatenate(([d[0] if d_prev is None else d_prev], d[:-1]))
+    trans = prev != d                                 # a transition before each bit
+    votes = np.where(e == prev, 1, -1) * trans        # +1: clock early -> later
+    pipe.append(np.sign(votes.sum()))                 # majority vote of the block
+    v = pipe.pop(0)                                   # ... seen d_lat updates later
+    if cdr:
+        freg += ki * v                                # integral path (frequency)
+        acc += kp * v + freg                          # proportional path + phase
+\end{lstlisting}
+
+\paragraph{What you should see} \Cref{fig:ch16-lab7}, with the baseline of \cref{sec:picdr} ($K_P$ = 1/8 LSB, $K_P/K_I$ = 128, one update of extra latency). The loop locks in \textbf{0.13\,\textmu{}s} (the phase-only model of \cref{fig:ch13-sim}, with a stricter lock test, reports 0.19\,\textmu{}s); the integral register settles at 199\,ppm against the true 200; the tracking error is \textbf{2.57\,ps rms} and 17.3\,ps peak-to-peak, around a static offset of $-7.4$\,ps from the maximum-height eye center. There are \textbf{0 bit errors} in 59\,680 bits with the CDR, against \textbf{1372} (BER $2.3\times10^{-2}$) with a fixed clock, which slides across an eye edge once per microsecond. Raising $K_P$ to 1/2 and 1\,LSB raises the wander to 5.13 and 9.90\,ps rms (31.1 and 57.5\,ps pp): the trade-off of \cref{we:ch13-step}.
+
+\begin{figure}[!tbp]
+\centering
+\includegraphics[width=\linewidth]{ch16_lab7}
+\caption{\textbf{Lab 7: the PI rotates continuously to follow a 200\,ppm offset, and the errors stop.} (a) PI code (navy) over the code the data phase requires (gold); it wraps every 2.0\,\textmu{}s. (b) Clock-minus-data phase: the 74\,ps initial error is pulled in by 0.13\,\textmu{}s, then the loop dithers around a $-7.4$\,ps lock point. (c) Cumulative errors: fixed clock (red, one burst per UI of drift) and CDR (blue, none).}
+\label{fig:ch16-lab7}
+\end{figure}
+
+\paragraph{Questions and extensions} (1)~Sweep $K_P$ from 1/16 to 1\,LSB and the latency \code{d\_lat} from 0 to 4. Plot the rms and peak-to-peak wander and compare with dither $\approx2S\,T_\mathrm{lat}$ (\cref{sec:bbcdr}). (2)~Set \code{ki=0} and raise \code{ppm} to 300, 450 and 550. Where does the proportional-only loop lose lock, and does it match the 488\,ppm of \cref{sec:picdr}? Watch the static phase offset grow with the frequency offset before it fails. (3)~Add sinusoidal jitter with \code{sj\_pp} and \code{sj\_f}. Find the largest amplitude at 1 and 4.9\,MHz with zero errors, and plot your JTOL points on \cref{fig:ch13-jtol}. Why does the loop lock 7\,ps before the eye center?
+
+%% =====================================================================
+\section{Where to go next}\label{sec:ch16-next}
+
+\paragraph{Build the GUI demo} The proposal lists a GUI front-end for the link model among its deliverables, in the spirit of the Julia SerDes framework (JLSD) it cites. The labs are the engine: put sliders for loss, taps, peaking and noise in front of \code{channel()}, the FFE, \code{ctle()}, the DFE and \code{lab7\_bbcdr.simulate()}, and redraw the eye and bathtub on every change. Cross-check the eyes against PyBERT~\cite{pybert}, a mature open link simulator with IBIS-AMI support.
+
+\paragraph{Use a measured channel} Load the test board's 4-port Touchstone file. \code{sdp.four\_port\_to\_diff} assumes ports 1$\to$2 and 3$\to$4 and returns $V_\mathrm{out}/V_s$, half of $S_{21}$ for a matched link; the data must start near DC (\tool{scikit-rf} can extrapolate).
+\begin{lstlisting}
+import skrf as rf
+ntw = rf.Network("board.s4p")               # measured channel, ports 1->2, 3->4
+Hd, fd, hd, td = sdp.four_port_to_diff(ntw, None, 50, 50, t_d=DT)
+h = 2 * hd                                  # S21-like: same scale as impulse(channel())
+\end{lstlisting}
+On a synthetic 4-port built from REF this returns exactly $-17.38$\,dB and $p_0=0.3396$\,V; Labs 2--7 then run unchanged. Next: crosstalk, adaptation with \code{sdp.lms\_equalizer}, and the statistical eye of \cref{sec:stateye}.
+
+\begin{takeaways}
+\begin{itemize}
+  \item serdespy 1.0 runs on NumPy 2 with one shim; remember its quirks: Nyquist frequency in \code{Transmitter}, FIR before oversampling, \code{res=150}, renormalized taps, noise before equalization.
+  \item REF loses 17.38\,dB at Nyquist; its PDA eye is $-0.161$\,V and its PRBS7 eye $-77.8$\,mV.
+  \item Under the peak-swing constraint the 2-tap FFE (162.7\,mV) beats the zero-forcing 3-tap (144.8\,mV); a CTLE alone peaks at 113.3\,mV at 14\,dB; 8\,dB plus a 2- or 3-tap DFE gives 129.5 or 143.0\,mV.
+  \item Counted errors confirm \code{ber\_q} where counting is possible; below $10^{-5}$ only the estimate speaks.
+  \item A bang-bang PI-CDR locks to 200\,ppm in 0.13\,\textmu{}s with 2.6\,ps rms wander and no errors (a fixed clock: 1372).
+\end{itemize}
+\end{takeaways}

@@ -1,0 +1,184 @@
+\tikzsetfigurename{06_txffe-}
+\chapter{Transmit FFE}\label{ch:txffe}
+\chapterlead{The transmitter knows every bit before it leaves the chip, so it can pre-distort the waveform to cancel the ISI the channel is about to add.}
+\suppressfloats[t]
+
+\begin{objectives}
+\begin{itemize}
+  \item Describe the TX feed-forward equalizer (FFE) as a 3-tap FIR filter, and write its output and its effect on the pulse response.
+  \item Derive the FFE frequency response and the de-emphasis in dB, and explain the peak-swing constraint $\sum\lvert c_k\rvert=1$.
+  \item Solve for zero-forcing taps as a small matrix equation, and say when least squares does better.
+  \item Show on the REF channel why zero-forcing taps are not eye-optimal (Lab~3).
+  \item Pick practical settings: standard presets, tap resolution, and the swing the FFE costs.
+\end{itemize}
+\end{objectives}
+
+\section{A FIR filter in the driver}\label{sec:ch6-fir}
+
+The TX FFE is a finite-impulse-response filter that acts on the symbol stream $a_n\in\{-1,+1\}$ before the driver (\cref{fig:ch6-fir}). With three taps, the driver output during UI $n$ is
+\begin{equation}
+  x_n=A\left(c_{-1}\,a_{n+1}+c_0\,a_n+c_1\,a_{n-1}\right).
+  \label{eq:ch6-fir}
+\end{equation}
+The \textbf{pre-tap} $c_{-1}$ weights the \emph{next} bit. The transmitter already knows that bit, because in hardware the whole chain is delayed by one UI. The \textbf{main tap} is $c_0$ and the \textbf{post-tap} is $c_1$. Liu writes the general $(2M+1)$-tap version as $H(z)=\sum_{k=0}^{2M}\alpha_{-M+k}z^{-k}$ with $z=e^{j\omega\Tb}$~\cite{liuEq}. It has no feedback, so it is unconditionally stable.
+
+Since the channel is linear, sending $x_n$ is the same as sending three scaled, shifted copies of each bit. The pulse response seen at the receiver is therefore the convolution of the tap list with the cursor list:
+\begin{equation}
+  q_k=\sum_{j=-1}^{1}c_j\,\pk{k-j}=c_{-1}\pk{k+1}+c_0\pk{k}+c_1\pk{k-1}.
+  \label{eq:ch6-conv}
+\end{equation}
+\Cref{eq:ch6-conv} is all we need. Every FFE question in this chapter is a question about the new cursors $q_k$.
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[font=\sffamily\small,
+    tap/.style={draw=navy, line width=0.7pt, fill=btint, isosceles triangle, isosceles triangle apex angle=60,
+                shape border rotate=-90, inner sep=0pt, minimum size=7mm}]
+  \node[text=navy] (in) at (0,0) {$a_{n+1}$};
+  \node[blk, minimum width=11mm, minimum height=7mm] (d1) at (3.0,0) {$z^{-1}$};
+  \node[blk, minimum width=11mm, minimum height=7mm] (d2) at (6.0,0) {$z^{-1}$};
+  \coordinate (n0) at (1.4,0); \coordinate (n1) at (4.5,0); \coordinate (n2) at (7.5,0);
+  \draw[sig] (in) -- (d1);
+  \draw[sig] (d1) -- node[above, lbl, pos=0.45]{$a_n$} (d2);
+  \draw[line width=0.75pt, navy] (d2.east) -- (n2) node[above, lbl, pos=0.4]{$a_{n-1}$};
+  \foreach \n/\c/\i in {n0/{c_{-1}}/0, n1/{c_0}/1, n2/{c_1}/2}{
+    \node[dot] at (\n) {};
+    \node[tap] (t\i) at ($(\n)+(0,-1.25)$) {};
+    \draw[line width=0.75pt, navy] (\n) -- (t\i.north);
+    \node[right=1mm of t\i, text=navy] {$\c$};
+  }
+  \node[sumnode] (s) at (4.5,-2.75) {$\Sigma$};
+  \draw[sig] (t0.south) -- (s.north west);
+  \draw[sig] (t1.south) -- (s.north);
+  \draw[sig] (t2.south) -- (s.north east);
+  \node[blkb, minimum width=16mm, minimum height=8mm] (drv) at (8.0,-2.75) {CML\\[-2pt]\scriptsize driver};
+  \draw[sig] (s.east) -- (drv.west);
+  \draw[sig] (drv.east) -- ++(0.9,0) node[right, text=navy]{$x(t)$};
+  \node[align=left, anchor=west, font=\footnotesize, text=muted] at (9.1,-1.0) {$x_n=A\sum_j c_j\,a_{n-j}$\\[1pt] $\sum_j\lvert c_j\rvert=1$};
+  \node[lbl, anchor=south] at (1.4,0.25) {from serializer};
+\end{tikzpicture}
+\caption{\textbf{A 3-tap TX FFE is a short delay line with weighted taps.} Each bit is sent three times: once early with weight $c_{-1}$, once on time with $c_0$, and once late with $c_1$. In a CML driver the taps are parallel current-steering slices that share the output load (\cref{sec:ffe-impl}).}
+\label{fig:ch6-fir}
+\end{figure}
+
+\section{De-emphasis, pre-emphasis and the swing limit}\label{sec:ffe-taps}
+
+The driver's output swing is fixed by its tail current and load at $\pm A$. By \cref{eq:ch6-fir}, the largest output occurs when all terms add, so it equals $A\sum\lvert c_k\rvert$. To keep the driver within its swing we require the \textbf{peak-power constraint}:
+\begin{equation}
+  \lvert c_{-1}\rvert+\lvert c_0\rvert+\lvert c_1\rvert=1 .
+  \label{eq:ch6-peak}
+\end{equation}
+For a low-pass channel the side taps are negative. Consider a 2-tap FFE with $c_1<0$. A \emph{transition} bit ($a_n=-a_{n-1}$) gets $\lvert x_n\rvert=A(c_0+\lvert c_1\rvert)=A$, the full swing. A \emph{repeated} bit gets $A(c_0-\lvert c_1\rvert)$, which is smaller. This is \textbf{de-emphasis}: transitions keep full swing and runs of identical bits are attenuated (\cref{fig:ch6-deemph}).
+
+\textbf{Pre-emphasis} has exactly the same filter shape, but it is scaled the other way. It keeps $c_0=1$ and lifts the transitions to $A(1+\lvert c_1\rvert)$. A driver that already runs at its maximum swing has no headroom for that, so a practical TX de-emphasizes.
+
+\begin{figure}[!tbp]
+  \centering
+  \includegraphics[width=\linewidth]{ch06_deemph}
+  \caption{\textbf{De-emphasis keeps transitions at full swing and halves the repeated bits.} (a)~TX output for a 24-bit pattern without FFE, and with 6\,dB of 2-tap de-emphasis ($c_0=0.751$, $c_1=-0.249$). (b)~The same signals after the REF channel. Without FFE a long run charges the line far beyond the transition levels, so the next transition cannot cross in time. With de-emphasis the run and transition levels are much closer, and the dots (one sample per UI) form a cleaner pattern.}
+  \label{fig:ch6-deemph}
+\end{figure}
+
+\paragraph{Frequency response} The FFE transfer function is $H_\mathrm{FFE}(f)=\sum_k c_k\,e^{-j2\pi fk\Tb}$. For two taps, $\lvert H\rvert^2=c_0^2+c_1^2+2c_0c_1\cos(2\pi f\Tb)$. In Liu's normalization $c_0=1$, $c_1=\alpha$, with $-1<\alpha<0$:
+
+\begin{keyeq}[2-tap FFE response and de-emphasis]
+\begin{equation}
+  \lvert H_\mathrm{FFE}(f)\rvert=\sqrt{1+\alpha^2+2\alpha\cos(2\pi f\Tb)},\qquad
+  \mathrm{DE}=20\log_{10}\frac{\lvert H(\fN)\rvert}{\lvert H(0)\rvert}=20\log_{10}\frac{1-\alpha}{1+\alpha}
+  \label{eq:ffe-resp}
+\end{equation}
+With $\sum\lvert c\rvert=1$ the response is $c_0+c_1=1-2\lvert c_1\rvert$ at DC and $c_0-c_1=1$ at $\fN$, so $\mathrm{DE}=-20\log_{10}(1-2\lvert c_1\rvert)$.
+\end{keyeq}
+
+As a check, \cref{eq:ffe-resp} gives $1+\alpha$ at DC and $1-\alpha$ at $\fN$, matching Liu's sketch. (The handwritten notes contain a typo, $\sqrt{(1+\alpha)^2+2\alpha\cos\omega\Tb}$, which fails this DC check.) The response rises monotonically from DC to $\fN$ and repeats with period $1/\Tb=\qty{5}{\giga\hertz}$ (\cref{fig:ch6-ffefreq}a). It never rises above 0\,dB. It only pulls the low frequencies down.
+
+\begin{example}{The PCIe de-emphasis presets in volts}\label{we:ch6-pcie}
+PCIe Gen2 at 5\,GT/s specifies TX de-emphasis of \qty{-3.5}{\deci\bel} and \qty{-6}{\deci\bel}. For $-3.5$\,dB, $1-2\lvert c_1\rvert=10^{-3.5/20}=0.668$, so $c_1=-0.166$ and $c_0=0.834$. For $-6$\,dB, $1-2\lvert c_1\rvert=0.501$, so $c_1=-0.249$ and $c_0=0.751$.
+
+With $A=\qty{0.5}{\volt}$ (1\,Vppd), transition bits swing $\pm\qty{500}{\milli\volt}$ in both cases. Repeated bits swing $\pm0.668\times500=\pm\qty{334}{\milli\volt}$ at $-3.5$\,dB and $\pm\qty{251}{\milli\volt}$ at $-6$\,dB. A 9.5\,dB setting would need $c_1=-1/3$ and leave repeated bits at $\pm\qty{167}{\milli\volt}$.
+
+In a CML driver the taps steer a fixed total tail current, so the supply current is the same at every setting. De-emphasis does not save power. It only redistributes the swing.
+\end{example}
+
+\begin{figure}[!tbp]
+  \centering
+  \includegraphics[width=\linewidth]{ch06_ffefreq}
+  \caption{\textbf{A TX FFE pulls the low frequencies down; it never lifts $\fN$.} (a)~\Cref{eq:ffe-resp} for 0, 3.5, 6 and 9.5\,dB of de-emphasis. The response peaks at $\fN$ and is periodic in $\fb$. (b)~REF channel times FFE. Each setting removes as many dB of the low-frequency excess as its de-emphasis, so the cascade gets flatter but stays at $-17.4$\,dB at $\fN$.}
+  \label{fig:ch6-ffefreq}
+\end{figure}
+
+\section{Solving for the taps}\label{sec:ch6-solve}
+
+\paragraph{Zero forcing} Choose the three taps so that the equalized pulse has $q_{-1}=0$, $q_0=1$ and $q_1=0$. Writing \cref{eq:ch6-conv} for $k=-1,0,1$ gives three linear equations in three unknowns. Each row is one cursor of the equalized pulse, and each column is the pulse shifted by one tap:
+
+\begin{keyeq}[Zero-forcing FFE taps]
+\begin{equation}
+  \begin{bmatrix}\pk{0}&\pk{-1}&\pk{-2}\\ \pk{1}&\pk{0}&\pk{-1}\\ \pk{2}&\pk{1}&\pk{0}\end{bmatrix}
+  \begin{bmatrix}c_{-1}\\ c_0\\ c_1\end{bmatrix}=
+  \begin{bmatrix}0\\1\\0\end{bmatrix},
+  \qquad c_k\leftarrow\frac{c_k}{\sum_j\lvert c_j\rvert}.
+  \label{eq:ch6-zf}
+\end{equation}
+\end{keyeq}
+
+The matrix has constant diagonals: it is a \textbf{Toeplitz} matrix. A $(2M+1)$-tap FFE gives a $(2M+1)\times(2M+1)$ system of the same form. The normalization step comes last. It scales the whole equalized pulse down, but it does not change where the zeros are.
+
+\begin{example}{Liu's 3-tap zero-forcing FFE}\label{we:ch6-liu}
+Liu's example pulse has $x_{-1}=0.2$, $x_0=0.85$, $x_1=-0.2$, $x_2=0.1$ and $x_3=0.05$~\cite{liuEq}. \Cref{eq:ch6-zf} reads
+\[
+\begin{bmatrix}0.85&0.2&0\\-0.2&0.85&0.2\\0.1&-0.2&0.85\end{bmatrix}
+\begin{bmatrix}\alpha_{-1}\\\alpha_0\\\alpha_1\end{bmatrix}=\begin{bmatrix}0\\1\\0\end{bmatrix}
+\;\Rightarrow\;\boldsymbol\alpha=[-0.248,\ 1.053,\ 0.277].
+\]
+Since $\sum\lvert\alpha\rvert=1.578$, the normalized taps are $[-0.157,\ 0.667,\ 0.176]$. The equalized cursors for $k=-2..4$ are $[-0.031,\ 0,\ 0.634,\ 0,\ 0.024,\ 0.051,\ 0.009]$. With $2A=1$, the PDA eye opens from $0.85-0.55=0.30$ to $0.634-0.115=0.519$ (\cref{fig:ch6-zf}). Three lessons:
+\begin{itemize}
+  \item The post-tap is \emph{positive}, because $x_1$ is negative. ZF inverts whatever ISI is there. This FFE is not even high-pass: it is $-3.3$\,dB at DC and $-3.8$\,dB at $\fN$.
+  \item ISI is pushed outside the forced window. A new cursor appears at $k=-2$, and $k=3$ grows from 6\,\% to 8\,\% of the main cursor.
+  \item Normalization costs main cursor. It drops from 0.85 to 0.634.
+\end{itemize}
+\end{example}
+
+\begin{figure}[!tbp]
+  \centering
+  \includegraphics[width=\linewidth]{ch06_zf}
+  \caption{\textbf{Zero forcing zeros only the cursors it is told to.} (a)~Liu's example pulse. (b)~After the normalized 3-tap ZF FFE, the cursors at $k=\pm1$ are exactly zero, but ISI appears at $k=-2$ and grows at $k=+3$ (circled). Normalization to $\sum\lvert c\rvert=1$ lowers the main cursor to 0.634.}
+  \label{fig:ch6-zf}
+\end{figure}
+
+\paragraph{Least squares and MMSE} Zero forcing looks at only $2M+1$ cursors. \textbf{Least squares} (LS) uses the whole pulse. Stack shifted copies of the full pulse as the columns of a matrix $\mathbf H$ (one row per output cursor), then minimize $\lVert\mathbf H\mathbf c-\mathbf y_\mathrm{des}\rVert^2$, where $\mathbf y_\mathrm{des}$ is 1 at the main cursor and 0 elsewhere. The solution is $\mathbf c=(\mathbf H^\mathsf{T}\mathbf H)^{-1}\mathbf H^\mathsf{T}\mathbf y_\mathrm{des}$, which is then normalized. For a receiver FIR, where noise passes through the filter, the noise-aware \textbf{MMSE} form adds $(\sign^2/\sigma_a^2)\mathbf I$ to $\mathbf H^\mathsf{T}\mathbf H$. Palermo's 10\,Gb/s example gives $\mathbf c=[-0.131,\ 0.595,\ -0.274]$~\cite{palermo720eq}. Its DC gain is $\sum c=0.190$ ($-14.4$\,dB) and its Nyquist gain is $\lvert\sum(-1)^kc_k\rvert=1$, so it applies \qty{14.4}{\deci\bel} of de-emphasis, all of it paid in swing.
+
+\paragraph{The REF channel} Lab~3 applies \cref{eq:ch6-zf} to the REF cursors $\pk{-1}=0.0486$, $\pk{0}=0.3396$ and $\pk{1}=0.1817$. The 3-tap ZF taps are $[-0.0853,\ 0.5959,\ -0.3188]$, which is \qty{14.3}{\deci\bel} of boost. The 2-tap ZF taps, forcing only $q_1=0$, are $[0.6515,\ -0.3485]$, or \qty{10.4}{\deci\bel}. \Cref{fig:ch6-ref} shows the result for PRBS7. The eye goes from \qty{-77.8}{\milli\volt} without FFE to \qty{162.7}{\milli\volt} (0.89\,UI) with the 2-tap FFE, but only to \qty{144.8}{\milli\volt} (0.83\,UI) with the 3-tap ZF FFE. (With PRBS13 the 2-tap eye is \qty{148}{\milli\volt}. Its PDA and statistical eyes, \qty{126}{\milli\volt} and \qty{131}{\milli\volt} at $10^{-12}$, are worked out in \cref{sec:pda,sec:stateye}.)
+
+So the 3-tap zero-forcing FFE is \emph{worse} than the 2-tap one. Under $\sum\lvert c\rvert=1$, every unit of tap weight comes out of the main cursor, which drops from 0.340 to 0.175\,V with three taps. The pre-tap spends 0.085 of the budget to null $\pk{-1}=0.049$ exactly, and it leaks $\pk{2}$ into $q_1$. A grid search for the 3-tap setting with the largest PDA eye finds $[-0.04,\ 0.61,\ -0.35]$. Its PRBS7 eye is \qty{163.6}{\milli\volt}, only \qty{1}{\milli\volt} better than the 2-tap FFE. \emph{Zero forcing is a recipe, not an optimum.} Judge taps by the eye they produce.
+
+\begin{figure}[!tbp]
+  \centering
+  \includegraphics[width=\linewidth]{ch06_ref}
+  \caption{\textbf{On REF, a 2-tap FFE opens the eye; the 3-tap ZF FFE does slightly worse.} (a)~Pulse responses without FFE, with the 2-tap ZF taps $[0.652,-0.349]$ and with the 3-tap ZF taps $[-0.085,0.596,-0.319]$. Dots mark the cursors. (b,\,c)~PRBS7 eyes at the RX input, plotted on the same scale. The open eye is \qty{163}{\milli\volt} but only about a third of the unequalized swing. That is the price of equalizing at the TX.}
+  \label{fig:ch6-ref}
+\end{figure}
+
+\begin{tryit}[Lab 3: TX FFE]
+\code{lab3\_tx\_ffe.py} computes the ZF taps with \code{sdp.forcing\_ffe}, normalizes them, and measures the eyes quoted above. Change the pre-tap by hand and watch the eye move in both directions (\cref{sec:lab3}).
+\end{tryit}
+
+\section{Practical notes}\label{sec:ch6-practical}
+
+\paragraph{Presets} Standards define a few TX presets rather than free taps, because a transmitter cannot measure the channel. PCIe Gen2 uses \qty{-3.5}{\deci\bel} and \qty{-6}{\deci\bel} (\cref{we:ch6-pcie}). \OS{} offers the same two presets plus a small pre-tap. \Cref{sec:eq-partition} shows that $-6$\,dB is the right preset for REF once a DFE follows.
+
+\paragraph{Tap resolution} A CML driver builds each tap from $N$ equal current slices, so the taps move in steps of $1/N$. For the REF 2-tap FFE, 8 slices give $[0.625,-0.375]$ and a \qty{162.6}{\milli\volt} eye. 32 slices give $[0.656,-0.344]$ and \qty{162.3}{\milli\volt}. The ideal setting gives \qty{162.7}{\milli\volt}. The eye is flat near its optimum, so 4--5 bits (16--32 slices) are plenty at this data rate. Palermo quotes 4--6 bits as typical~\cite{palermo720eq}.
+
+\begin{insight}
+A TX FFE does not boost the high frequencies. It \emph{lowers the low frequencies}, because the driver is already at its peak swing. The 10.4\,dB ZF setting on REF leaves repeated bits at 30\,\% of full swing, and the eye at the receiver is about a third of the unequalized swing. Receiver noise, crosstalk and sampler offset do not shrink with it, so the SNR falls by the de-emphasis. Keep the TX FFE at moderate de-emphasis (3.5--6\,dB) with a small pre-tap, and let the receiver equalizers do the rest. How the driver builds the taps is covered in \cref{sec:ffe-impl}.
+\end{insight}
+
+\begin{takeaways}
+\begin{itemize}
+  \item A TX FFE is a short FIR filter. Its taps convolve with the cursor list: $q_k=\sum_jc_j\pk{k-j}$.
+  \item The peak-swing constraint $\sum\lvert c_k\rvert=1$ forces de-emphasis. Transitions keep full swing and repeated bits are attenuated.
+  \item A 2-tap FFE has $\lvert H\rvert=\sqrt{1+\alpha^2+2\alpha\cos2\pi f\Tb}$, with de-emphasis $-20\log_{10}(1-2\lvert c_1\rvert)$. PCIe's $-3.5$ and $-6$\,dB correspond to $c_1=-0.166$ and $-0.249$.
+  \item Zero-forcing taps solve a small Toeplitz system. Least squares uses the whole pulse, and MMSE adds noise.
+  \item On REF, 2-tap ZF gives \qty{162.7}{\milli\volt} and 3-tap ZF gives \qty{144.8}{\milli\volt}. Zero forcing is not eye-optimal.
+  \item The FFE costs launch swing and SNR, not power. Use moderate presets and 4--5-bit taps.
+\end{itemize}
+\end{takeaways}

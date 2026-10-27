@@ -1,0 +1,196 @@
+---
+title: "B. Tables and Constants"
+parent: "Appendices"
+nav_order: 2
+permalink: "/appendices/b-tables-and-constants/"
+---
+{% raw %}
+<h1 id="app:qtable"><span class="chapnum">Appendix B</span>Tables and Constants</h1>
+<p><a href="#tab:app-q">Table B.1</a> converts a target BER into the Gaussian multiplier <span class="math inline">\(Q\)</span>, and <a href="#tab:app-db">Table B.2</a> converts loss in decibels into voltage and power ratios. <a href="#tab:app-const">Table B.3</a> collects the constants used in the examples.</p>
+<div id="tab:app-q">
+
+</div>
+<div id="tab:app-db">
+
+</div>
+<div class="mpcol" style="--w:46%">
+<div class="captionblock">
+<p><span class="capnum">Table B.1.</span> <strong>BER against <span class="math inline">\(Q\)</span></strong>, with <span class="math inline">\(\mathrm{BER}=Q(Q)\)</span>.</p>
+</div>
+<p><span></span></p>
+<div>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">BER</th>
+<th style="text-align: center;"><span class="math inline">\(Q\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(2Q\)</span> (eye/<span class="math inline">\(\sigma\)</span>)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><span class="math inline">\(10^{-3}\)</span></td>
+<td style="text-align: center;">3.090</td>
+<td style="text-align: center;">6.18</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><span class="math inline">\(10^{-4}\)</span></td>
+<td style="text-align: center;">3.719</td>
+<td style="text-align: center;">7.44</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><span class="math inline">\(10^{-5}\)</span></td>
+<td style="text-align: center;">4.265</td>
+<td style="text-align: center;">8.53</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><span class="math inline">\(10^{-6}\)</span></td>
+<td style="text-align: center;">4.753</td>
+<td style="text-align: center;">9.51</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><span class="math inline">\(10^{-7}\)</span></td>
+<td style="text-align: center;">5.199</td>
+<td style="text-align: center;">10.40</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><span class="math inline">\(10^{-8}\)</span></td>
+<td style="text-align: center;">5.612</td>
+<td style="text-align: center;">11.22</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><span class="math inline">\(10^{-9}\)</span></td>
+<td style="text-align: center;">5.998</td>
+<td style="text-align: center;">12.00</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><span class="math inline">\(10^{-10}\)</span></td>
+<td style="text-align: center;">6.361</td>
+<td style="text-align: center;">12.72</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><span class="math inline">\(10^{-11}\)</span></td>
+<td style="text-align: center;">6.706</td>
+<td style="text-align: center;">13.41</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><span class="math inline">\(10^{-12}\)</span></td>
+<td style="text-align: center;"><strong>7.034</strong></td>
+<td style="text-align: center;"><strong>14.07</strong></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><span class="math inline">\(10^{-13}\)</span></td>
+<td style="text-align: center;">7.349</td>
+<td style="text-align: center;">14.70</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><span class="math inline">\(10^{-14}\)</span></td>
+<td style="text-align: center;">7.651</td>
+<td style="text-align: center;">15.30</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><span class="math inline">\(10^{-15}\)</span></td>
+<td style="text-align: center;">7.941</td>
+<td style="text-align: center;">15.88</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="mpcol" style="--w:50%">
+<div class="captionblock">
+<p><span class="capnum">Table B.2.</span> <strong>Decibels to ratios</strong> (loss).</p>
+</div>
+<p><span></span></p>
+<div>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: right;">Loss (dB)</th>
+<th style="text-align: center;">Voltage ratio</th>
+<th style="text-align: center;">Power ratio</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">0.5</td>
+<td style="text-align: center;">0.944</td>
+<td style="text-align: center;">0.891</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">1</td>
+<td style="text-align: center;">0.891</td>
+<td style="text-align: center;">0.794</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">3</td>
+<td style="text-align: center;">0.708</td>
+<td style="text-align: center;">0.501</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">6</td>
+<td style="text-align: center;">0.501</td>
+<td style="text-align: center;">0.251</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">10</td>
+<td style="text-align: center;">0.316</td>
+<td style="text-align: center;">0.100</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">12</td>
+<td style="text-align: center;">0.251</td>
+<td style="text-align: center;">0.0631</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">14</td>
+<td style="text-align: center;">0.200</td>
+<td style="text-align: center;">0.0398</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">17.4 (REF)</td>
+<td style="text-align: center;">0.135</td>
+<td style="text-align: center;">0.0182</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">20</td>
+<td style="text-align: center;">0.100</td>
+<td style="text-align: center;">0.0100</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">30</td>
+<td style="text-align: center;">0.0316</td>
+<td style="text-align: center;">0.00100</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">40</td>
+<td style="text-align: center;">0.0100</td>
+<td style="text-align: center;">0.000100</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div id="tab:app-const">
+
+</div>
+<div class="tabularx">
+<p><span>@l l L@</span> <strong>Quantity</strong> &amp; <strong>Value</strong> &amp; <strong>Use</strong><br />
+Boltzmann constant <span class="math inline">\(k\)</span> &amp; <span class="math inline">\(1.381\times10^{-23}\)</span> J/K &amp; noise<br />
+Elementary charge <span class="math inline">\(q\)</span> &amp; <span class="math inline">\(1.602\times10^{-19}\)</span> C &amp; shot noise, <span class="math inline">\(V_T\)</span><br />
+Thermal voltage <span class="math inline">\(kT/q\)</span> &amp; 25.85 mV &amp; HBT <span class="math inline">\(g_\mathrm{m}=I_C/V_T\)</span>: 38.7 mS per mA<br />
+<span class="math inline">\(kT\)</span> &amp; <span class="math inline">\(4.14\times10^{-21}\)</span> J = <span class="math inline">\(-173.8\)</span> dBm/Hz &amp; noise floors<br />
+<span class="math inline">\(\sqrt{4kTR}\)</span>, <span class="math inline">\(R=50\,\Omega\)</span> &amp; 0.91 nV/<span class="math inline">\(\sqrt{\mathrm{Hz}}\)</span> &amp; termination noise<br />
+<span class="math inline">\(\sqrt{kT/C}\)</span>, <span class="math inline">\(C=50\)</span> fF &amp; 0.29 mV &amp; sampled noise<br />
+Vacuum permittivity <span class="math inline">\(\varepsilon_0\)</span> &amp; <span class="math inline">\(8.854\times10^{-12}\)</span> F/m &amp; capacitance<br />
+Speed of light <span class="math inline">\(c\)</span> &amp; <span class="math inline">\(2.998\times10^8\)</span> m/s &amp; line delay<br />
+FR-4 (<span class="math inline">\(\varepsilon_r=4\)</span>): <span class="math inline">\(v=c/2\)</span> &amp; <span class="math inline">\(1.50\times10^8\)</span> m/s = 6.67 ps/mm = 169 ps/in &amp; reflections, flight time<br />
+1 UI at 5 Gb/s &amp; 200 ps &amp; everything<br />
+1 degree of the 2.5 GHz clock &amp; 1.11 ps &amp; I/Q and PI errors<br />
+1 PI step &amp; 6.25 ps = 0.031 UI &amp; CDR<br />
+</p>
+</div>
+
+<nav class="prev-next" aria-label="Chapter navigation"><a class="pn-link prev" href="{% endraw %}{{ '/appendices/a-formula-sheet/' | relative_url }}{% raw %}"><small>← Previous</small>Formula Sheet</a><a class="pn-link next" href="{% endraw %}{{ '/appendices/c-design-review-checklists/' | relative_url }}{% raw %}"><small>Next →</small>Design-Review Checklists</a></nav>
+<p class="page-source">Generated from <a href="https://github.com/bricd-org/serdes-tutorial/blob/main/book/tutorial/chapters/A_appendices.tex">book/tutorial/chapters/A_appendices.tex</a>. Figure, table and equation numbers match the <a href="{% endraw %}{{ '/assets/pdf/Open-SERDES_Tutorial.pdf' | relative_url }}{% raw %}">PDF edition</a>.</p>
+{% endraw %}

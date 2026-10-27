@@ -1,0 +1,189 @@
+---
+title: "14. The Open-SERDES Architecture"
+parent: "Part V · Putting It Together"
+nav_order: 14
+permalink: "/chapters/14-the-open-serdes-architecture/"
+---
+{% raw %}
+<h1 id="ch:arch"><span class="chapnum">Chapter 14</span>The Open-SERDES Architecture</h1>
+<div class="chapterlead">
+<p>Every decision of the last thirteen chapters on a few pages: the blocks, the clocks, the number each block must meet, and what it all costs in power.</p>
+</div>
+<div class="tbox tbox-objectives">
+<div class="tbox-title">
+<p>In this chapter you will learn</p>
+</div>
+<ul>
+<li><p>Read the complete Open-SERDES block diagram and follow a bit from the 16-bit TX word to the 16-bit RX word.</p></li>
+<li><p>Trace every clock in the chip from the 50 MHz reference to the last divider, with its frequency and phase.</p></li>
+<li><p>Use the block specification table to find the target, and the chapter that derives it, for any block you design.</p></li>
+<li><p>Build a first-cut power budget from tail currents and convert it to energy per bit.</p></li>
+<li><p>Defend the ten main architecture decisions and name the risks that remain open.</p></li>
+</ul>
+</div>
+<h2 id="sec:arch-block"><span class="secnum">14.1</span>The complete transceiver</h2>
+<p><a href="#fig:arch">Figure 14.1</a> puts the whole chip on one page. It is a single-lane transceiver: one transmitter, one receiver and one clock generator on the same SG13G2 die, connected to each other through the off-chip REF channel (<a href="{% endraw %}{{ '/chapters/03-the-channel/' | relative_url }}{% raw %}#sec:refchannel">Section 3.7</a>) or through an on-chip loopback.</p>
+<h5 id="transmit-path">Transmit path</h5>
+<p>A 16-bit word arrives every 3.2 ns (312.5 MHz), from the user or from the on-chip PRBS7/31 generator (<a href="{% endraw %}{{ '/chapters/02-signals-systems-and-the-language-of-links/' | relative_url }}{% raw %}#sec:prbs">Section 2.2</a>). CMOS on 1.2 V performs the first 16:4 serialization; HBT CML on the 2.5 V analog supply performs the 4:2 and the final half-rate 2:1, built three times so the driver receives <span class="math inline">\(D_{n+1}\)</span>, <span class="math inline">\(D_n\)</span> and <span class="math inline">\(D_{n-1}\)</span> for its three FFE taps (Sections <a href="{% endraw %}{{ '/chapters/09-the-transmitter/' | relative_url }}{% raw %}#sec:serializer">9.2</a> and <a href="{% endraw %}{{ '/chapters/09-the-transmitter/' | relative_url }}{% raw %}#sec:ffe-impl">9.5</a>). The CML driver launches 1 Vppd into 50 Ω per side (<a href="{% endraw %}{{ '/chapters/09-the-transmitter/' | relative_url }}{% raw %}#sec:cml-driver">Section 9.4</a>).</p>
+<h5 id="receive-path">Receive path</h5>
+<p>Behind the ESD diodes and the 100 Ω termination (<a href="{% endraw %}{{ '/chapters/09-the-transmitter/' | relative_url }}{% raw %}#sec:esd-pad">Section 9.6</a>), a loopback multiplexer selects the pad or the near-end loopback. The CTLE adds 0–12 dB of peaking (<a href="{% endraw %}{{ '/chapters/07-continuous-time-linear-equalizer/' | relative_url }}{% raw %}">Chapter 7</a>), the DFE summer subtracts <span class="math inline">\(w_1\)</span> and <span class="math inline">\(w_2\)</span> times the previous decisions (<a href="{% endraw %}{{ '/chapters/08-decision-feedback-equalization-and-adaptation/' | relative_url }}{% raw %}#sec:dfe-timing">Section 8.2</a>), and four samplers decide: data D0, D1 and edges E0, E1 (<a href="{% endraw %}{{ '/chapters/10-receiver-front-end-and-samplers/' | relative_url }}{% raw %}#sec:sampler">Section 10.2</a>). The deserializer delivers 16 data and 16 edge bits at 312.5 MHz (<a href="{% endraw %}{{ '/chapters/10-receiver-front-end-and-samplers/' | relative_url }}{% raw %}#sec:deserializer">Section 10.6</a>); the PRBS checker counts errors.</p>
+<h5 id="clocking-and-control">Clocking and control</h5>
+<p>An integer-N PLL with an LC VCO multiplies the 50 MHz reference by <span class="math inline">\(N=50\)</span> to 2.5 GHz (<a href="{% endraw %}{{ '/chapters/12-clock-generation-the-phase-locked-loop/' | relative_url }}{% raw %}#ch:pll">Chapter 12</a>). The TX gets it through buffers and <span class="math inline">\(\div2\)</span> dividers; the RX gets I and Q from a polyphase filter (<a href="{% endraw %}{{ '/chapters/12-clock-generation-the-phase-locked-loop/' | relative_url }}{% raw %}#sec:quadrature">Section 12.5</a>), rotated by two phase interpolators (PIs) under the digital CDR loop filter (<a href="{% endraw %}{{ '/chapters/13-clock-and-data-recovery/' | relative_url }}{% raw %}#sec:picdr">Section 13.6</a>). An SPI port writes every setting.</p>
+<div id="fig:arch">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/tikz/14_arch-0.svg' | relative_url }}{% raw %}" style="width:753px" alt="The complete Open-SERDES transceiver: a CMOS core at 312.5 MHz, wrapped in HBT CML wherever a signal or clock runs at 1.25 GHz or faster." loading="lazy" />
+<figcaption><span class="capnum">Figure 14.1.</span> <strong>The complete Open-SERDES transceiver: a CMOS core at 312.5 MHz, wrapped in HBT CML wherever a signal or clock runs at 1.25 GHz or faster.</strong> Read the TX band left to right and the RX band right to left; bold numbers above the TX row are lane rates, and slash numbers count parallel lanes. Notice three things. The 2.5 GHz PLL clock is used twice: divided down for the TX (fixed phase), and split into I/Q and rotated by the PIs for the RX (recovered phase). The CDR is a digital loop: edge and data bits leave the deserializer, the loop filter computes the PI code, and the samplers move. The near-end loopback (violet) takes the driver output straight to the RX input, so the whole link can be tested without a board channel.</figcaption>
+</figure>
+<h3 id="sec:ch14-clock"><span class="secnum">14.1.1</span>The clocking plan</h3>
+<p><a href="#fig:ch14-clock">Figure 14.2</a> follows each clock from the reference to the last flip-flop. All of the frequencies come from one relation between the bit rate, the half-rate clock and the word rate.</p>
+<div class="tbox tbox-keyeq">
+<div class="tbox-title">
+<p>Key equation · The Open-SERDES clock frequencies</p>
+</div>
+<div id="eq:ch14-clk">
+
+</div>
+<p><span class="math display">\[f_\mathrm{clk} = \frac{f_\mathrm{b}}{2} = N f_\mathrm{ref} = 2.5\,\mathrm{GHz},\qquad
+  f_\mathrm{word} = \frac{f_\mathrm{b}}{16} = 312.5\,\mathrm{MHz},\qquad
+  \Delta t_\mathrm{PI} = \frac{1}{64\,f_\mathrm{clk}} = 6.25\,\mathrm{ps} \tag{14.1}\]</span></p>
+</div>
+<p>The TX needs one clock phase: the final 2:1 mux uses both edges of the 2.5 GHz clock as its select (<a href="{% endraw %}{{ '/chapters/09-the-transmitter/' | relative_url }}{% raw %}#sec:serializer">Section 9.2</a>). The RX needs four phases half a UI apart: data samplers on the edges of I (eye centers), edge samplers on the edges of Q (crossings), all moved together by the CDR in 6.25 ps steps. The RX dividers run from the <em>recovered</em> clock, so the deserializer and the CDR logic sit in a clock domain that is not phase-locked to the TX word clock; a small FIFO crosses back to the core (<a href="{% endraw %}{{ '/chapters/10-receiver-front-end-and-samplers/' | relative_url }}{% raw %}#sec:deserializer">Section 10.6</a>). In near-end loopback both ends share the PLL, so the frequency offset is zero. Through a board to a second chip, the CDR must absorb up to <span class="math inline">\(\pm300\)</span> ppm (<a href="{% endraw %}{{ '/chapters/13-clock-and-data-recovery/' | relative_url }}{% raw %}#sec:picdr">Section 13.6</a>).</p>
+<div id="fig:ch14-clock">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/tikz/14_arch-1.svg' | relative_url }}{% raw %}" style="width:749px" alt="One 2.5 GHz PLL serves the whole chip; the TX divides it, the RX rotates it." loading="lazy" />
+<figcaption><span class="capnum">Figure 14.2.</span> <strong>One 2.5 GHz PLL serves the whole chip; the TX divides it, the RX rotates it.</strong> Top: the frequency at every node. The TX chain divides by 2, 4 and 8 down to the 312.5 MHz word clock. The RX chain first makes four phases with the polyphase filter, rotates them with the two PIs, and divides the recovered clock for the deserializer and for the CDR loop, which updates every 8 UI at 625 MHz. Bottom: what the four phases do. D0 and D1 sample the eye centers on the two edges of I; E0 and E1 sample the crossings on the edges of Q. One 400 ps clock period carries two bits and contains 64 PI steps.</figcaption>
+</figure>
+<div class="tbox tbox-insight">
+<div class="tbox-title">
+<p>What this means for your design</p>
+</div>
+<p>Three boundaries organize the chip, and most integration bugs live on them: the <strong>speed boundary</strong> between CMOS and CML (1.25 Gb/s in the TX, 2.5 Gb/s in the RX), which needs level converters and half a slow-clock cycle of timing margin; the <strong>supply boundary</strong> between 1.2 and 2.5 V, where every <span class="math inline">\(V_\mathrm{CE}\)</span> must stay below <span class="math inline">\(\mathrm{BV}_\mathrm{CEO}\)</span>; and the <strong>clock-domain boundary</strong> between the TX clock and the recovered RX clock. Draw all three on the floorplan first.</p>
+</div>
+<h2 id="sec:ch14-specs"><span class="secnum">14.2</span>Block specifications</h2>
+<p><a href="#tab:specs">Table 14.1</a> is the contract between the system model and the circuit designers: one row per block, the numbers that block must meet, and the chapter where each number is derived. Values marked <span class="math inline">\(^\dagger\)</span> are first estimates from hand analysis or behavioral models. They must be confirmed by simulation in SG13G2, and some of them will move.</p>
+<div id="tab:specs">
+
+</div>
+<div class="tabularx">
+<p><span>@&gt;p<span>19mm</span> &gt;p<span>27mm</span> L &gt;p<span>19mm</span>@</span> <strong>Block</strong> &amp; <strong>Key specification</strong> &amp; <strong>Target value</strong> &amp; <strong>Derived in</strong><br />
+Link &amp; rate, BER, channel &amp; 5 Gb/s NRZ; BER <span class="math inline">\(\le10^{-12}\)</span> over REF (<span class="math inline">\(-17.4\)</span> dB at 2.5 GHz); margin up to 20 dB &amp; Sections <a href="{% endraw %}{{ '/chapters/01-why-serial-links/' | relative_url }}{% raw %}#sec:os-targets">1.4</a> and <a href="{% endraw %}{{ '/chapters/03-the-channel/' | relative_url }}{% raw %}#sec:refchannel">3.7</a><br />
+Serializer &amp; ratio, clocks, jitter &amp; 16:1 from 16 b at 312.5 MHz; CMOS 16:4, CML 4:2, half-rate CML 2:1; DCD + DDJ <span class="math inline">\(\le8\)</span> ps<span class="math inline">\(^\dagger\)</span> &amp; <a href="{% endraw %}{{ '/chapters/09-the-transmitter/' | relative_url }}{% raw %}#sec:serializer">Section 9.2</a><br />
+TX driver &amp; topology, swing &amp; HBT CML, 50 Ω back-termination per side; 0.8–1.0 Vppd (<span class="math inline">\(I_T\)</span> = 16–20 mA); every <span class="math inline">\(V_\mathrm{CE}&lt;\mathrm{BV}_\mathrm{CEO}\approx1.6\)</span> V at all corners &amp; <a href="{% endraw %}{{ '/chapters/09-the-transmitter/' | relative_url }}{% raw %}#sec:cml-driver">Section 9.4</a><br />
+TX FFE &amp; taps, range, resolution &amp; <span class="math inline">\(c_{-1}, c_0, c_1\)</span> with <span class="math inline">\(\sum\lvert c_k\rvert=1\)</span>; <span class="math inline">\(c_1\)</span> to <span class="math inline">\(-0.25\)</span> (6 dB), <span class="math inline">\(c_{-1}\)</span> to <span class="math inline">\(-0.1\)</span>; 5-bit current cells (steps of 1/32) &amp; Sections <a href="{% endraw %}{{ '/chapters/06-transmit-ffe/' | relative_url }}{% raw %}#sec:ffe-taps">6.2</a> and <a href="{% endraw %}{{ '/chapters/09-the-transmitter/' | relative_url }}{% raw %}#sec:ffe-impl">9.5</a><br />
+Termination, pad &amp; impedance, <span class="math inline">\(C_p\)</span>, return loss &amp; 100 Ω diff., <span class="math inline">\(\pm10\)</span> % after 3–4-bit trim; <span class="math inline">\(C_p\le0.85\)</span> pF (0.63 pF estimated<span class="math inline">\(^\dagger\)</span>); RL <span class="math inline">\(\ge10\)</span> dB at <span class="math inline">\(f_\mathrm{N}\)</span> &amp; Sections <a href="{% endraw %}{{ '/chapters/09-the-transmitter/' | relative_url }}{% raw %}#sec:termination">9.3</a> and <a href="{% endraw %}{{ '/chapters/09-the-transmitter/' | relative_url }}{% raw %}#sec:esd-pad">9.6</a><br />
+CTLE &amp; peaking, poles, noise &amp; 0–12 dB programmable; <span class="math inline">\(f_{p1}\approx2.5\)</span> GHz, <span class="math inline">\(f_{p2}\ge7.5\)</span> GHz; noise <span class="math inline">\(\le0.25\)</span> mV rms<span class="math inline">\(^\dagger\)</span> &amp; <a href="{% endraw %}{{ '/chapters/07-continuous-time-linear-equalizer/' | relative_url }}{% raw %}">Chapter 7</a><br />
+DFE &amp; taps, loop timing &amp; half-rate, 2 taps, direct feedback; <span class="math inline">\(w_1\)</span> up to <span class="math inline">\(0.5\,p_0\)</span>, <span class="math inline">\(w_2\)</span> to <span class="math inline">\(\pm0.15\,p_0\)</span>; tap-1 loop <span class="math inline">\(\approx\)</span>140 ps<span class="math inline">\(^\dagger\)</span> <span class="math inline">\(&lt;\)</span> 1 UI; loop unrolling as fallback &amp; <a href="{% endraw %}{{ '/chapters/08-decision-feedback-equalization-and-adaptation/' | relative_url }}{% raw %}#sec:dfe-timing">Section 8.2</a><br />
+Samplers &amp; count, sensitivity, offset &amp; 4 HBT CML master–slave (D0 E0 D1 E1); <span class="math inline">\(V_\mathrm{sens}\approx20\)</span> mV; offset <span class="math inline">\(\sigma\approx4.9\)</span> mV raw<span class="math inline">\(^\dagger\)</span>, <span class="math inline">\(\pm0.46\)</span> mV after 5-bit trim; <span class="math inline">\(\tau\le5\)</span> ps; aperture <span class="math inline">\(\le0.2\)</span> UI &amp; Sections <a href="{% endraw %}{{ '/chapters/10-receiver-front-end-and-samplers/' | relative_url }}{% raw %}#sec:sampler">10.2</a> and <a href="{% endraw %}{{ '/chapters/10-receiver-front-end-and-samplers/' | relative_url }}{% raw %}#sec:offset">10.4</a><br />
+Deserializer &amp; ratio, output &amp; 1:16 CMOS; 16 data + 16 edge bits at 312.5 MHz; two extra latches on the edge path; FIFO to the core &amp; Sections <a href="{% endraw %}{{ '/chapters/10-receiver-front-end-and-samplers/' | relative_url }}{% raw %}#sec:deserializer">10.6</a> and <a href="{% endraw %}{{ '/chapters/10-receiver-front-end-and-samplers/' | relative_url }}{% raw %}#sec:metastability">10.3</a><br />
+PLL &amp; architecture, jitter &amp; integer-N CP-PLL, <span class="math inline">\(f_\mathrm{ref}\)</span> = 50 MHz, <span class="math inline">\(N\)</span> = 50; LC VCO 2.5 GHz (4 nH, <span class="math inline">\(Q\)</span> = 16.8); <span class="math inline">\(K_\mathrm{VCO}\approx2\pi\times150\)</span> MHz/V; <span class="math inline">\(f_u\approx3\)</span> MHz; RJ <span class="math inline">\(\le1.0\)</span> ps rms<span class="math inline">\(^\dagger\)</span> &amp; <a href="{% endraw %}{{ '/chapters/12-clock-generation-the-phase-locked-loop/' | relative_url }}{% raw %}#ch:pll">Chapter 12</a><br />
+Quadrature &amp; accuracy &amp; 2-stage polyphase + CML buffers; I/Q error <span class="math inline">\(\le2^{\circ}\)</span> (3<span class="math inline">\(\sigma\)</span>); duty cycle <span class="math inline">\(50\pm0.5\)</span> % with DCC &amp; <a href="{% endraw %}{{ '/chapters/12-clock-generation-the-phase-locked-loop/' | relative_url }}{% raw %}#sec:quadrature">Section 12.5</a><br />
+PI &amp; resolution, linearity &amp; 2 PIs, 64 steps per 400 ps (6.25 ps = 0.031 UI); INL <span class="math inline">\(\le1^{\circ}\)</span> &amp; <a href="{% endraw %}{{ '/chapters/13-clock-and-data-recovery/' | relative_url }}{% raw %}#sec:picdr">Section 13.6</a><br />
+CDR &amp; loop, tracking &amp; half-rate Alexander BBPD; P+I at 625 MHz, <span class="math inline">\(K_P\)</span> = 1/8 LSB, <span class="math inline">\(K_P/K_I\)</span> = 128; <span class="math inline">\(\pm300\)</span> ppm; lock <span class="math inline">\(&lt;1\)</span> s; wander <span class="math inline">\(\le20\)</span> ps pp<span class="math inline">\(^\dagger\)</span>; JTOL above the USB-style mask &amp; Sections <a href="{% endraw %}{{ '/chapters/13-clock-and-data-recovery/' | relative_url }}{% raw %}#sec:bbcdr">13.4</a> and <a href="{% endraw %}{{ '/chapters/13-clock-and-data-recovery/' | relative_url }}{% raw %}#sec:jtol">13.5</a><br />
+Timing budget &amp; total jitter &amp; TJ <span class="math inline">\(\le0.3\)</span> UI (60 ps) at <span class="math inline">\(10^{-12}\)</span>; estimated 58.6 ps<span class="math inline">\(^\dagger\)</span> &amp; <a href="{% endraw %}{{ '/chapters/11-jitter/' | relative_url }}{% raw %}#sec:jitter-budget">Section 11.5</a><br />
+Voltage budget &amp; margin at the sampler &amp; <span class="math inline">\(\ge50\)</span> mV after noise, offset and sensitivity; 76 mV on REF with 2-tap de-emphasis<span class="math inline">\(^\dagger\)</span> &amp; <a href="{% endraw %}{{ '/chapters/04-link-budgets-and-statistical-analysis/' | relative_url }}{% raw %}#sec:noisebudget">Section 4.4</a><br />
+Test &amp; on-chip &amp; PRBS7/31 generator and checker; near-end loopback; SPI registers &amp; <a href="{% endraw %}{{ '/chapters/15-design-and-verification-flow-with-open-tools/' | relative_url }}{% raw %}#sec:labtest">Section 15.5</a><br />
+Power &amp; total, per bit &amp; <span class="math inline">\(\approx\)</span>216 mW, 43 pJ/b<span class="math inline">\(^\dagger\)</span> &amp; <a href="#sec:power-budget">Section 14.3</a><br />
+</p>
+</div>
+<h5 id="the-link-budget-in-one-paragraph">The link budget in one paragraph</h5>
+<p>Both budgets close (<a href="#fig:ch14-budget">Figure 14.3</a>). In voltage, REF with only the 2-tap TX de-emphasis leaves a 131 mV statistical eye at <span class="math inline">\(10^{-12}\)</span>; noise (<span class="math inline">\(2Q\sigma_\mathrm{n}=21\)</span> mV), jitter (3.5 mV), offset (10 mV) and sensitivity (20 mV) leave a <strong>76 mV</strong> margin by linear addition, 89 mV statistically (<a href="{% endraw %}{{ '/chapters/04-link-budgets-and-statistical-analysis/' | relative_url }}{% raw %}#sec:noisebudget">Section 4.4</a>), and the full partition (<span class="math inline">\(-6\)</span> dB preset + 2-tap DFE, 172 mV noise-free PRBS7 eye, <a href="{% endraw %}{{ '/chapters/08-decision-feedback-equalization-and-adaptation/' | relative_url }}{% raw %}#sec:eq-partition">Section 8.5</a>) only adds to it. In time, 40 ps of DJ plus <span class="math inline">\(2Q\times1.32\)</span> ps of RJ give TJ = <strong>58.6 ps = 0.293 UI</strong>, just inside 0.3 UI (<a href="{% endraw %}{{ '/chapters/11-jitter/' | relative_url }}{% raw %}#sec:jitter-budget">Section 11.5</a>). Timing is the tighter budget, and its largest line is the CDR’s own dither.</p>
+<div id="fig:ch14-budget">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch14_budget.svg' | relative_url }}{% raw %}" style="width:753px" alt="Both budgets close, but timing is the tight one." loading="lazy" />
+<figcaption><span class="capnum">Figure 14.3.</span> <strong>Both budgets close, but timing is the tight one.</strong> (a) The 131 mV statistical eye of REF with 2-tap de-emphasis, minus the terms of <a href="{% endraw %}{{ '/chapters/04-link-budgets-and-statistical-analysis/' | relative_url }}{% raw %}#sec:noisebudget">Section 4.4</a>: 76 mV of margin remains, more than half the eye. (b) One 200 ps UI minus the deterministic jitter (linear sum) and <span class="math inline">\(2Q\)</span> times the random jitter (RSS): 141 ps remains, only 1.4 ps more than the 0.7 UI target allows.</figcaption>
+</figure>
+<h2 id="sec:power-budget"><span class="secnum">14.3</span>Power budget</h2>
+<p>A CML gate draws its tail current whatever the data, so a CML-heavy chip has a power budget you can write down before any layout: list the tails, multiply by the supply. CMOS logic burns <span class="math inline">\(\alpha C V^2 f\)</span> instead.</p>
+<div class="tbox tbox-keyeq">
+<div class="tbox-title">
+<p>Key equation · CML power and energy per bit</p>
+</div>
+<div id="eq:ch14-eb">
+
+</div>
+<p><span class="math display">\[P_\mathrm{CML} = V_\mathrm{CC}\sum_i I_{T,i},\qquad P_\mathrm{CMOS}=\alpha\,C_\mathrm{sw}V_\mathrm{DD}^2f,\qquad E_b = \frac{P_\mathrm{total}}{f_\mathrm{b}} \tag{14.2}\]</span></p>
+</div>
+<p><a href="#tab:ch14-power">Table 14.2</a> collects the estimates of Chapters <a href="{% endraw %}{{ '/chapters/09-the-transmitter/' | relative_url }}{% raw %}">9</a>, <a href="{% endraw %}{{ '/chapters/10-receiver-front-end-and-samplers/' | relative_url }}{% raw %}">10</a>, <a href="{% endraw %}{{ '/chapters/12-clock-generation-the-phase-locked-loop/' | relative_url }}{% raw %}#ch:pll">12</a> and <a href="{% endraw %}{{ '/chapters/13-clock-and-data-recovery/' | relative_url }}{% raw %}">13</a> and <a href="#fig:ch14-power">Figure 14.4</a> plots them. Assumptions: 1 Vppd swing (20 mA driver tail); CML gates as in <a href="{% endraw %}{{ '/chapters/09-the-transmitter/' | relative_url }}{% raw %}#we:ch9-hbt">Worked Example 9.3</a>, about 1.2 mA each with emitter followers; CML on 2.5 V, CMOS on 1.2 V; the team’s measured PLL power of 12.73 mW [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-smacd2026pll">11</a>]. The polyphase buffers, the PIs and the sampler clock buffers are separate circuits and are counted separately.</p>
+<div id="tab:ch14-power">
+
+</div>
+<div class="tabularx">
+<p><span>@l &gt;p<span>52mm</span> L r@</span> &amp; <strong>Blocks</strong> &amp; <strong>Assumption</strong> &amp; <strong>mW</strong><br />
+TX &amp; 3-tap CML driver &amp; <span class="math inline">\(I_T\)</span> = 20 mA from 2.5 V (40 mW at 0.8 Vppd) &amp; 50.0<br />
+&amp; CML 4:2, 2:1 (<span class="math inline">\(\times3\)</span>), latches, pre-drivers, clock buffers, <span class="math inline">\(\div2\)</span> &amp; about 17 CML gates of 1.2 mA &amp; 51.0<br />
+&amp; CMOS 16:4 &amp; 1.2 V, 625 MHz &amp; 3.0<br />
+RX &amp; CTLE + buffer, DFE summers and tap DACs &amp; 5 mA + 6 mA &amp; 27.5<br />
+&amp; 4 CML samplers + their clock buffers &amp; 12 mA + 4 mA &amp; 40.0<br />
+&amp; CMOS 1:16 deserializer, offset DACs &amp; 1.2 V; 5 bits <span class="math inline">\(\times4\)</span> &amp; 5.6<br />
+Clocking &amp; PLL (team design) &amp; measured, 130 nm BiCMOS [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-smacd2026pll">11</a>] &amp; 12.7<br />
+&amp; polyphase + I/Q buffers, distribution, 2 PIs &amp; 6 mA + 8 mW (<a href="{% endraw %}{{ '/chapters/13-clock-and-data-recovery/' | relative_url }}{% raw %}#sec:picdr">Section 13.6</a>) &amp; 23.0<br />
+Digital &amp; CDR loop filter, PRBS gen. + checker, SPI &amp; CMOS at 625 and 312.5 MHz &amp; 3.2<br />
+<strong>Total</strong> &amp; &amp; TX 104, RX 73, clocking 36, digital 3 &amp; <strong>216</strong><br />
+</p>
+</div>
+<div id="fig:ch14-power">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch14_power.svg' | relative_url }}{% raw %}" style="width:753px" alt="The CML driver alone is almost a quarter of the chip’s power; CMOS logic is a rounding error." loading="lazy" />
+<figcaption><span class="capnum">Figure 14.4.</span> <strong>The CML driver alone is almost a quarter of the chip’s power; CMOS logic is a rounding error.</strong> (a) The first-cut budget of <a href="#tab:ch14-power">Table 14.2</a>, colored by section. The TX takes 48 %, mostly static CML current; the four samplers are the largest RX item. (b) Energy per bit against the Purdue OpenSerDes, an all-digital 2 Gb/s link in SKY130 at about 438 mW [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-openserdes2021">13</a>], and against Open-SERDES with the voltage-mode (SST) driver of <a href="{% endraw %}{{ '/chapters/09-the-transmitter/' | relative_url }}{% raw %}#sec:cml-driver">Section 9.4</a>.</figcaption>
+</figure>
+<div class="tbox tbox-example">
+<div class="tbox-title">
+<p>Worked Example 14.1 · Energy per bit, and where to save</p>
+</div>
+<p><span id="we:ch14-power"></span> <strong>Total:</strong> the CML tails add up to 77 mA from 2.5 V (192 mW); the PLL, the CMOS blocks and the DACs add 25 mW: <span class="math inline">\(P\approx216\,\mathrm{mW}\)</span>. By <a href="#eq:ch14-eb">Equation (14.2)</a>, <span class="math inline">\(E_b = 216\,\mathrm{mW}/5\,\mathrm{Gb/s} = \mathbf{43.2}\)</span> pJ/b.</p>
+<p><strong>Comparison:</strong> the Purdue OpenSerDes spends <span class="math inline">\(438\,\mathrm{mW}/2\,\mathrm{Gb/s} = 219\)</span> pJ/b [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-openserdes2021">13</a>]. Open-SERDES runs 2.5 times faster for about half the power, five times less energy per bit, because the HBTs do in a few CML gates what an all-digital 130 nm CMOS design must do with oversampling and many more gates.</p>
+<p><strong>Savings, largest first:</strong> (1) the SST driver of <a href="{% endraw %}{{ '/chapters/09-the-transmitter/' | relative_url }}{% raw %}#sec:cml-driver">Section 9.4</a> saves about 44 mW, giving 172 mW and 34.4 pJ/b; (2) a swing of 0.8 Vppd saves 10 mW; (3) each CML gate removed from the clock paths saves about 3 mW. Lowering the CML supply would save the most of all, but every <span class="math inline">\(V_\mathrm{CE}\)</span> must still fit below <span class="math inline">\(\mathrm{BV}_\mathrm{CEO}\)</span> with the swing on top (<a href="{% endraw %}{{ '/chapters/09-the-transmitter/' | relative_url }}{% raw %}#sec:cml-driver">Section 9.4</a>), so this waits for silicon data.</p>
+</div>
+<h2 id="sec:ch14-decisions"><span class="secnum">14.4</span>Design decisions</h2>
+<p><a href="#tab:decisions">Table 14.3</a> lists the ten choices that shape Open-SERDES. Each row says what was chosen, what was rejected and why, and where the argument is made in full. Use it in design reviews: if someone proposes to change a row, the chapter in the last column says which numbers must be recomputed.</p>
+<div id="tab:decisions">
+
+</div>
+<div class="tabularx">
+<p><span>@&gt;p<span>17mm</span> &gt;p<span>22mm</span> &gt;p<span>21mm</span> L &gt;p<span>16mm</span>@</span> <strong>Decision</strong> &amp; <strong>Chosen</strong> &amp; <strong>Alternatives</strong> &amp; <strong>Why</strong> &amp; <strong>Ch.</strong><br />
+Modulation &amp; NRZ &amp; PAM4 &amp; on REF NRZ wins by 2.6 dB; PAM4 pays only above about 24 dB and needs 3 slicers and linear circuits &amp; <a href="{% endraw %}{{ '/chapters/04-link-budgets-and-statistical-analysis/' | relative_url }}{% raw %}#sec:pam4">Section 4.5</a><br />
+Clock rate &amp; half rate, 2.5 GHz &amp; full rate, quarter rate &amp; full rate needs 5 GHz clocks; quarter rate needs 8 calibrated phases &amp; Sections <a href="{% endraw %}{{ '/chapters/09-the-transmitter/' | relative_url }}{% raw %}#sec:serializer">9.2</a> and <a href="{% endraw %}{{ '/chapters/12-clock-generation-the-phase-locked-loop/' | relative_url }}{% raw %}#sec:quadrature">12.5</a><br />
+Fast logic &amp; SiGe HBT CML &amp; CMOS, MOS CML &amp; full switching at 100 mV, gain 5.8 vs. 2; CMOS misses the 8 FO4 rule at 2.5 GHz, slow corner &amp; <a href="{% endraw %}{{ '/chapters/09-the-transmitter/' | relative_url }}{% raw %}#sec:serializer">Section 9.2</a><br />
+TX driver &amp; CML &amp; SST (voltage mode) &amp; resistor-set impedance, constant current, taps leave the impedance alone; SST (<span class="math inline">\(-44\)</span> mW) is the upgrade &amp; <a href="{% endraw %}{{ '/chapters/09-the-transmitter/' | relative_url }}{% raw %}#sec:cml-driver">Section 9.4</a><br />
+TX FFE &amp; 3 taps &amp; 2 taps, 4+ taps &amp; post-tap does most of the work; pre-tap for <span class="math inline">\(p_{-1}\)</span> on longer channels (on REF, 2 taps win: Lab 3) &amp; <a href="{% endraw %}{{ '/chapters/06-transmit-ffe/' | relative_url }}{% raw %}">Chapter 6</a> and <a href="{% endraw %}{{ '/chapters/16-hands-on-labs-with-serdespy/' | relative_url }}{% raw %}#sec:lab3">Section 16.4</a><br />
+RX equalizer &amp; CTLE 0–12 dB + 2-tap DFE &amp; CTLE only, more DFE taps, RX FFE &amp; DFE removes <span class="math inline">\(p_1\)</span>, <span class="math inline">\(p_2\)</span> without noise; CTLE adds gain, adaptivity and reach above 22 dB &amp; <a href="{% endraw %}{{ '/chapters/08-decision-feedback-equalization-and-adaptation/' | relative_url }}{% raw %}#sec:eq-partition">Section 8.5</a><br />
+VCO &amp; LC, 4 nH, <span class="math inline">\(Q\)</span> = 16.8 &amp; ring VCO &amp; 15–30 dB lower phase noise; reuses the team’s proven design &amp; <a href="{% endraw %}{{ '/chapters/12-clock-generation-the-phase-locked-loop/' | relative_url }}{% raw %}#sec:lcvco">Section 12.4</a><br />
+CDR &amp; PI dual loop, digital BB &amp; VCO-based BB, linear (Hogge) &amp; reuses the clean PLL; synthesizable; PVT-independent gain; no false lock &amp; <a href="{% endraw %}{{ '/chapters/13-clock-and-data-recovery/' | relative_url }}{% raw %}#sec:picdr">Section 13.6</a><br />
+Quadrature &amp; 2-stage polyphase + CML &amp; 5 GHz VCO + <span class="math inline">\(\div2\)</span>, quadrature VCO &amp; keeps the 2.5 GHz VCO; <span class="math inline">\(\div2\)</span> needs a 5 GHz VCO with an accurate duty cycle &amp; <a href="{% endraw %}{{ '/chapters/12-clock-generation-the-phase-locked-loop/' | relative_url }}{% raw %}#sec:quadrature">Section 12.5</a><br />
+On-chip test &amp; PRBS7/31 + checker, loopback &amp; external BERT only &amp; scope and PC suffice; <span class="math inline">\(10^{-12}\)</span> in 10 minutes; loopback isolates the chip &amp; <a href="{% endraw %}{{ '/chapters/15-design-and-verification-flow-with-open-tools/' | relative_url }}{% raw %}#sec:labtest">Section 15.5</a><br />
+</p>
+</div>
+<h2 id="sec:ch14-risks"><span class="secnum">14.5</span>Risks and open questions</h2>
+<p>The architecture closes on paper. It can still fail in these places, roughly in order of the cost of a late fix:</p>
+<ul>
+<li><p><strong>ESD and pad capacitance.</strong> ESD diodes can take most of the 0.85 pF budget alone; get the SG13G2 ESD cell capacitance early, and keep the T-coil of <a href="{% endraw %}{{ '/chapters/09-the-transmitter/' | relative_url }}{% raw %}#sec:esd-pad">Section 9.6</a> as the fallback.</p></li>
+<li><p><strong><span class="math inline">\(\mathrm{BV}_\mathrm{CEO}\)</span> headroom.</strong> The off driver transistor sits at 1.25–1.5 V against about 1.6 V; simulate every <span class="math inline">\(V_\mathrm{CE}\)</span> at every corner with the real termination.</p></li>
+<li><p><strong>PLL phase noise.</strong> The quoted <span class="math inline">\(-100.8\)</span> dBc/Hz at 1 MHz is far worse than Leeson predicts (<a href="{% endraw %}{{ '/chapters/12-clock-generation-the-phase-locked-loop/' | relative_url }}{% raw %}#sec:lcvco">Section 12.4</a>); the 1 ps RJ line depends on what it really is.</p></li>
+<li><p><strong>Inductor EM modeling.</strong> The 4 nH tank and any T-coil must be EM-simulated on TopMetal2 (<a href="{% endraw %}{{ '/chapters/15-design-and-verification-flow-with-open-tools/' | relative_url }}{% raw %}#sec:layout-hs">Section 15.4</a>) and matched to the team’s measured <span class="math inline">\(Q\)</span>.</p></li>
+<li><p><strong>Timing loops.</strong> DFE tap 1 uses about 140 of its 200 ps and the CDR dither 19 of its 20 ps; both need post-layout confirmation.</p></li>
+<li><p><strong>Area, pads and the channel.</strong> The PLL is 0.347 mm<span class="math inline">\(^2\)</span> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-smacd2026pll">11</a>], the MIM capacitors add tenths of a mm<span class="math inline">\(^2\)</span>, and the high-speed pads need SMA-grade access; REF must be replaced by measured S-parameters (<a href="{% endraw %}{{ '/chapters/16-hands-on-labs-with-serdespy/' | relative_url }}{% raw %}#sec:ch16-next">Section 16.9</a>).</p></li>
+</ul>
+<div class="tbox tbox-takeaways">
+<div class="tbox-title">
+<p>Key takeaways</p>
+</div>
+<ul>
+<li><p>Open-SERDES is a single-lane transceiver: CMOS at 312.5 MHz in the core, HBT CML at 1.25 GHz and above, joined by level converters, two supplies and two clock domains.</p></li>
+<li><p>One 2.5 GHz LC PLL feeds both sides: the TX divides it; the RX makes four phases and rotates them in 6.25 ps steps under digital CDR control.</p></li>
+<li><p>The block specification table is the contract: every block has a number and a chapter; <span class="math inline">\(^\dagger\)</span> marks estimates awaiting simulation.</p></li>
+<li><p>The voltage budget leaves about 76 mV; the timing budget leaves a 141 ps eye with 1.4 ps to spare.</p></li>
+<li><p>First-cut power is about 216 mW (43 pJ/b), five times less energy per bit than OpenSerDes, dominated by static CML current; the SST driver is the first saving.</p></li>
+</ul>
+</div>
+
+<nav class="prev-next" aria-label="Chapter navigation"><a class="pn-link prev" href="{% endraw %}{{ '/chapters/13-clock-and-data-recovery/' | relative_url }}{% raw %}"><small>← Previous</small>Clock and Data Recovery</a><a class="pn-link next" href="{% endraw %}{{ '/chapters/15-design-and-verification-flow-with-open-tools/' | relative_url }}{% raw %}"><small>Next →</small>Design and Verification Flow with Open Tools</a></nav>
+<p class="page-source">Generated from <a href="https://github.com/bricd-org/serdes-tutorial/blob/main/book/tutorial/chapters/14_arch.tex">book/tutorial/chapters/14_arch.tex</a>. Figure, table and equation numbers match the <a href="{% endraw %}{{ '/assets/pdf/Open-SERDES_Tutorial.pdf' | relative_url }}{% raw %}">PDF edition</a>.</p>
+{% endraw %}

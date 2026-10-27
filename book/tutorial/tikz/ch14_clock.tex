@@ -1,0 +1,67 @@
+% ch14_clock.tex -- fig:ch14-clock : Open-SERDES clocking plan (frequencies and phases)
+\begin{tikzpicture}[x=0.94cm,y=1cm,font=\sffamily\scriptsize,
+  a/.style={blkb,minimum height=7.5mm,minimum width=12mm,font=\sffamily\scriptsize,inner sep=1.5pt},
+  dv/.style={blkb,minimum height=6mm,minimum width=8mm,font=\sffamily\scriptsize,inner sep=1pt},
+  fq/.style={font=\sffamily\scriptsize\bfseries,text=golddk,align=center},
+  ds/.style={font=\sffamily\scriptsize,text=navy,align=center},
+  tp/.style={circle,fill=gold,inner sep=0pt,minimum size=3pt}]
+% ---------------- PLL core
+\node[fq,anchor=east] (ref) at (0.35,0) {REFCLK\\50\,MHz\\(20\,ns)};
+\node[a,minimum width=16mm] (pfd) at (1.4,0) {PFD + CP\\+ loop filter};
+\node[a,minimum width=14mm] (vco) at (3.8,0) {LC VCO\\4\,nH, $Q$ = 16.8};
+\node[dv] (div50) at (2.6,-1.05) {$\div50$};
+\draw[clk] (ref.east) -- (pfd.west);
+\draw[sig,draw=navy] (pfd.east) -- node[ds,above=0pt]{$V_\mathrm{ctrl}$} (vco.west);
+\coordinate (v) at (5.0,0);
+\draw[clk] (vco.east) -- (v);
+\fill[gold] (v) circle (1.6pt);
+\draw[clk] (v) |- (div50.east);
+\draw[clk] (div50.west) -| (pfd.south);
+\node[fq,anchor=west,align=left] at (5.1,0) {2.5\,GHz\\\textcolor{muted}{400\,ps}};
+% ---------------- TX branch (y = 1.45)
+\node[a] (tbuf) at (6.2,1.45) {CML\\buffer};
+\node[dv] (t1) at (8.55,1.45) {$\div2$};
+\node[dv] (t2) at (10.85,1.45) {$\div2$};
+\node[dv] (t3) at (13.15,1.45) {$\div2$};
+\draw[clk] (v) |- (tbuf.west);
+\draw[clk] (tbuf) -- coordinate[pos=0.3] (tp0) node[fq,pos=0.66,above=1pt]{2.5\,GHz} (t1);
+\draw[clk] (t1) -- coordinate[pos=0.3] (tp1) node[fq,pos=0.64,above=1pt]{1.25\,GHz} (t2);
+\draw[clk] (t2) -- coordinate[pos=0.3] (tp2) node[fq,pos=0.64,above=1pt]{625\,MHz} (t3);
+\draw[clk] (t3) -- coordinate[pos=0.3] (tp3) node[fq,pos=0.68,above=1pt]{312.5\,MHz} (15.45,1.45);
+\foreach \p/\t in {tp0/{final 2:1 select\\(both edges: 5\,Gb/s)}, tp1/{4:2 CML,\\CMOS$\to$CML}, tp2/{CMOS 8:4}, tp3/{CMOS 16:8,\\TX word clock}}{
+  \node[tp] at (\p) {}; \draw[clk,-] (\p) -- ++(0,-0.35); \node[ds,anchor=north] at ($(\p)+(0,-0.35)$) {\t};}
+\node[lblb,anchor=west] at (5.55,2.3) {TX: one fixed phase, divided down};
+% ---------------- RX branch (y = -1.75)
+\node[a,minimum width=15mm] (ppf) at (6.1,-1.75) {2-stage PPF\\+ CML buffers};
+\node[a,minimum width=16mm] (pi) at (8.6,-1.75) {PI$_D$: code $k$\\PI$_E$: $k+16$};
+\node[dv] (r1) at (10.75,-1.75) {$\div2$};
+\node[dv] (r2) at (12.4,-1.75) {$\div2$};
+\node[dv] (r3) at (14.05,-1.75) {$\div2$};
+\draw[clk] (v) |- (ppf.west);
+\draw[clk] (ppf) -- coordinate (mq) (pi);
+\node[ds,text=golddk,anchor=north] at ($(mq)+(0,-0.45)$) {I, Q, $\bar{\mathrm{I}}$, $\bar{\mathrm{Q}}$};
+\draw[clk] (pi) -- coordinate[pos=0.25] (rp0) (r1);
+\draw[clk] (r1) -- coordinate[pos=0.25] (rp1) (r2);
+\draw[clk] (r2) -- coordinate[pos=0.25] (rp2) (r3);
+\draw[clk] (r3) -- coordinate[pos=0.25] (rp3) (15.45,-1.75);
+\foreach \p/\t/\dx in {rp0/{\textcolor{golddk}{\bfseries 2.5\,GHz}\\samplers D0 D1\\and E0 E1}/-0.1, rp1/{\textcolor{golddk}{\bfseries 1.25\,GHz}\\CMOS 1:2}/0, rp2/{\textcolor{golddk}{\bfseries 625\,MHz}\\CDR loop\\(8\,UI)}/0, rp3/{\textcolor{golddk}{\bfseries 312.5\,MHz}\\1:16 + FIFO}/0.25}{
+  \node[tp] at (\p) {}; \draw[clk,-] (\p) -- ++(0,-0.35); \node[ds,anchor=north] at ($(\p)+(\dx,-0.35)$) {\t};}
+\node[lblb,anchor=west] at (5.4,-0.85) {RX: four phases, rotated by the CDR};
+% ---------------- timing of the four sampling phases (lower panel)
+\begin{scope}[shift={(4.9,-5.05)},x=0.0185cm]
+  \foreach \c/\n in {0/{bit $n$ (even)},200/{bit $n{+}1$ (odd)},400/{bit $n{+}2$}}{
+    \draw[navy,line width=0.8pt,fill=btint] (\c-100,0.55) -- (\c-75,0.95) -- (\c+75,0.95) -- (\c+100,0.55) -- (\c+75,0.15) -- (\c-75,0.15) -- cycle;
+    \node[ds] at (\c,0.55) {\n};}
+  \draw[navy,line width=0.8pt] (-150,0.95) -- (-125,0.95) -- (-100,0.55) -- (-125,0.15) -- (-150,0.15);
+  \node[ds,anchor=east] at (-160,0.55) {data at sampler};
+  \draw[golddk,line width=0.9pt] (-150,-0.55) -- (0,-0.55) -- (0,-0.05) -- (200,-0.05) -- (200,-0.55) -- (400,-0.55) -- (400,-0.05) -- (550,-0.05);
+  \node[ds,anchor=east] at (-160,-0.3) {clock I (\ang{0})};
+  \draw[golddk,line width=0.9pt,dashed] (-150,-1.35) -- (100,-1.35) -- (100,-0.85) -- (300,-0.85) -- (300,-1.35) -- (550,-1.35);
+  \node[ds,anchor=east] at (-160,-1.1) {clock Q (\ang{90})};
+  \foreach \t/\s in {0/D0,100/E0,200/D1,300/E1,400/D0}{
+    \draw[c4,densely dotted,line width=0.7pt] (\t,1.1) -- (\t,-1.55);
+    \node[font=\sffamily\scriptsize\bfseries,text=c4,anchor=north] at (\t,-1.55) {\s};}
+  \draw[<->,muted,line width=0.5pt] (0,1.25) -- node[ds,above=0pt]{1\,UI = 200\,ps} (200,1.25);
+  \draw[<->,muted,line width=0.5pt] (0,-2.05) -- node[ds,below=0pt]{$T_\mathrm{clk}$ = 400\,ps = 2\,UI = 64 PI steps of 6.25\,ps} (400,-2.05);
+\end{scope}
+\end{tikzpicture}

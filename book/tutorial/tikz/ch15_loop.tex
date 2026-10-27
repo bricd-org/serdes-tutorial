@@ -1,0 +1,14 @@
+% ch15_loop.tex -- fig:ch15-loop : the model <-> circuit loop
+\begin{tikzpicture}[x=1cm,y=1cm,font=\sffamily\scriptsize,
+  bx/.style={blk,minimum width=52mm,minimum height=15mm,font=\sffamily\scriptsize,align=left,text width=49mm,inner sep=3pt},
+  al/.style={font=\sffamily\scriptsize\itshape,text=golddk,align=center}]
+\node[bx,fill=navy,text=white] (m) at (0,2.4) {\textbf{1. System model} (\textcolor{goldlt}{serdespy})\\REF channel, TX FIR, CTLE, DFE,\\noise and jitter $\to$ eye, BER, margins};
+\node[bx,fill=gtint,draw=golddk] (s) at (7.6,2.4) {\textbf{2. Block specs} (\cref{tab:specs})\\swing, FFE range, peaking, $\sign$,\\$V_\mathrm{os}$, $V_\mathrm{sens}$, RJ, DJ, power};
+\node[bx,fill=btint] (c) at (7.6,0) {\textbf{3. Circuit} (\tool{Xschem} + \tool{ngspice})\\\texttt{.ac}, \texttt{.tran}, \texttt{.noise}, transient noise,\\PVT corners, Monte Carlo, extracted RC};
+\node[bx,fill=white] (b) at (0,0) {\textbf{4. Back-annotate the model}\\CTLE \texttt{.ac} $\to$ measured $\Hctle(f)$\\driver step $\to$ TX edge and FIR taps\\sampler MC $\to$ $\sign$, $V_\mathrm{os}$; PLL $\to$ RJ};
+\draw[sig] (m) -- node[al,above=1pt]{derive targets} (s);
+\draw[sig] (s) -- node[al,right=1pt]{design} (c);
+\draw[sig] (c) -- node[al,below=1pt]{simulate, extract} (b);
+\draw[sig] (b) -- node[al,left=1pt]{re-run eye, BER\\(\cref{lst:ch15-ac})} (m);
+\node[font=\sffamily\scriptsize\bfseries,text=c4,align=center] at (3.8,1.2) {repeat at every corner\\until the margin is $>0$};
+\end{tikzpicture}

@@ -1,0 +1,476 @@
+\tikzsetfigurename{09_tx-}
+\chapter{The Transmitter}\label{ch:tx}
+\chapterlead{Sixteen slow bits go in, one fast differential wave comes out: the serializer, the termination, the CML driver with its FFE, and the pad that connects them to the channel.}
+
+\begin{objectives}
+\begin{itemize}
+  \item Explain with the FO4 rule why the last serializer stages and their clocks must be half-rate CML in 130\,nm.
+  \item Design an HBT CML 2:1 multiplexer and read its timing, including duty-cycle errors.
+  \item Compare series, parallel and double termination, and compute what double termination costs.
+  \item Size the \OS{} CML driver (current, swing, power, headroom, $\mathrm{BV}_\mathrm{CEO}$) and compare it with a voltage-mode driver.
+  \item Build the 3-tap FFE as a current-summing driver and choose its tap resolution.
+  \item Budget the pad, ESD and driver capacitance, and decide when a T-coil is worth its area.
+\end{itemize}
+\end{objectives}
+
+%% =====================================================================
+\section{The transmitter at a glance}\label{sec:ch9-overview}
+
+The transmitter takes a 16-bit word from the digital core every \qty{3.2}{\nano\second} (\qty{312.5}{\mega\hertz}) and launches it as a \qty{5}{\giga\bit\per\second} NRZ wave into the \qty{50}{\ohm}-per-side channel (\cref{fig:ch9-arch}). Each 2:1 stage doubles the lane rate and is clocked at \emph{half} its output bit rate. The clocks come from the \qty{2.5}{\giga\hertz} PLL (\cref{ch:pll}) through a chain of $\div2$ dividers. Static CMOS on \qty{1.2}{\volt} handles the slow, wide part. HBT current-mode logic (CML) on the \qty{2.5}{\volt} analog supply handles everything at \qty{1.25}{\giga\hertz} and above. The final 2:1 multiplexer is built three times, so that the driver receives $D_{n+1}$, $D_n$ and $D_{n-1}$ for its three FFE taps.
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[x=0.98cm,y=1cm,font=\sffamily\footnotesize,
+  b/.style={blk,minimum width=11mm,minimum height=10mm,font=\sffamily\footnotesize,inner sep=2pt},
+  bb/.style={b,fill=btint}, bg/.style={b,fill=gtint,draw=golddk}, bn/.style={b,fill=navy,text=white},
+  dv/.style={blk,minimum width=8mm,minimum height=6mm,inner sep=1pt,font=\sffamily\footnotesize},
+  rate/.style={font=\sffamily\scriptsize,text=golddk,align=center},
+  bus/.style={font=\sffamily\scriptsize,text=muted}]
+  \draw[region,fill=gtint!35] (-0.35,-3.05) rectangle (4.75,1.3);
+  \draw[region,fill=bgpale!80] (4.9,-3.05) rectangle (15.95,1.3);
+  \node[lblb,anchor=north west] at (-0.3,1.25) {CMOS, 1.2\,V};
+  \node[lblb,anchor=north west] at (4.95,1.25) {HBT CML, 2.5\,V analog supply};
+  \node[bg] (s1) at (1.35,0) {16:8};
+  \node[bg] (s2) at (3.45,0) {8:4};
+  \node[bb] (cv) at (5.65,0) {CMOS\\$\to$CML};
+  \node[bb] (s3) at (7.75,0) {4:2};
+  \node[bb] (s4) at (9.85,0) {2:1\\$\times$3};
+  \node[bb] (pd) at (11.95,0) {pre-\\drivers};
+  \node[bn,minimum width=14mm] (dr) at (14.0,0) {3-tap\\driver};
+  \node[draw=navy,fill=navy,minimum size=2mm,inner sep=0pt] (pad) at (15.2,0) {};
+  \draw[sig,line width=1.4pt] (-0.25,0) -- (s1.west);
+  \foreach \a/\b/\n/\r in {s1/s2/8/{625\\Mb/s}, s2/cv/4/{1.25\\Gb/s}, cv/s3/4/{1.25\\Gb/s}, s3/s4/2/{2.5\\Gb/s}, s4/pd/3/{5\\Gb/s}, pd/dr/3/{5\\Gb/s}}{
+    \draw[sig] (\a.east) -- (\b.west);
+    \path (\a.east) -- (\b.west) coordinate[pos=0.5] (m);
+    \draw[navy] ($(m)+(-0.08,-0.12)$) -- ($(m)+(0.08,0.12)$);
+    \node[bus,anchor=south] at ($(m)+(0,0.12)$) {\n};
+    \node[rate,anchor=north] at ($(m)+(0,-0.12)$) {\r};
+  }
+  \draw[navy] (0.18,-0.12) -- (0.34,0.12); \node[bus,anchor=south] at (0.26,0.12) {16};
+  \node[rate,anchor=north] at (0.26,-0.12) {312.5\\Mb/s};
+  \draw[navy,line width=0.75pt] (dr.east) -- (pad.west);
+  \draw[sig] (pad.east) -- (15.85,0);
+  \node[rate,anchor=north] at (15.45,-0.15) {5\,Gb/s\\1\,Vppd};
+  \node[bn,minimum width=14mm] (pll) at (14.0,-2.2) {PLL\\2.5\,GHz};
+  \node[dv] (d1) at (8.8,-2.2) {$\div2$};
+  \node[dv] (d2) at (4.25,-2.2) {$\div2$};
+  \node[dv] (d3) at (2.4,-2.2) {$\div2$};
+  \draw[clk] (pll.west) -- (d1.east);
+  \draw[clk] (d1.west) -- (d2.east);
+  \draw[clk] (d2.west) -- (d3.east);
+  \draw[clk] (d3.west) -- (-0.25,-2.2);
+  \foreach \x/\t in {9.85/s4, 7.75/s3, 5.65/cv, 3.45/s2, 1.35/s1}{
+    \node[dot,fill=gold] at (\x,-2.2) {};
+    \draw[clk] (\x,-2.2) -- (\t.south);
+  }
+  \node[rate,anchor=north] at (11.9,-2.3) {2.5\,GHz};
+  \node[rate,anchor=north] at (6.7,-2.3) {1.25\,GHz};
+  \node[rate,anchor=north] at (3.25,-2.55) {625\,MHz};
+  \node[rate,anchor=north,align=left] at (0.75,-2.3) {312.5\,MHz\\to core};
+\end{tikzpicture}
+\caption{\textbf{The \OS{} transmitter is a tree of 2:1 stages, each clocked at half its output rate.} Slash numbers give the number of parallel lanes; gold text gives the rate of each lane or clock. CMOS does 16:4. HBT CML does the 4:2 and the final half-rate 2:1, which is built three times to feed the three FFE taps.}
+\label{fig:ch9-arch}
+\end{figure}
+
+%% =====================================================================
+\section{The serializer}\label{sec:serializer}
+
+\subsection{Clocks, not gates, set the speed}
+
+A 130\,nm CMOS gate switches in tens of picoseconds, yet a 5\,GHz CMOS serializer does not work, because the clock has to be \emph{distributed}. A clock passing through a chain of inverters keeps its shape only if each half-period lets every inverter swing fully. Below about 8 fan-out-of-4 delays per period, the pulses shrink at each stage and vanish~\cite{palermo720ckt}. The \textbf{FO4 delay} $t_\mathrm{FO4}$, the delay of an inverter driving four copies of itself, is the natural unit of CMOS speed.
+
+\begin{keyeq}[The clock-distribution limit]
+\begin{equation}
+  T_\mathrm{clk}\ \ge\ 8\,t_\mathrm{FO4}\qquad\Longrightarrow\qquad \fb \le \frac{n}{8\,t_\mathrm{FO4}},
+  \label{eq:ch9-fo4}
+\end{equation}
+where $n$ is the number of bits per clock period: 1 at full rate, 2 at half rate, 4 at quarter rate.
+\end{keyeq}
+
+\begin{example}{Can CMOS clock the last stage?}\label{we:ch9-fo4}
+\textbf{Given:} $t_\mathrm{FO4}\approx\qty{42}{\pico\second}$ for 1.2\,V \sgx{} CMOS at the typical corner and about \qty{55}{\pico\second} at the slow corner. These are 130\,nm estimates: measure yours in \tool{ngspice} with a chain of inverters, each loaded by four copies of itself.
+
+\textbf{Full rate} needs $T_\mathrm{clk}=\qty{200}{\pico\second}=4.8\,t_\mathrm{FO4}$, and \cref{eq:ch9-fo4} allows only \qty{3.0}{\giga\bit\per\second}. \textbf{Half rate} needs $T_\mathrm{clk}=\qty{400}{\pico\second}$: $9.5\,t_\mathrm{FO4}$ typical but $7.3\,t_\mathrm{FO4}$ slow, a limit of 5.95 and \qty{4.55}{\giga\bit\per\second}. CMOS fails at the slow corner (\cref{fig:ch9-fo4}).
+
+\textbf{Conclusion:} the final 2:1 stage and its clock must be CML, whose speed is set by $\RL\CL$ rather than FO4. Stages at 625\,MHz and below ($T_\mathrm{clk}\ge29\,t_\mathrm{FO4}$) stay in CMOS.
+\end{example}
+
+\begin{figure}[tbp]
+\centering
+\includegraphics{ch09_fo4}
+\caption{\textbf{The 8-FO4 rule rules out full-rate CMOS and leaves half-rate CMOS without margin.} Maximum bit rate from \cref{eq:ch9-fo4} at the typical (42\,ps) and slow (55\,ps) FO4 delays. Only bars above the dashed line can serialize 5\,Gb/s. Quarter and eighth rate pass on paper but need multi-phase clocks and high fan-in output muxes.}
+\label{fig:ch9-fo4}
+\end{figure}
+
+\subsection{The half-rate CML 2:1 multiplexer}
+
+A \textbf{half-rate} multiplexer has no full-rate flip-flop at its output. The clock \emph{itself} is the select: the even bit goes out while CK is high and the odd bit while CK is low~\cite{palermo720ckt}. \Cref{fig:ch9-mux}(a) shows the HBT version, a stacked (series-gated) CML gate. The clock pair $Q_5/Q_6$ steers the tail current $I_T$ into one of the two data pairs, and the selected pair steers it into one of the shared loads $\RL$. The deselected pair carries no current. The data bases sit at CML levels and the clock bases one $V_\mathrm{BE}$ lower, through emitter followers, so every device keeps its $V_\mathrm{CE}$ near 0.8\,V on the 2.5\,V supply.
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[american, scale=0.64, transform shape, font=\small]
+  \node[lblb,anchor=west,font=\sffamily\normalsize\bfseries] at (-2.2,4.0) {(a)};
+  \draw (-0.3,4.0) -- (9.1,4.0); \draw (4.4,4.0) node[vcc]{$V_\mathrm{CC}=\qty{2.5}{\volt}$};
+  \draw (0,0) node[npn](Q1){};
+  \draw (2.4,0) node[npn,xscale=-1](Q2){};
+  \draw (6.4,0) node[npn](Q3){};
+  \draw (8.8,0) node[npn,xscale=-1](Q4){};
+  \draw (1.2,-2.3) node[npn](Q5){};
+  \draw (7.6,-2.3) node[npn,xscale=-1](Q6){};
+  \foreach \q/\t/\dx in {Q1/Q_1/0.5,Q2/Q_2/-0.5,Q3/Q_3/0.5,Q4/Q_4/-0.5,Q5/Q_5/0.5,Q6/Q_6/-0.5}{\node[text=navy] at ($(\q.center)+(\dx,0.05)$) {$\t$};}
+  \draw (0,2.0) to[R, l=$\RL$] (0,4.0);
+  \draw (8.8,1.4) to[R, l_=$\RL$] (8.8,4.0);
+  \draw (Q1.C) -- (0,2.0) to[short,*-] (6.4,2.0) -- (Q3.C);
+  \draw (Q2.C) -- (2.4,1.4) to[short,*-] (6.25,1.4) arc[start angle=180,end angle=0,radius=0.15] -- (8.8,1.4) node[circ]{} -- (Q4.C);
+  \draw (0,2.0) to[short,-o] (-1.0,2.0) node[left]{$\mathrm{out}^-$};
+  \draw (8.8,1.4) to[short,-o] (9.8,1.4) node[right]{$\mathrm{out}^+$};
+  \draw (Q1.B) to[short,-o] ++(-0.45,0) node[left]{$D_\mathrm{e}^+$};
+  \draw (Q2.B) to[short,-o] ++(0.45,0) node[above]{$D_\mathrm{e}^-$};
+  \draw (Q3.B) to[short,-o] ++(-0.45,0) node[above]{$D_\mathrm{o}^+$};
+  \draw (Q4.B) to[short,-o] ++(0.45,0) node[right]{$D_\mathrm{o}^-$};
+  \draw (Q1.E) -- (0,-1.15) -- (2.4,-1.15) -- (Q2.E);
+  \draw (1.2,-1.15) node[circ]{} -- (Q5.C);
+  \draw (Q3.E) -- (6.4,-1.15) -- (8.8,-1.15) -- (Q4.E);
+  \draw (7.6,-1.15) node[circ]{} -- (Q6.C);
+  \draw (Q5.B) to[short,-o] ++(-0.45,0) node[left]{$\mathrm{CK}^+$};
+  \draw (Q6.B) to[short,-o] ++(0.45,0) node[right]{$\mathrm{CK}^-$};
+  \draw (Q5.E) -- (1.2,-3.45) -- (7.6,-3.45) -- (Q6.E);
+  \draw (4.4,-3.45) node[circ]{} to[I, l=$I_T$] (4.4,-5.0) node[ground]{};
+\end{tikzpicture}
+
+\vspace{2mm}
+\begin{tikzpicture}[x=4.2mm,y=4.0mm,font=\sffamily\footnotesize,timing/slope=0.12,
+  timing/xunit=4.2mm,timing/yunit=4.0mm,timing/d/text/.style={font=\sffamily\scriptsize}]
+  \node[lblb,font=\sffamily\small\bfseries] at (-11.5,0.6) {(b)};
+  \foreach \s in {0,4,8,12}{
+    \fill[gtint] (\s,-2.75) rectangle (\s+2,-1.45);
+    \fill[btint] (\s+2,-4.35) rectangle (\s+4,-3.05);
+  }
+  \foreach \s in {0,2,...,16}{\draw[gridc] (\s,0.25) -- (\s,-6.0);}
+  \timing[draw=navy,line width=0.7pt] at (0,-1.0) {2H2L2H2L2H2L2H2L};
+  \timing[draw=golddk,line width=0.7pt] at (0,-2.6) {3D{$e_0$}4D{$e_1$}4D{$e_2$}4D{$e_3$}1D{}};
+  \timing[draw=bblue,line width=0.7pt] at (0,-4.2) {1D{}4D{$o_0$}4D{$o_1$}4D{$o_2$}3D{$o_3$}};
+  \timing[draw=navy,line width=0.9pt] at (0,-5.8) {2D{$e_0$}2D{$o_0$}2D{$e_1$}2D{$o_1$}2D{$e_2$}2D{$o_2$}2D{$e_3$}2D{$o_3$}};
+  \node[anchor=east,text=navy] at (-0.4,-0.5) {CK (2.5\,GHz)};
+  \node[anchor=east,text=golddk] at (-0.4,-2.1) {$D_\mathrm{e}$ (2.5\,Gb/s)};
+  \node[anchor=east,text=bblue] at (-0.4,-3.7) {$D_\mathrm{o}$ (after latch)};
+  \node[anchor=east,text=navy] at (-0.4,-5.3) {OUT (5\,Gb/s)};
+  \draw[<->,muted] (4,0.55) -- node[above,lbl]{1\,UI} (6,0.55);
+  \draw[<->,muted] (0,-6.4) -- node[below,lbl]{$T_\mathrm{clk}=2\,\UI=\qty{400}{\pico\second}$} (4,-6.4);
+  \node[lbl,anchor=west,align=left] at (16.4,-2.1) {shaded: selected\\(must be stable)};
+  \node[lbl,anchor=west,align=left] at (16.4,-3.7) {changes mid\\CK-high};
+\end{tikzpicture}
+\caption{\textbf{A half-rate CML multiplexer: the clock picks which data pair gets the current.} (a) When $\mathrm{CK}^+$ is high, $Q_5$ conducts and the even pair $Q_1/Q_2$ drives the loads; when it is low, the odd pair $Q_3/Q_4$ does. The hop marks a crossing without connection. (b) Each input changes only while it is deselected. The even data is selected in the gold windows and changes half a UI after CK falls; an extra latch delays the odd data by half a period so it changes while CK is high. The output UIs follow the clock halves exactly.}
+\label{fig:ch9-mux}
+\end{figure}
+
+\begin{keyeq}[CML gate design]
+\begin{equation}
+  \Delta V = I_T\RL,\qquad \tau=\RL\CL,\qquad P = V_\mathrm{CC}I_T=\frac{V_\mathrm{CC}\,\Delta V\,\CL}{\tau}.
+  \label{eq:ch9-cml}
+\end{equation}
+Choose the swing $\Delta V$ first, then $\RL$ from the speed target $\tau$, then $I_T$.
+\end{keyeq}
+
+\paragraph{Glitch-free timing and retiming} The select must never switch while a selected input changes. In \cref{fig:ch9-mux}(b) each input changes in the middle of the half where it is deselected: the even data directly, the odd data after one extra latch. Data from the 4:2 stage, which runs on the divided 1.25\,GHz clock, is retimed by latches on the 2.5\,GHz clock, and transitions placed mid-way through the deselected half leave $\pm\qty{100}{\pico\second}$ for divider delay, wiring, setup and hold (\qty{800}{\pico\second} at the CMOS-to-CML boundary). A skew beyond the window does not degrade the eye gracefully: it shifts the bits by one position.
+
+\paragraph{Duty cycle becomes UI width} A clock with duty cycle $D$ produces even UIs of $2D\Tb$ and odd UIs of $2(1-D)\Tb$. A 45\,\% duty cycle gives alternating 180 and 220\,ps bits, \qty{20}{\pico\second} of deterministic jitter before the channel acts (\cref{ch:jitter}). Restore the clock to 50\,\% with a CML buffer chain or a duty-cycle corrector right before the mux.
+
+\begin{insight}
+Build the last two serializer stages and the 2.5\,GHz clock buffers in HBT CML, and everything from 625\,MHz down in 1.2\,V CMOS. Half rate removes the 5\,GHz clock but turns duty cycle into UI width: budget for a duty-cycle corrector, and simulate every clock-domain boundary at all corners.
+\end{insight}
+
+%% =====================================================================
+\section{Termination}\label{sec:termination}
+
+A wave that meets an impedance step reflects (\cref{sec:reflections}). A link can absorb it at the source, at the load or at both ends (\cref{fig:ch9-term}).
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[american, scale=0.72, transform shape, font=\small]
+  \tikzset{res/.style={anchor=north,font=\sffamily\small,text=navy,align=center}}
+  % (a) series
+  \node[lblb,anchor=west] at (-0.6,1.1) {(a) series};
+  \draw (0,-1.0) node[ground]{} to[V, l=$V_s$] (0,0) to[R, l={$R_S=\Zo$}] (1.8,0) to[TL, l=$\Zo$] (3.9,0) to[short,-o] (4.4,0);
+  \node[lbl,anchor=west] at (4.45,0) {high-Z};
+  \node[res] at (2.4,-1.4) {RX sees $V_s$\\echo absorbed at TX};
+  % (b) parallel
+  \begin{scope}[xshift=6.6cm]
+  \node[lblb,anchor=west] at (-0.6,1.1) {(b) parallel};
+  \draw (0,-1.0) node[ground]{} to[I, l=$I$] (0,0) -- (0.6,0) to[TL, l=$\Zo$] (2.7,0) -- (3.3,0) to[R, l={$R_T=\Zo$}] (3.3,-1.0) node[ground]{};
+  \node[res] at (1.8,-1.4) {RX sees $I\Zo$\\echo returns ($\Gamma_S=+1$)};
+  \end{scope}
+  % (c) double
+  \begin{scope}[xshift=12.6cm]
+  \node[lblb,anchor=west] at (-0.6,1.1) {(c) double};
+  \draw (0,-1.0) node[ground]{} to[I, l=$I$] (0,0) -- (1.0,0) to[R, l={$R_S$}, *-] (1.0,-1.0) node[ground]{};
+  \draw (1.0,0) -- (1.5,0) to[TL, l=$\Zo$] (3.5,0) -- (4.0,0) to[R, l={$R_T$}] (4.0,-1.0) node[ground]{};
+  \node[res] at (2.0,-1.4) {RX sees $I\Zo/2$\\echoes absorbed at both ends};
+  \end{scope}
+\end{tikzpicture}
+\caption{\textbf{Three ways to terminate a line.} (a) Series (source) termination launches $V_s/2$, which the open end doubles; it needs a high-impedance RX, which pad capacitance prevents at 5\,Gb/s. (b) Parallel (load) termination: an echo from an imperfect RX returns to the high-impedance source, reflects again and arrives a round trip later as ISI. (c) Double termination ($R_S=R_T=\Zo$) costs half the swing but absorbs echoes at both ends. It is the \OS{} CML driver; a voltage-mode driver with $R_T$ is also doubly terminated.}
+\label{fig:ch9-term}
+\end{figure}
+
+\paragraph{Why double termination wins} Nothing is perfectly matched: pad capacitance, resistor tolerance and the package always reflect a few percent of the wave at the RX. With $R_S=\Zo$ that echo dies at the TX ($\Gamma_S=0$) instead of returning as a delayed copy of the bit, which would be ISI at a fixed, unknown cursor where no FFE or DFE tap is waiting. The price is swing: half the source current heats the transmitter's own termination.
+
+\paragraph{On-chip resistors in \sgx{}} Place both terminations on the die at the pad. An off-chip resistor leaves bond wire, package and pad as an unterminated stub; on chip, the package becomes part of the line and only the lumped pad capacitance remains (\cref{sec:esd-pad}). Use an unsilicided poly resistor: linear and well matched, but spreading by roughly $\pm20$--30\,\% over process and temperature (check the PDK~\cite{ihppdk}). $\pm20\,\%$ still gives 19\,dB of return loss (\cref{sec:reflections}). A 3-bit trim in 6--8\,\% steps is still worth adding, because a CML driver's swing is proportional to its load resistance. Size each TX resistor for the full 20\,mA.
+
+%% =====================================================================
+\section{The CML output driver}\label{sec:cml-driver}
+
+The \OS{} driver (\cref{fig:ch9-cml}) is \cref{fig:ch9-term}(c) in differential form. An HBT pair $Q_1/Q_2$ steers the tail current $I_T$ into one of two loads $\RL=\Zo=\qty{50}{\ohm}$, which are also the TX back-terminations. The RX terminates the line in \qty{100}{\ohm} differential.
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[american, scale=0.7, transform shape, font=\small]
+  \draw (-0.4,3.8) -- (3.0,3.8); \draw (1.3,3.8) node[vcc]{$V_\mathrm{CC}=\qty{2.5}{\volt}$};
+  \draw (0,0) node[npn](Q1){};
+  \draw (2.6,0) node[npn,xscale=-1](Q2){};
+  \node[text=navy] at ($(Q1.center)+(0.5,0.05)$) {$Q_1$};
+  \node[text=navy] at ($(Q2.center)+(-0.5,0.05)$) {$Q_2$};
+  \draw (Q1.C) -- (0,1.5) to[R, l=$\RL$, *-] (0,3.8);
+  \draw (Q2.C) -- (2.6,1.0) to[R, l_=$\RL$, *-] (2.6,3.8);
+  \draw (0,1.5) -- (2.45,1.5) arc[start angle=180,end angle=0,radius=0.15] -- (4.4,1.5) -- (4.4,2.6) -- (5.2,2.6);
+  \draw (2.6,1.0) -- (4.8,1.0) -- (4.8,0.0) -- (5.2,0.0);
+  \node[text=navy,anchor=south] at (1.2,1.5) {$\mathrm{out}^-$};
+  \node[text=navy,anchor=south] at (3.7,1.0) {$\mathrm{out}^+$};
+  \node[draw=navy,fill=navy,minimum size=2mm,inner sep=0pt] at (5.2,2.6) {};
+  \node[draw=navy,fill=navy,minimum size=2mm,inner sep=0pt] at (5.2,0.0) {};
+  \node[lbl,anchor=south] at (5.2,2.75) {pads};
+  \draw (5.3,2.6) to[TL, l=$\Zo$] (8.5,2.6) -- (9.5,2.6);
+  \draw (5.3,0.0) to[TL, l_=$\Zo$] (8.5,0.0) -- (9.5,0.0);
+  \draw (9.5,2.6) to[R, l_=\qty{50}{\ohm}] (9.5,1.3) to[R, l_=\qty{50}{\ohm}] (9.5,0.0);
+  \draw (9.5,1.3) to[short,*-] (10.5,1.3) to[C, l=$C_\mathrm{CM}$] (10.5,0.2) node[ground]{};
+  \node[lblb] at (9.5,3.25) {RX};
+  \node[lbl] at (6.9,3.4) {channel (REF)};
+  \draw (Q1.B) to[short,-o] ++(-0.5,0) node[left]{$D^+$};
+  \draw (Q2.B) to[short,-o] ++(0.5,0) node[below]{$D^-$};
+  \draw (Q1.E) -- (0,-1.15) -- (2.6,-1.15) -- (Q2.E);
+  \draw (1.3,-2.3) node[npn](Q3){};
+  \node[text=navy] at ($(Q3.center)+(0.5,0.05)$) {$Q_3$};
+  \draw (1.3,-1.15) node[circ]{} -- (Q3.C);
+  \draw (Q3.B) to[short,-o] ++(-0.5,0) node[left]{$V_\mathrm{B}$};
+  \draw (Q3.E) to[R, l=$R_E$] (1.3,-4.3) node[ground]{};
+  \draw[-{Stealth[length=2mm]},c4,line width=0.8pt] (1.75,-1.3) -- (1.75,-1.75) node[right,text=c4,font=\small] {$I_T$};
+\end{tikzpicture}
+\caption{\textbf{The \OS{} CML driver.} $Q_1/Q_2$ steer the tail current $I_T$, set by $Q_3$, $R_E$ and $V_\mathrm{B}$, into one of the \qty{50}{\ohm} loads $\RL$. The loads double as TX back-terminations, so each output sees $\RL\parallel\Zo=\qty{25}{\ohm}$. The RX terminates in 2$\times$\qty{50}{\ohm} with an AC-grounded center tap. 20\,mA gives 1\,Vppd.}
+\label{fig:ch9-cml}
+\end{figure}
+
+\paragraph{Swing} When $Q_2$ takes all of $I_T$, the current divides between its own load and the line, so each output sees $\RL\parallel\Zo=\qty{25}{\ohm}$ and swings $I_T\cdot\qty{25}{\ohm}$ single-ended. The differential voltage flips sign with the data, so $V_{d,\mathrm{pp}}=2\cdot I_T\cdot\qty{25}{\ohm}=I_T\Zo$.
+
+\paragraph{Voltage mode} The alternative is a \textbf{voltage-mode} (VM) driver, usually a source-series-terminated (SST) one: each output is an inverter-like switch pair in series with a resistor, $R_\mathrm{on}+R_S=\Zo$~\cite{p4:wong2004}. Its current flows only around the loop of TX resistor, line, \qty{100}{\ohm} RX termination, line and TX resistor: $4\Zo=\qty{200}{\ohm}$. A supply $V_s$ drives $I=V_s/4\Zo$, the RX sees $\pm V_s/2$, and $V_{d,\mathrm{pp}}=V_s$.
+
+\begin{keyeq}[Driver current for a differential swing $V_{d,\mathrm{pp}}$]
+\begin{equation}
+  I_\mathrm{CML}=\frac{V_{d,\mathrm{pp}}}{\Zo},\qquad
+  I_\mathrm{VM,\,SE\ term.}=\frac{V_{d,\mathrm{pp}}}{2\Zo},\qquad
+  I_\mathrm{VM,\,diff.\ term.}=\frac{V_{d,\mathrm{pp}}}{4\Zo}.
+  \label{eq:ch9-drv}
+\end{equation}
+CML needs four times the current of VM into a differential termination: half of it flows in its own termination, and it never reverses through the line.
+\end{keyeq}
+
+\begin{example}{CML versus SST at \OS{} swings}\label{we:ch9-drv}
+\textbf{CML:} 800\,mVppd needs $I_T=0.8/50=\qty{16}{\milli\ampere}$, \qty{40}{\milli\watt} from 2.5\,V. At 1\,Vppd (the model value, $A=\qty{0.5}{\volt}$) it needs \qty{20}{\milli\ampere} and \textbf{\qty{50}{\milli\watt}}. The output common mode sits $I_T\times\qty{25}{\ohm}=\qty{0.5}{\volt}$ below $V_\mathrm{CC}$, and each output moves between 1.75 and 2.25\,V.
+
+\textbf{SST:} 800\,mVppd needs $I=0.8/200=\qty{4}{\milli\ampere}$ from $V_s\approx\qty{0.8}{\volt}$: \qty{3.2}{\milli\watt}, or \qty{4.8}{\milli\watt} through a regulator from 1.2\,V (6\,mW at 1\,Vppd). Keep $R_\mathrm{on}\le\qty{10}{\ohm}$, so a $\pm30\,\%$ spread moves the output impedance by only $\pm\qty{3}{\ohm}$.
+
+\textbf{Verdict:} SST saves about 44\,mW (\cref{fig:ch9-current}), but \OS{} uses CML: a passive-resistor impedance with no calibration loop, constant supply current, FFE taps that leave the impedance untouched, and fast HBTs instead of CMOS pre-drivers passing 200\,ps (4.8\,FO4) pulses. SST is the power upgrade for a second tape-out.
+\end{example}
+
+\begin{figure}[tbp]
+\centering
+\includegraphics{ch09_current}
+\caption{\textbf{A CML driver pays four times the current of a voltage-mode driver for the same swing.} (a) Supply current from \cref{eq:ch9-drv}; the band is the \OS{} range of 0.8--1.0\,Vppd. With 6\,dB of de-emphasis an SST driver draws 1.38 times more on average, because its main and post slices fight; CML draws the same current at every FFE setting. (b) Output-stage power: 40--50\,mW for HBT CML from 2.5\,V versus about 6\,mW for SST.}
+\label{fig:ch9-current}
+\end{figure}
+
+\paragraph{Why HBTs} A CML stage must switch its tail current fully. A bipolar pair splits it as $\Delta I=I_T\tanh(V_\mathrm{id}/2V_T)$, so $V_\mathrm{id}\approx4V_T\approx\qty{100}{\milli\volt}$ steers 96\,\% of it at any current. A MOS pair needs $\sqrt2\,V_\mathrm{OD}$, typically 200--300\,mV. The HBT's $\gm/I_C=1/V_T=\qty{38.7}{\per\volt}$ is also several times a MOSFET's.
+
+\begin{example}{HBT versus MOS in a 2.5\,GHz CML stage}\label{we:ch9-hbt}
+\textbf{Given:} a mux or pre-driver stage loaded by $\CL=\qty{40}{\femto\farad}$, with $f_\mathrm{3dB}\ge\qty{7.5}{\giga\hertz}$, so $\tau\le\qty{21}{\pico\second}$. By \cref{eq:ch9-cml}, $\RL=\qty{500}{\ohm}$ gives $\tau=\qty{20}{\pico\second}$; $\Delta V=\qty{300}{\milli\volt}$ then needs $I_T=\qty{0.6}{\milli\ampere}$, or \qty{1.5}{\milli\watt} from 2.5\,V.
+
+\textbf{HBT pair:} at the crossing each device carries 0.3\,mA, $\gm=\qty{11.6}{\milli\siemens}$, and the gain is $\gm\RL=\Delta V/2V_T=\mathbf{5.8}$. Full switching needs about 104\,mV.
+
+\textbf{MOS pair} at the same current with $V_\mathrm{OD}=\qty{150}{\milli\volt}$: $\gm=\qty{4}{\milli\siemens}$, gain $\Delta V/V_\mathrm{OD}=\mathbf{2}$, full switching at 212\,mV. More gain needs wider devices, more $\CL$ and more current. A chain of HBT stages can therefore run at smaller swing, with fewer and smaller stages.
+\end{example}
+
+\begin{pitfall}[Headroom and the $\mathrm{BV}_\mathrm{CEO}$ limit]
+\sgx{} HBTs break down at about $\mathrm{BV}_\mathrm{CEO}\approx\qty{1.6}{\volt}$ (check the PDK). On 2.5\,V the \emph{off} driver transistor is at risk: its collector sits at the high output level. Stack up \cref{we:ch9-drv} at 1\,Vppd. Outputs: 2.25\,V (off) and 1.75\,V (on). Bases high: 1.9\,V, from a pre-driver whose common-mode resistor pulls its outputs 0.6\,V below $V_\mathrm{CC}$. Common emitter: $1.9-V_\mathrm{BE}\approx\qty{1.0}{\volt}$. So $V_\mathrm{CE}=0.75$\,V on and 1.25\,V off, with 1.0\,V left for the tail. The 0.35\,V margin is eaten by $V_\mathrm{CC}+5\,\%$, overshoot and reflections; an emitter-follower pre-driver with bases near 1.6\,V would leave the off device at 1.5\,V nominal. Check every $V_\mathrm{CE}$ at every corner \emph{with the real RX termination attached}: a far end terminated to ground moves the output common mode.
+\end{pitfall}
+
+%% =====================================================================
+\section{The FFE inside the driver}\label{sec:ffe-impl}
+
+\Cref{ch:txffe} chose the taps; here we build them. Put one differential pair per tap on the same pair of loads, drive each with its own copy of the data, and set each tail current to the tap weight (\cref{fig:ch9-ffe}). The loads add the currents, which forms the FIR sum of \cref{sec:ffe-taps}. Negative side taps cost nothing: swapping a pair's base inputs inverts its contribution.
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[american, scale=0.66, transform shape, font=\small]
+  \draw (-0.6,4.3) -- (11.8,4.3); \draw (5.6,4.3) node[vcc]{$V_\mathrm{CC}=\qty{2.5}{\volt}$};
+  \foreach \x/\n in {0/a,4.8/c,9.6/e}{\draw (\x,0) node[npn](Q\n){};}
+  \foreach \x/\n in {1.6/b,6.4/d,11.2/f}{\draw (\x,0) node[npn,xscale=-1](Q\n){};}
+  \foreach \n/\t/\dx in {a/Q_5/0.5,b/Q_6/-0.5,c/Q_1/0.5,d/Q_2/-0.5,e/Q_3/0.5,f/Q_4/-0.5}{\node[text=navy] at ($(Q\n.center)+(\dx,0.05)$) {$\t$};}
+  \draw (0,2.2) to[R, l=$\RL$] (0,4.3);
+  \draw (11.2,1.5) to[R, l_=$\RL$] (11.2,4.3);
+  \draw (Qa.C) -- (0,2.2) to[short,*-] (9.6,2.2) -- (Qe.C);
+  \draw (4.8,2.2) node[circ]{} -- (Qc.C);
+  \draw (Qb.C) -- (1.6,1.5) to[short,*-] (4.65,1.5) arc[start angle=180,end angle=0,radius=0.15] -- (9.45,1.5) arc[start angle=180,end angle=0,radius=0.15] -- (11.2,1.5) node[circ]{} -- (Qf.C);
+  \draw (6.4,1.5) node[circ]{} -- (Qd.C);
+  \draw (0,2.2) to[short,-o] (-1.1,2.2) node[left]{$\mathrm{out}^-$};
+  \draw (11.2,1.5) to[short,-o] (12.3,1.5) node[right]{$\mathrm{out}^+$};
+  \draw (Qa.B) to[short,-o] ++(-0.45,0) node[left]{$D_{n+1}^-$};
+  \draw (Qb.B) to[short,-o] ++(0.45,0) node[below=1pt]{$D_{n+1}^+$};
+  \draw (Qc.B) to[short,-o] ++(-0.45,0) node[above=1pt]{$D_{n}^+$};
+  \draw (Qd.B) to[short,-o] ++(0.45,0) node[below=1pt]{$D_{n}^-$};
+  \draw (Qe.B) to[short,-o] ++(-0.45,0) node[above=1pt]{$D_{n-1}^-$};
+  \draw (Qf.B) to[short,-o] ++(0.45,0) node[right]{$D_{n-1}^+$};
+  \foreach \l/\r/\c/\lab in {a/b/0.8/{I_{-1}=|c_{-1}|I_T}, c/d/5.6/{I_0=c_0I_T}, e/f/10.4/{I_1=|c_1|I_T}}{
+    \draw (Q\l.E) -- ($(Q\l.E)+(0,-0.4)$) -| (Q\r.E);
+    \draw (\c,-1.17) node[circ]{} to[I, l={$\lab$}] (\c,-2.9) node[ground]{};
+  }
+  \node[lblb,font=\sffamily\normalsize\bfseries] at (0.8,-3.75) {pre tap};
+  \node[lblb,font=\sffamily\normalsize\bfseries] at (5.6,-3.75) {main tap};
+  \node[lblb,font=\sffamily\normalsize\bfseries] at (10.4,-3.75) {post tap};
+\end{tikzpicture}
+\caption{\textbf{A 3-tap FFE is three CML pairs on one pair of loads.} Each pair is driven by its own copy of the data and steers a tail current proportional to its tap weight. The pre and post pairs have their inputs swapped, which gives $c_{-1},c_1<0$. The tails are current DACs sharing one reference, with $I_{-1}+I_0+I_1=I_T=\qty{20}{\milli\ampere}$, so the supply current never changes. Hops mark crossings without connection.}
+\label{fig:ch9-ffe}
+\end{figure}
+
+\begin{keyeq}[Current-summing FFE]
+\begin{equation}
+  v_{d}[n]=\frac{\Zo}{2}\,I_T\sum_{k=-1}^{1}c_k\,a_{n-k},\qquad c_k=\pm\frac{I_k}{I_T},\qquad \sum_k\lvert c_k\rvert=\frac{I_{-1}+I_0+I_1}{I_T}=1 .
+  \label{eq:ch9-ffe}
+\end{equation}
+The peak-swing constraint of \cref{sec:ffe-taps} holds by construction: the taps are slices of one fixed tail current.
+\end{keyeq}
+
+\paragraph{Making the delayed copies} No 5\,GHz clock is needed. Call the half-rate streams $E_m$ (bit $2m$) and $O_m$ (bit $2m+1$). The main mux selects $(E_m,O_m)$. The post-tap mux must emit bit $2m-1$ in the even slot and bit $2m$ in the odd slot, so it selects $(O_{m-1},E_m)$; the pre-tap mux selects $(O_m,E_{m+1})$. About four extra latches on the 2.5\,GHz clock keep these inputs glitch-free (\cref{fig:ch9-mux}b).
+
+\begin{example}{Tap currents for the $-6$\,dB preset}\label{we:ch9-ffe}
+The de-emphasis of a 2-tap setting is $\mathrm{DE}=20\log_{10}\big[(\lvert c_0\rvert+\lvert c_1\rvert)/(\lvert c_0\rvert-\lvert c_1\rvert)\big]$, the ratio of transition to repeated-bit swing. For 6\,dB that ratio is 2; with $\lvert c_0\rvert+\lvert c_1\rvert=1$, $\lvert c_0\rvert-\lvert c_1\rvert=0.5$, so $c_0=0.75$ and $c_1=-0.25$, the PCIe preset of \cref{sec:ffe-taps}. (The often-quoted $c_1=-1/3$ is the 9.5\,dB setting.)
+
+\textbf{At 1\,Vppd} ($I_T=\qty{20}{\milli\ampere}$): $I_0=\qty{15}{\milli\ampere}$, $I_1=\qty{5}{\milli\ampere}$. Transition bits swing $(15+5)\,\mathrm{mA}\times\Zo=\qty{1.0}{\Vppd}$, repeated bits $(15-5)\times50=\qty{0.5}{\Vppd}$. The supply stays at \qty{50}{\milli\watt} for every preset.
+
+\textbf{Resolution:} build $I_T$ from 32 cells of \qty{0.625}{\milli\ampere} (5 bits). The $-6$\,dB preset is exact (24 and 8 cells). The $-3.5$\,dB preset needs 5.3 cells; five give $c_1=-0.156$ and 3.2\,dB, which is harmless because the eye is flat near its optimum (\cref{ch:txffe}). A pre-tap moves in steps of $1/32=0.031$.
+\end{example}
+
+\paragraph{The resolution trade-off} Range and resolution cost capacitance, not current. Sizing each pair for its largest current (20\,mA main, 8\,mA for $\lvert c_1\rvert\le0.4$, 3\,mA for $\lvert c_{-1}\rvert\le0.15$) loads the output with 31\,mA worth of collectors, 1.55 times a plain driver. A \textbf{segmented} driver instead uses 32 identical cells, each with a selector in its pre-driver that assigns it to the pre, main or post stream: the output always sees exactly 20\,mA of devices, and the cost moves into the pre-drivers.
+
+\begin{insight}
+Build the FFE from current. The tail current is fixed, so power and output impedance do not depend on the preset, and $\sum\lvert c_k\rvert=1$ holds automatically. Five bits are enough. Spend layout effort on matching the three tap paths: a 10\,ps skew between $D_n$ and $D_{n-1}$ moves the de-emphasis edge by 0.05\,UI.
+\end{insight}
+
+%% =====================================================================
+\section{Pad, ESD and bandwidth}\label{sec:esd-pad}
+
+At the pad the driver's collector capacitance, the termination's parasitics, the ESD diodes and the bond pad hang on one node (\cref{fig:ch9-tcoil}a). That node sees $\RL\parallel\Zo=\qty{25}{\ohm}$, so the total capacitance $C_p$ makes a pole at
+\begin{equation}
+  f_\mathrm{3dB}=\frac{1}{2\pi(\Zo/2)C_p}=\frac{1}{\pi\Zo C_p}
+  \label{eq:ch9-padpole}
+\end{equation}
+and spoils the return loss (\cref{sec:reflections}). The \textbf{ESD} protection cannot be left out: dual diodes from the pad to both rails, plus a supply clamp, steer an electrostatic discharge away from the HBT and thin-oxide junctions. Diodes rated for a few kilovolts of human-body-model discharge are large and often dominate $C_p$.
+
+\begin{example}{The \OS{} pad capacitance budget}\label{we:ch9-pad}
+\textbf{Illustrative values} (extract the real ones from layout): bond pad \qty{80}{\femto\farad}, ESD diodes \qty{250}{\femto\farad}, driver collectors and termination parasitics \qty{300}{\femto\farad}: $C_p=\qty{0.63}{\pico\farad}$.
+
+\textbf{Return loss at $\fN$:} $x=\omega\Zo C_p=0.495$ and $\lvert S_{11}\rvert=x/\sqrt{4+x^2}=0.24$, or \textbf{$-12.4$\,dB}. It passes a 10\,dB target ($C_p\le\qty{0.85}{\pico\farad}$) but fails 15\,dB ($C_p\le\qty{0.46}{\pico\farad}$). \textbf{Bandwidth:} $f_\mathrm{3dB}=1/(\pi\cdot50\cdot0.63\,\mathrm{pF})=\qty{10.1}{\giga\hertz}$, four times $\fN$.
+
+\textbf{System check:} the REF model assumes \qty{300}{\femto\farad} per pad. With \code{c\_pad=0.63e-12} in \code{channel()} the loss at $\fN$ grows from 17.4 to \qty{17.8}{\deci\bel} and the FFE-only PDA eye drops from 62 to 54\,mV. Always rerun the system model with the extracted pad capacitance.
+\end{example}
+
+\begin{figure}[tbp]
+\centering
+\includegraphics{ch09_pad}
+\caption{\textbf{Pad capacitance costs return loss long before it costs bandwidth.} (a) Return loss at 2.5\,GHz versus total pad capacitance. The 0.63\,pF example passes the 10\,dB line (limit 0.85\,pF). A T-coil with \qty{3}{\ohm} of loss per coil holds $\lvert S_{11}\rvert$ near $-25$\,dB. (b) Response at the capacitive node of a doubly terminated pad: the T-coil moves the 0.63\,pF pole from 10.1 to 14.3\,GHz with a maximally flat response.}
+\label{fig:ch9-pad}
+\end{figure}
+
+\paragraph{The T-coil} When the budget does not close, a \textbf{bridged T-coil} separates the capacitance from the line~\cite{p4:galal2003,p4:kossel2008}. Two coupled inductors connect pad and termination, the capacitive load hangs on their center tap, and a small $C_B$ bridges the ends (\cref{fig:ch9-tcoil}b). With the right values the inductive and capacitive impedances cancel exactly~\cite{p4:razavi2015tcoil}.
+
+\begin{keyeq}[Bridged T-coil, $\zeta=1/\sqrt2$]
+\begin{equation}
+  L_1=L_2=\frac{R^2C}{2(1+k)},\quad k=\frac{4\zeta^2-1}{4\zeta^2+1}=\frac13,\quad C_B=\frac{C}{16\zeta^2}=\frac{C}{8},\quad Z_\mathrm{in}=R\ \text{at all }f.
+  \label{eq:ch9-tcoil}
+\end{equation}
+The total inductance is $L_1+L_2+2M=R^2C$. From a current source, the capacitor node then has 2.83 times the bandwidth of the plain $RC$. In a doubly terminated pad the plain pole already sees $R/2$, so the bandwidth gain is $\sqrt2$; the bigger gain is in return loss.
+\end{keyeq}
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[american, scale=0.78, transform shape, font=\small]
+  \node[lblb,anchor=west,font=\sffamily\small\bfseries] at (-1.0,2.4) {(a) everything on one node};
+  \draw (-0.6,1.6) -- (3.6,1.6) node[right]{$V_\mathrm{CC}$};
+  \draw (-0.6,-1.6) -- (3.6,-1.6);
+  \draw (-0.6,0) -- (3.4,0);
+  \draw (-0.2,0) to[I, l_=$i_\mathrm{drv}$, *-] (-0.2,-1.6);
+  \draw (0.8,0) to[R, l=$\RL$, *-] (0.8,1.6);
+  \draw (1.8,0) to[D*, l_=$D_1$, *-] (1.8,1.6);
+  \draw (1.8,-1.6) to[D*, l_=$D_2$] (1.8,0);
+  \draw (2.8,0) to[C, l=$C_\mathrm{pad}$, *-] (2.8,-1.6);
+  \node[draw=navy,fill=navy,minimum size=2mm,inner sep=0pt] at (3.4,0) {};
+  \draw (3.5,0) to[TL, l=$\Zo$] (5.6,0);
+  \begin{scope}[xshift=8.6cm]
+  \node[lblb,anchor=west,font=\sffamily\small\bfseries] at (-1.0,2.4) {(b) bridged T-coil};
+  \draw (-0.7,0) node[left]{T} to[short,o-] (0,0) to[L, l=$L_2$, *-*] (2.2,0) to[L, l=$L_1$, -*] (4.4,0);
+  \node[text=navy] at (4.55,-0.3) {P};
+  \draw (0,0) to[R, l=$\RL$] (0,-1.6) node[ground]{};
+  \draw (0,0) -- (0,2.0) to[C, l=$C_B$] (4.4,2.0) -- (4.4,0);
+  \node[text=navy] at (2.2,0.35) {X};
+  \draw (1.7,0) -- (1.7,-0.35) to[C, l_=$C$] (1.7,-1.6) node[ground]{};
+  \draw (2.7,0) -- (2.7,-0.35) to[I, l=$i_\mathrm{drv}$] (2.7,-1.6) node[ground]{};
+  \draw[<->,muted,line width=0.6pt] (1.0,0.85) to[bend left=30] (3.4,0.85);
+  \node[text=navy] at (2.2,1.45) {$k=\tfrac13$};
+  \node[draw=navy,fill=navy,minimum size=2mm,inner sep=0pt] at (4.6,0) {};
+  \draw (4.7,0) to[TL, l=$\Zo$] (6.6,0);
+  \end{scope}
+\end{tikzpicture}
+\caption{\textbf{A T-coil hides the pad capacitance from the line.} (a) Without it, driver, termination $\RL$, ESD diodes $D_1/D_2$ and pad share one node, and $C_p=C_\mathrm{drv}+C_\mathrm{ESD}+C_\mathrm{pad}$ sets both the pole of \cref{eq:ch9-padpole} and the return loss. (b) With a bridged T-coil the load $C=C_\mathrm{ESD}+C_\mathrm{drv}$ sits at the center tap X, and $\RL$ (returned to $V_\mathrm{CC}$) at the far end T. The line at P sees $\RL$ at all frequencies.}
+\label{fig:ch9-tcoil}
+\end{figure}
+
+For $C=\qty{0.63}{\pico\farad}$ and $R=\qty{50}{\ohm}$, \cref{eq:ch9-tcoil} gives $L_1=L_2=\qty{0.59}{\nano\henry}$, $M=\qty{0.20}{\nano\henry}$ and $C_B=\qty{79}{\femto\farad}$ (often the coil's own inter-winding capacitance): better than 25\,dB of return loss at $\fN$ with \qty{3}{\ohm} per coil (\cref{fig:ch9-pad}). In \sgx{} it fits in roughly $\qty{60}{\micro\meter}\times\qty{60}{\micro\meter}$ on the thick top metals; take $k$, $C_B$ and self-resonance from EM simulation (\cref{sec:layout-hs}).
+
+\begin{insight}[Design rule of thumb]
+At 5\,Gb/s a T-coil is \emph{optional}. Below about 0.85\,pF the pad already meets 10\,dB of return loss at $\fN$, and its pole at 7.5\,GHz or above costs little ISI. Add a T-coil if ESD and driver push $C_p$ toward 1\,pF, or if the return-loss target is tighter (15\,dB at $\fN$). Either way, give the system model your extracted $C_p$, not the 300\,fF of REF.
+\end{insight}
+
+%% =====================================================================
+\section{TX design checklist}\label{sec:ch9-checklist}
+
+\Cref{tab:ch9-check} collects the checks and a first-cut power estimate of about 100\,mW, half of it in the driver (\cref{sec:power-budget} adds the RX and clocking).
+
+\begin{table}[tbp]
+\centering
+\caption{\textbf{TX checklist and first-cut power at 1\,Vppd.} CML gates as in \cref{we:ch9-hbt}, about 1.2\,mA each with emitter followers. Confirm every line in \tool{ngspice}.}
+\label{tab:ch9-check}
+\small
+\begin{tabularx}{\linewidth}{@{}l L r@{}}
+\toprule
+Block & Check before layout & Power\\
+\midrule
+3-tap CML driver & $I_T=20$\,mA (16\,mA at 0.8\,Vppd); every $V_\mathrm{CE}<\mathrm{BV}_\mathrm{CEO}$ at $V_\mathrm{CC}+5\,\%$ & 50\,mW\\
+Pre-drivers ($\times3$) & full switching ($\ge4V_T$); tap paths matched to a few ps & 10\,mW\\
+2:1 muxes ($\times3$), latches ($\times4$) & glitch-free phases; 5-bit tap DACs, $-3.5$/$-6$\,dB presets & 21\,mW\\
+Clock buffers, 4:2, $\div2$ & duty cycle $50\pm1\,\%$; clock-to-data windows at all corners & 20\,mW\\
+CMOS 16:4 (1.2\,V) & FO4 measured; timing closed at 625\,MHz & 3\,mW\\
+Termination and pad & poly $\RL$ for 20\,mA; $C_p<0.85$\,pF or T-coil; RL $\ge10$\,dB at $\fN$ & --\\
+\midrule
+\textbf{Total TX} & 41\,mA from 2.5\,V, 2.5\,mA from 1.2\,V & \textbf{$\approx$104\,mW}\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{takeaways}
+\begin{itemize}
+  \item A CMOS clock tree needs 8\,FO4 per period. With $t_\mathrm{FO4}\approx42$\,ps (55\,ps slow), full-rate CMOS cannot reach 5\,Gb/s and half-rate CMOS fails at the slow corner, so the final 2:1 mux and its 2.5\,GHz clock are HBT CML.
+  \item A half-rate mux uses the clock as the select. Each input must change only while deselected, and the clock duty cycle becomes the UI width.
+  \item Double termination absorbs echoes at both ends for half the swing. A CML driver needs $I_T=V_{d,\mathrm{pp}}/\Zo$: 20\,mA and 50\,mW from 2.5\,V at 1\,Vppd, four times a voltage-mode driver.
+  \item HBTs switch fully with about 100\,mV: a 2.5\,GHz CML stage has a gain of 5.8 against 2 for MOS at the same current.
+  \item The off driver transistor sees the highest $V_\mathrm{CE}$; keep it below $\mathrm{BV}_\mathrm{CEO}\approx1.6$\,V at every corner.
+  \item The FFE is current-steering pairs on shared loads; $-6$\,dB is $c_0=0.75$, $c_1=-0.25$ (15 and 5\,mA). Five bits are enough.
+  \item Keep $C_p$ below 0.85\,pF for 10\,dB return loss at $\fN$; a T-coil ($k=1/3$, $C_B=C/8$) absorbs larger loads.
+\end{itemize}
+\end{takeaways}

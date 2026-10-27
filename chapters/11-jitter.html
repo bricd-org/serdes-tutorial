@@ -1,0 +1,211 @@
+---
+title: "11. Jitter"
+parent: "Part IV · Clocking"
+nav_order: 11
+permalink: "/chapters/11-jitter/"
+---
+{% raw %}
+<h1 id="ch:jitter"><span class="chapnum">Chapter 11</span>Jitter</h1>
+<div class="chapterlead">
+<p>A 200 ps bit leaves no room for sloppy clock edges: this chapter turns “the clock wobbles” into numbers you can budget, measure and design against.</p>
+</div>
+<div class="tbox tbox-objectives">
+<div class="tbox-title">
+<p>In this chapter you will learn</p>
+</div>
+<ul>
+<li><p>Define time-interval error, period jitter and cycle-to-cycle jitter, and say which one a serial link cares about.</p></li>
+<li><p>Convert voltage noise into timing jitter through the slew rate.</p></li>
+<li><p>Separate random from deterministic jitter and combine them with the dual-Dirac model, <span class="math inline">\(\mathrm{TJ} = \mathrm{DJ}_{\delta\delta} + 2Q\,\sigma_\mathrm{RJ}\)</span>.</p></li>
+<li><p>Integrate a phase-noise spectrum <span class="math inline">\(\mathcal{L}(f)\)</span> into rms jitter with the right limits.</p></li>
+<li><p>Build the Open-SERDES jitter budget and check it against 0.3 UI at <span class="math inline">\(10^{-12}\)</span>.</p></li>
+</ul>
+</div>
+<h2 id="sec:jitter-defs"><span class="secnum">11.1</span>What jitter is</h2>
+<p>An ideal clock has edges at exactly <span class="math inline">\(t = nT\)</span>; a real clock has edges at <span class="math inline">\(t_n\)</span>, each a little early or late. <strong>Jitter</strong> is that deviation. Three measures are in common use (<a href="#fig:ch11-tie">Figure 11.1</a>a): <span id="eq:ch11-tie"></span><span class="math display">\[\mathrm{TIE}_n = t_n - nT, \qquad
+  J_{\mathrm{per},n} = T_n - T = \mathrm{TIE}_{n+1} - \mathrm{TIE}_n, \qquad
+  J_{\mathrm{cc},n} = T_{n+1} - T_n , \tag{11.1}\]</span> where <span class="math inline">\(T_n = t_{n+1} - t_n\)</span> is the <span class="math inline">\(n\)</span>-th period. The <strong>time-interval error</strong> (TIE, also called absolute jitter) is the one a link cares about, because the sampler compares a clock edge with a data edge, not one clock period with the next. <strong>Period jitter</strong> and <strong>cycle-to-cycle jitter</strong> matter for digital setup and hold, but they can be tiny while the TIE is large, because small period errors add up.</p>
+<div id="fig:ch11-tie">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch11_tie.png' | relative_url }}{% raw %}" style="width:753px" alt="Jitter is measured against an ideal clock, and it accumulates." loading="lazy" />
+<figcaption><span class="capnum">Figure 11.1.</span> <strong>Jitter is measured against an ideal clock, and it accumulates.</strong> (a) TIE<span class="math inline">\(_n\)</span> is the offset of each edge from <span class="math inline">\(nT\)</span>; the period <span class="math inline">\(T_n\)</span> differs from <span class="math inline">\(T\)</span> by the period jitter. (b) TIE of the team’s 2.5 GHz LC VCO (73 fs rms period jitter, <a href="#we:ch11-pn">Worked Example 11.2</a>). Free-running, the TIE is a random walk that grows as <span class="math inline">\(\kappa\sqrt{t}\)</span> and passes 10 ps within 8 s. Locked in a 3 MHz PLL it stays near 0.6 ps rms.</figcaption>
+</figure>
+<p><a href="#fig:ch11-tie">Figure 11.1</a>(b) shows the difference. A free-running oscillator has no memory of where its edges should be, so its TIE random-walks. A phase-locked loop (<a href="{% endraw %}{{ '/chapters/12-clock-generation-the-phase-locked-loop/' | relative_url }}{% raw %}#ch:pll">Chapter 12</a>) compares its edges with a clean reference and keeps the TIE bounded. The CDR (<a href="{% endraw %}{{ '/chapters/13-clock-and-data-recovery/' | relative_url }}{% raw %}">Chapter 13</a>) does the same for the data: it tracks slow jitter and leaves only the fast part to close the eye.</p>
+<div class="tbox tbox-example">
+<div class="tbox-title">
+<p>Worked Example 11.1 · Three jitter numbers from six edges</p>
+</div>
+<p><span id="we:ch11-defs"></span> <strong>Given:</strong> <span class="math inline">\(T = 400\)</span> ps and edges at 0, 401.0, 799.5, 1201.5, 1600.0 and 2000.8 ps. <strong>TIE:</strong> 0, 1.0, <span class="math inline">\(-0.5\)</span>, 1.5, 0, 0.8 ps: 2.0 ps peak-to-peak, 0.69 ps rms about the mean. <strong>Period jitter:</strong> 1.0, <span class="math inline">\(-1.5\)</span>, 2.0, <span class="math inline">\(-1.5\)</span>, 0.8 ps: 1.42 ps rms. <strong>Cycle-to-cycle:</strong> <span class="math inline">\(-2.5\)</span>, 3.5, <span class="math inline">\(-3.5\)</span>, 2.3 ps: 3.0 ps rms.</p>
+<p><strong>Lesson:</strong> <span class="math inline">\(J_\mathrm{cc} &gt; J_\mathrm{per} &gt; \mathrm{TIE}\)</span> is typical of a locked clock: a bounded TIE means a long period is usually followed by a short one. Always say which measure a number is.</p>
+</div>
+<h5 id="voltage-noise-becomes-timing-noise">Voltage noise becomes timing noise</h5>
+<p>Near a threshold crossing, a noise voltage moves the crossing by the noise divided by the slope of the edge (<a href="#fig:ch11-slope">Figure 11.2</a>a):</p>
+<div class="tbox tbox-keyeq">
+<div class="tbox-title">
+<p>Key equation · Noise-to-jitter conversion</p>
+</div>
+<div id="eq:ch11-slope">
+
+</div>
+<p><span class="math display">\[\sigma_t = \frac{\sigma_v}{\mathrm{SR}}, \qquad \mathrm{SR} = \left.\frac{dv}{dt}\right|_\text{crossing} = 2\pi f_0 A_c \ \text{for a sine of amplitude } A_c . \tag{11.2}\]</span></p>
+</div>
+<p>A 2.5 GHz CML clock of 0.4 V<span class="math inline">\(_\mathrm{ppd}\)</span> (<span class="math inline">\(A_c = 0.2\)</span> V) slews at 3.14 mV/ps, so 1 mV rms of noise costs 0.32 ps rms. Attenuated to 0.1 V<span class="math inline">\(_\mathrm{ppd}\)</span> by a lossy route, the same clock turns the same noise into 1.27 ps (<a href="#fig:ch11-slope">Figure 11.2</a>b). The relation also works in reverse: <a href="{% endraw %}{{ '/chapters/02-signals-systems-and-the-language-of-links/' | relative_url }}{% raw %}#sec:eye">Section 2.6</a> showed that sampling a few picoseconds off the eye centre costs millivolts.</p>
+<div id="fig:ch11-slope">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch11_slope.svg' | relative_url }}{% raw %}" style="width:753px" alt="Timing jitter is voltage noise divided by the slope." loading="lazy" />
+<figcaption><span class="capnum">Figure 11.2.</span> <strong>Timing jitter is voltage noise divided by the slope.</strong> (a) Noisy edges (noise exaggerated to 30 mV rms) cross the threshold at spread-out times, with spread <span class="math inline">\(\sigma_v/\mathrm{SR}\)</span>. (b) <span class="math inline">\(\sigma_t\)</span> against slew rate. Attenuating a 2.5 GHz clock from 0.4 to 0.1 V<span class="math inline">\(_\mathrm{ppd}\)</span> makes it four times more jitter-sensitive.</figcaption>
+</figure>
+<div class="tbox tbox-insight">
+<div class="tbox-title">
+<p>Design rule of thumb</p>
+</div>
+<p>Keep clock swings large and edges fast wherever a clock is buffered or sampled: halving the slew rate doubles the jitter from the same noise. This is why Open-SERDES restores its 2.5 GHz clocks with CML limiting buffers (<a href="{% endraw %}{{ '/chapters/12-clock-generation-the-phase-locked-loop/' | relative_url }}{% raw %}#sec:quadrature">Section 12.5</a>) instead of letting them decay along long wires.</p>
+</div>
+<h2 id="sec:ch11-rjdj"><span class="secnum">11.2</span>Random and deterministic jitter</h2>
+<p>Jitter sources fall into two families with different statistics (<a href="#fig:ch11-tree">Figure 11.3</a>). <strong>Random jitter</strong> (RJ) comes from thermal, shot and flicker noise. It is Gaussian and <em>unbounded</em>, and is described by its rms <span class="math inline">\(\sigma_\mathrm{RJ}\)</span>; a peak-to-peak RJ is meaningless without a BER. <strong>Deterministic jitter</strong> (DJ) is <em>bounded</em>. Its parts are <strong>data-dependent jitter</strong> (DDJ), mainly ISI from the channel plus <strong>duty-cycle distortion</strong> (DCD); <strong>periodic jitter</strong> (PJ) from supply tones, reference spurs or spread-spectrum clocking, whose arcsine PDF piles up at its peaks; and <strong>bounded uncorrelated jitter</strong> (BUJ), mostly crosstalk.</p>
+<div id="fig:ch11-tree">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/tikz/11_jitter-0.svg' | relative_url }}{% raw %}" style="width:659px" alt="Jitter splits into an unbounded random part and bounded deterministic parts." loading="lazy" />
+<div class="figcredit">
+<p>After Palermo [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-palermo720clk">34</a>].</p>
+</div>
+<figcaption><span class="capnum">Figure 11.3.</span> <strong>Jitter splits into an unbounded random part and bounded deterministic parts.</strong> Each leaf shows the shape of its probability density. RJ terms are independent Gaussians and add in root-sum-square; DJ terms are added linearly, which is conservative.</figcaption>
+</figure>
+<p>When independent sources act on the same edge, the PDF of the total is the <em>convolution</em> of their PDFs, the rule <a href="{% endraw %}{{ '/chapters/04-link-budgets-and-statistical-analysis/' | relative_url }}{% raw %}#sec:stateye">Section 4.3</a> used for ISI. In <a href="#fig:ch11-hist">Figure 11.4</a> a 2 ps RJ convolved with 20 ps<span class="math inline">\(_\mathrm{pp}\)</span> of DJ gives a total whose centre looks like the DJ and whose tails are Gaussian.</p>
+<div id="fig:ch11-hist">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch11_hist.svg' | relative_url }}{% raw %}" style="width:753px" alt="Total jitter is the convolution of RJ and DJ, and its tails are Gaussian" loading="lazy" />
+<figcaption><span class="capnum">Figure 11.4.</span> <strong>Total jitter is the convolution of RJ and DJ, and its tails are Gaussian</strong> (log scale). (a) RJ never ends. (b) DJ, here DCD of <span class="math inline">\(\pm4\)</span> ps convolved with ISI from three earlier bits, stops at <span class="math inline">\(\pm10\)</span> ps. (c) The convolution. The dashed dual-Dirac model is fitted to the tails between BER <span class="math inline">\(10^{-4}\)</span> and <span class="math inline">\(10^{-12}\)</span>; it ignores the centre and returns DJ<span class="math inline">\(_{\delta\delta}\)</span> = 15.6 ps, less than the true 20 ps peak-to-peak.</figcaption>
+</figure>
+<h2 id="sec:dualdirac"><span class="secnum">11.3</span>The dual-Dirac model and total jitter</h2>
+<p>At <span class="math inline">\(10^{-12}\)</span> only the far tails of the jitter PDF matter. The <strong>dual-Dirac model</strong> keeps the tails and simplifies the rest: all DJ becomes two impulses at <span class="math inline">\(\pm\mathrm{DJ}_{\delta\delta}/2\)</span>, each carrying a Gaussian of rms <span class="math inline">\(\sigma_\mathrm{RJ}\)</span> (<a href="#fig:ch11-bathtub">Figure 11.5</a>a).</p>
+<div class="tbox tbox-derivation">
+<div class="tbox-title">
+<p>From two Gaussians to total jitter</p>
+</div>
+<p>Measure the sampling instant <span class="math inline">\(x\)</span> from the left crossing of the eye. Far out, only the Gaussian centred at <span class="math inline">\(+\mathrm{DJ}_{\delta\delta}/2\)</span> can put an edge later than <span class="math inline">\(x\)</span>, with probability <span class="math inline">\(Q\big((x - \mathrm{DJ}_{\delta\delta}/2)/\sigma_\mathrm{RJ}\big)\)</span>. Adding the mirror image from the right crossing gives the <strong>bathtub curve</strong> <span class="math display">\[\mathrm{BER}(x) \approx Q\!\left(\frac{x - \mathrm{DJ}_{\delta\delta}/2}{\sigma_\mathrm{RJ}}\right) + Q\!\left(\frac{\mathrm{UI}- x - \mathrm{DJ}_{\delta\delta}/2}{\sigma_\mathrm{RJ}}\right).\]</span> The target BER is reached where <span class="math inline">\(x - \mathrm{DJ}_{\delta\delta}/2 = Q_\mathrm{BER}\,\sigma_\mathrm{RJ}\)</span> on each side, with <span class="math inline">\(Q(Q_\mathrm{BER}) = \mathrm{BER}\)</span>. The eye that remains is <span class="math inline">\(\mathrm{UI}- \mathrm{DJ}_{\delta\delta} - 2Q_\mathrm{BER}\,\sigma_\mathrm{RJ}\)</span>; the rest is <em>total jitter</em>.</p>
+</div>
+<div class="tbox tbox-keyeq">
+<div class="tbox-title">
+<p>Key equation · Total jitter at a BER (dual-Dirac)</p>
+</div>
+<div id="eq:tj">
+
+</div>
+<p><span class="math display">\[\mathrm{TJ}(\mathrm{BER}) = \mathrm{DJ}_{\delta\delta} + 2\,Q_\mathrm{BER}\,\sigma_\mathrm{RJ},
+  \qquad \text{eye width} = 1\,\mathrm{UI}- \mathrm{TJ}, \qquad 2Q_{10^{-12}} = 14.07 . \tag{11.3}\]</span></p>
+</div>
+<p><span class="math inline">\(Q_\mathrm{BER}\)</span> is the Gaussian quantile of <a href="{% endraw %}{{ '/chapters/02-signals-systems-and-the-language-of-links/' | relative_url }}{% raw %}#eq:ber-q">Equation (2.9)</a>: 6.00 at <span class="math inline">\(10^{-9}\)</span>, 7.03 at <span class="math inline">\(10^{-12}\)</span>, 7.94 at <span class="math inline">\(10^{-15}\)</span>. The derivation drops two factors of <span class="math inline">\(\tfrac12\)</span> (each impulse carries half the edges, and about half the bits have no transition); keeping them gives <span class="math inline">\(Q = 6.84\)</span>. The industry keeps 7.03, which is 3% conservative, and so do we.</p>
+<div id="fig:ch11-bathtub">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch11_bathtub.svg' | relative_url }}{% raw %}" style="width:753px" alt="The bathtub: BER against sampling instant." loading="lazy" />
+<figcaption><span class="capnum">Figure 11.5.</span> <strong>The bathtub: BER against sampling instant.</strong> (a) Dual-Dirac PDFs at both crossings of the eye, DJ<span class="math inline">\(_{\delta\delta}\)</span> = 40 ps and <span class="math inline">\(\sigma_\mathrm{RJ}\)</span> = 3 ps. (b) Bathtubs for DJ<span class="math inline">\(_{\delta\delta}\)</span> = 40 ps. At <span class="math inline">\(10^{-12}\)</span> the eye is 0.71 UI wide with the Open-SERDES budget (<span class="math inline">\(\sigma = 1.32\)</span> ps), 0.59 UI with 3 ps and 0.45 UI with 5 ps.</figcaption>
+</figure>
+<p><a href="#fig:ch11-bathtub">Figure 11.5</a>(b) completes the teaser of <a href="{% endraw %}{{ '/chapters/02-signals-systems-and-the-language-of-links/' | relative_url }}{% raw %}#sec:ber">Section 2.7</a>. Note the factor 14.07 in <a href="#eq:tj">Equation (11.3)</a>: a picosecond of RJ costs 14 ps of eye at <span class="math inline">\(10^{-12}\)</span>, while a picosecond of DJ costs one.</p>
+<div class="tbox tbox-pitfall">
+<div class="tbox-title">
+<p>DJ<span class="math inline">\(_{\delta\delta}\)</span> is not DJ<span class="math inline">\(_\mathrm{pp}\)</span></p>
+</div>
+<p>DJ<span class="math inline">\(_{\delta\delta}\)</span> is a model parameter fitted to the tails. It is smaller than the true peak-to-peak DJ unless the DJ is two-valued, such as pure DCD (15.6 versus 20 ps in <a href="#fig:ch11-hist">Figure 11.4</a>). Use DJ<span class="math inline">\(_{\delta\delta}\)</span> in <a href="#eq:tj">Equation (11.3)</a>, and fit the tails at deep BER (Q of 4 or more): a fit at <span class="math inline">\(10^{-3}\)</span> overestimates <span class="math inline">\(\sigma_\mathrm{RJ}\)</span>. A direct TJ(<span class="math inline">\(10^{-12}\)</span>) measurement needs about <span class="math inline">\(10^{13}\)</span> bits, half an hour per point at 5 Gb/s.</p>
+</div>
+<h2 id="sec:phasenoise"><span class="secnum">11.4</span>From phase noise to jitter</h2>
+<p>Oscillators are specified in the frequency domain. The <strong>single-sideband phase noise</strong> <span class="math inline">\(\mathcal{L}(f)\)</span> is the noise power in 1 Hz at offset <span class="math inline">\(f\)</span> from the carrier, relative to the carrier, in dBc/Hz. For small noise it is half the one-sided phase spectrum <span class="math inline">\(S_\phi(f)\)</span>, so integrating it gives the phase variance, and dividing by <span class="math inline">\(2\pi f_0\)</span> turns phase into time:</p>
+<div class="tbox tbox-keyeq">
+<div class="tbox-title">
+<p>Key equation · Phase noise to rms jitter</p>
+</div>
+<div id="eq:ch11-pn2j">
+
+</div>
+<p><span class="math display">\[\sigma_t = \frac{\sigma_\phi}{2\pi f_0} = \frac{1}{2\pi f_0}\sqrt{2\!\int_{f_1}^{f_2}\!\mathcal{L}(f)\,df}, \qquad \mathcal{L} \text{ in linear units } \big(10^{\mathcal{L}_\mathrm{dB}/10}\big). \tag{11.4}\]</span></p>
+</div>
+<p>The limits matter. The upper limit <span class="math inline">\(f_2\)</span> is about <span class="math inline">\(f_0/2\)</span>. The lower limit <span class="math inline">\(f_1\)</span> is set by what the receiver tracks: jitter far below the CDR bandwidth moves the clock and the data together and does not close the eye. Integrating from 10 kHz gives the clock’s absolute jitter; integrating from the CDR bandwidth gives the jitter that reaches the sampler (<a href="#fig:ch11-pn">Figure 11.6</a>).</p>
+<div id="fig:ch11-pn">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch11_pn.svg' | relative_url }}{% raw %}" style="width:753px" alt="Integrating phase noise gives jitter, and the lower limit decides the answer." loading="lazy" />
+<figcaption><span class="capnum">Figure 11.6.</span> <strong>Integrating phase noise gives jitter, and the lower limit decides the answer.</strong> (a) The free-running VCO (<span class="math inline">\(-100.8\)</span> dBc/Hz at 1 MHz), the PLL’s in-band floor, and the output of the 3 MHz PLL of <a href="{% endraw %}{{ '/chapters/12-clock-generation-the-phase-locked-loop/' | relative_url }}{% raw %}#sec:pll-loop">Section 12.2</a>: the output follows the floor inside the loop bandwidth and the VCO outside it. (b) rms jitter from <span class="math inline">\(f_1\)</span> to 1.25 GHz. The PLL output has 1.01 ps from 10 kHz, but only 0.61 ps above a 4 MHz CDR bandwidth. The free-running VCO diverges as <span class="math inline">\(f_1 \to 0\)</span>, which is the random walk of <a href="#fig:ch11-tie">Figure 11.1</a>(b).</figcaption>
+</figure>
+<h5 id="a-useful-shortcut">A useful shortcut</h5>
+<p>In the <span class="math inline">\(1/f^2\)</span> region of an LC oscillator, <span class="math inline">\(\mathcal{L}(f) = \mathcal{L}(\Delta f)(\Delta f/f)^2\)</span>, and the free-running TIE grows as <span class="math inline">\(\kappa\sqrt{t}\)</span> with <span class="math inline">\(\kappa = (\Delta f/f_0)\sqrt{\mathcal{L}(\Delta f)}\)</span>. If a loop tracks this noise below a corner <span class="math inline">\(f_c\)</span> (a first-order high-pass), <a href="#eq:ch11-pn2j">Equation (11.4)</a> integrates in closed form to <span id="eq:ch11-kappa"></span><span class="math display">\[\sigma_t \approx \kappa/\sqrt{4\pi f_c} , \tag{11.5}\]</span> so jitter falls only as <span class="math inline">\(1/\sqrt{f_c}\)</span>: quadrupling the bandwidth halves the VCO’s share.</p>
+<div class="tbox tbox-example">
+<div class="tbox-title">
+<p>Worked Example 11.2 · Phase noise of the team PLL as jitter</p>
+</div>
+<p><span id="we:ch11-pn"></span> <strong>Given:</strong> <span class="math inline">\(\mathcal{L} = -100.8\)</span> dBc/Hz at 1 MHz [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-smacd2026pll">11</a>], applied at <span class="math inline">\(f_0 = 2.5\)</span> GHz. <strong>Assumptions</strong> (they change the answer): the value describes the <em>free-running</em> VCO with a <span class="math inline">\(1/f^2\)</span> slope and a 100 kHz <span class="math inline">\(1/f^3\)</span> corner; the in-band floor from reference and charge pump is <span class="math inline">\(-110\)</span> dBc/Hz; the PLL is the 3 MHz design of <a href="{% endraw %}{{ '/chapters/12-clock-generation-the-phase-locked-loop/' | relative_url }}{% raw %}#sec:pll-loop">Section 12.2</a>.</p>
+<p><strong>Free-running:</strong> <span class="math inline">\(\mathcal{L} = 8.3\times10^{-11}\)</span>, so <span class="math inline">\(\kappa = 4\times10^{-4}\sqrt{8.3\times10^{-11}} = 3.65\times10^{-9}\,\sqrt{\mathrm{s}}\)</span>. Period jitter <span class="math inline">\(\kappa\sqrt{400\,\mathrm{ps}} = 73\)</span> fs; TIE after 1 s <span class="math inline">\(= 3.65\)</span> ps. <strong>Locked, shortcut:</strong> <span class="math inline">\(3.65\times10^{-9}/\sqrt{4\pi\times3\,\mathrm{MHz}} = 0.59\)</span> ps from the VCO. <strong>Locked, full model</strong> (<a href="#fig:ch11-pn">Figure 11.6</a>): <strong>1.01 ps</strong> rms from 10 kHz, <strong>0.61 ps</strong> above 4 MHz.</p>
+<p><strong>Check the assumption:</strong> <a href="{% endraw %}{{ '/chapters/12-clock-generation-the-phase-locked-loop/' | relative_url }}{% raw %}#sec:lcvco">Section 12.4</a> shows that a <span class="math inline">\(Q = 16.8\)</span> tank should be about 20 dB quieter than <span class="math inline">\(-100.8\)</span> dBc/Hz, so the number may be a closed-loop value. If so, every VCO term here is pessimistic. Confirm with the team before freezing the PLL bandwidth.</p>
+</div>
+<h2 id="sec:jitter-budget"><span class="secnum">11.5</span>The Open-SERDES jitter budget</h2>
+<p>A <strong>jitter budget</strong> divides the UI among the blocks that move edges, so each designer gets a number to meet. Add DJ<span class="math inline">\(_{\delta\delta}\)</span> linearly, add RJ in RSS, and combine with <a href="#eq:tj">Equation (11.3)</a>. The Open-SERDES target is <strong>TJ <span class="math inline">\(\le\)</span> 0.3 UI = 60 ps at <span class="math inline">\(10^{-12}\)</span></strong>, measured at the sampler; the remaining 0.7 UI covers the sampler aperture and setup time (<a href="{% endraw %}{{ '/chapters/10-receiver-front-end-and-samplers/' | relative_url }}{% raw %}#sec:sampler">Section 10.2</a>), static phase offsets and margin. Only jitter the CDR does <em>not</em> track is counted: the clock RJ rows use the phase noise above the CDR bandwidth (0.61 ps from <a href="#we:ch11-pn">Worked Example 11.2</a>, rounded up to cover the buffers), and the CDR row is the CDR’s own tracking error (<a href="#tab:ch11-budget">Table 11.1</a>, <a href="#fig:ch11-budget">Figure 11.7</a>).</p>
+<div id="tab:ch11-budget">
+
+</div>
+<div class="tabularx">
+<p><span>L r r l</span> Contributor &amp; DJ<span class="math inline">\(_{\delta\delta}\)</span> (ps) &amp; RJ (ps rms) &amp; Owner<br />
+TX: half-rate mux DCD, driver data-dependent jitter &amp; 8 &amp; – &amp; <a href="{% endraw %}{{ '/chapters/09-the-transmitter/' | relative_url }}{% raw %}">Chapter 9</a><br />
+Channel: residual ISI after equalization (DDJ) &amp; 6 &amp; – &amp; <a href="{% endraw %}{{ '/chapters/08-decision-feedback-equalization-and-adaptation/' | relative_url }}{% raw %}#ch:dfe">Chapter 8</a><br />
+RX clock path: I/Q error, duty cycle, PI nonlinearity &amp; 6 &amp; – &amp; <a href="{% endraw %}{{ '/chapters/12-clock-generation-the-phase-locked-loop/' | relative_url }}{% raw %}#sec:quadrature">Section 12.5</a><br />
+CDR: PI quantization and bang-bang dither &amp; 20 &amp; – &amp; <a href="{% endraw %}{{ '/chapters/13-clock-and-data-recovery/' | relative_url }}{% raw %}#sec:picdr">Section 13.6</a><br />
+TX clock: PLL plus buffers, not tracked by the CDR &amp; – &amp; 1.0 &amp; <a href="{% endraw %}{{ '/chapters/12-clock-generation-the-phase-locked-loop/' | relative_url }}{% raw %}#ch:pll">Chapter 12</a><br />
+RX clock: PLL, PI and buffers, not tracked &amp; – &amp; 0.7 &amp; <a href="{% endraw %}{{ '/chapters/12-clock-generation-the-phase-locked-loop/' | relative_url }}{% raw %}#ch:pll">Chapter 12</a><br />
+Samplers: aperture and noise &amp; – &amp; 0.5 &amp; <a href="{% endraw %}{{ '/chapters/10-receiver-front-end-and-samplers/' | relative_url }}{% raw %}#sec:sampler">Section 10.2</a><br />
+Total &amp; <strong>40</strong> &amp; <strong>1.32</strong> (RSS) &amp;<br />
+</p>
+</div>
+<div id="fig:ch11-budget">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch11_budget.svg' | relative_url }}{% raw %}" style="width:753px" alt="The jitter budget fills 29% of the UI." loading="lazy" />
+<figcaption><span class="capnum">Figure 11.7.</span> <strong>The jitter budget fills 29% of the UI.</strong> DJ terms (gold) stack linearly; the RJ terms are combined in RSS and multiplied by <span class="math inline">\(2Q = 14.07\)</span> (blue). The total, 58.6 ps, sits just inside the 0.3 UI line and leaves a 0.71 UI eye.</figcaption>
+</figure>
+<div class="tbox tbox-example">
+<div class="tbox-title">
+<p>Worked Example 11.3 · Does the budget close?</p>
+</div>
+<p><span id="we:ch11-budget"></span> <strong>DJ:</strong> <span class="math inline">\(8 + 6 + 6 + 20 = 40\)</span> ps. <strong>RJ:</strong> <span class="math inline">\(\sigma = \sqrt{1.0^2 + 0.7^2 + 0.5^2} = 1.32\)</span> ps, so <span class="math inline">\(2Q\sigma = 14.07\times1.32 = 18.6\)</span> ps. <strong>TJ:</strong> <span class="math inline">\(40 + 18.6 = \mathbf{58.6}\)</span> ps <span class="math inline">\(=\)</span> <strong>0.293 UI</strong>, inside 0.3 UI with 1.4 ps to spare; the eye at <span class="math inline">\(10^{-12}\)</span> is 141 ps wide.</p>
+<p><strong>Turn it around:</strong> with DJ at 40 ps, RJ may be at most <span class="math inline">\((60-40)/14.07 = 1.42\)</span> ps rms; with RJ fixed, DJ may grow by only 1.4 ps. Tight budgets are normal. <strong>Consistency:</strong> <a href="{% endraw %}{{ '/chapters/04-link-budgets-and-statistical-analysis/' | relative_url }}{% raw %}#sec:stateye">Section 4.3</a> used 2 ps RJ and 20 ps DJ for the sampling clock; the CDR row here is that 20 ps, and 2 ps conservatively covers the RX share of the RJ.</p>
+</div>
+<div class="tbox tbox-insight">
+<div class="tbox-title">
+<p>What this means for your design</p>
+</div>
+<p>The largest line is the CDR’s own dither, and the most expensive per picosecond is RJ, because of the factor 14. So: design the CDR loop for low dither (<a href="{% endraw %}{{ '/chapters/13-clock-and-data-recovery/' | relative_url }}{% raw %}#sec:picdr">Section 13.6</a>); keep the PLL’s untracked jitter below 1 ps rms (<a href="{% endraw %}{{ '/chapters/12-clock-generation-the-phase-locked-loop/' | relative_url }}{% raw %}#ch:pll">Chapter 12</a>); and keep duty-cycle and quadrature errors small, because they become DJ at the half-rate samplers (<a href="{% endraw %}{{ '/chapters/12-clock-generation-the-phase-locked-loop/' | relative_url }}{% raw %}#sec:quadrature">Section 12.5</a>).</p>
+</div>
+<h2 id="sec:ch11-jtran"><span class="secnum">11.6</span>Jitter transfer, generation and tolerance</h2>
+<p>Three more terms describe how a block treats jitter versus jitter frequency. <strong>Jitter transfer</strong> is the ratio of output to input jitter: a PLL is low-pass to its reference, a CDR low-pass to the data. <strong>Jitter generation</strong> is the jitter a block adds with a clean input. <strong>Jitter tolerance</strong> (JTOL) is the largest sinusoidal jitter a receiver can take at a given frequency and still meet the BER. Because the CDR tracks slow jitter, a receiver tolerates many UI at low frequency but only its eye margin at high frequency; <a href="{% endraw %}{{ '/chapters/13-clock-and-data-recovery/' | relative_url }}{% raw %}#sec:jtol">Section 13.5</a> checks the Open-SERDES CDR against a mask.</p>
+<div class="tbox tbox-tryit">
+<div class="tbox-title">
+<p>Lab 6: jitter and the bathtub</p>
+</div>
+<p><a href="{% endraw %}{{ '/chapters/16-hands-on-labs-with-serdespy/' | relative_url }}{% raw %}#sec:lab6">Section 16.7</a> adds RJ and DJ to the REF link and plots the bathtub. Reproduce <a href="#fig:ch11-bathtub">Figure 11.5</a>(b), then change <span class="math inline">\(\sigma_\mathrm{RJ}\)</span> by 0.5 ps and watch the eye width move by 7 ps.</p>
+</div>
+<div class="tbox tbox-takeaways">
+<div class="tbox-title">
+<p>Key takeaways</p>
+</div>
+<ul>
+<li><p>A link cares about time-interval error, and only the part the CDR does not track.</p></li>
+<li><p>Voltage noise becomes jitter through the slope, <span class="math inline">\(\sigma_t = \sigma_v/\mathrm{SR}\)</span>: keep clock swings large and edges fast.</p></li>
+<li><p>RJ is Gaussian and unbounded (rms, adds in RSS); DJ is bounded (DDJ, DCD, PJ, BUJ; adds linearly). Their PDFs convolve.</p></li>
+<li><p>Dual-Dirac: <span class="math inline">\(\mathrm{TJ} = \mathrm{DJ}_{\delta\delta} + 2Q\sigma_\mathrm{RJ}\)</span> with <span class="math inline">\(2Q = 14.07\)</span> at <span class="math inline">\(10^{-12}\)</span>; one picosecond of RJ costs 14 ps of eye.</p></li>
+<li><p><span class="math inline">\(\sigma_t = \sqrt{2\int\mathcal{L}\,df}/(2\pi f_0)\)</span>, integrated from the CDR bandwidth. The team PLL model gives 1.01 ps from 10 kHz and 0.61 ps above 4 MHz.</p></li>
+<li><p>The Open-SERDES budget (40 ps DJ, 1.32 ps RJ) gives TJ = 58.6 ps = 0.293 UI against 0.3 UI; the CDR’s 20 ps is the largest line.</p></li>
+</ul>
+</div>
+
+<nav class="prev-next" aria-label="Chapter navigation"><a class="pn-link prev" href="{% endraw %}{{ '/chapters/10-receiver-front-end-and-samplers/' | relative_url }}{% raw %}"><small>← Previous</small>Receiver Front-End and Samplers</a><a class="pn-link next" href="{% endraw %}{{ '/chapters/12-clock-generation-the-phase-locked-loop/' | relative_url }}{% raw %}"><small>Next →</small>Clock Generation: The Phase-Locked Loop</a></nav>
+<p class="page-source">Generated from <a href="https://github.com/bricd-org/serdes-tutorial/blob/main/book/tutorial/chapters/11_jitter.tex">book/tutorial/chapters/11_jitter.tex</a>. Figure, table and equation numbers match the <a href="{% endraw %}{{ '/assets/pdf/Open-SERDES_Tutorial.pdf' | relative_url }}{% raw %}">PDF edition</a>.</p>
+{% endraw %}

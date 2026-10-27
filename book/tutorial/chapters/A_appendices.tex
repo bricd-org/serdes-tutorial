@@ -1,0 +1,286 @@
+\tikzsetfigurename{A_appendices-}
+%% Appendices (\appendix is issued in tutorial.tex)
+\providecommand{\appGrp}[1]{\rowcolor{btint}\multicolumn{2}{@{}l}{\sffamily\bfseries\color{navy}#1}\\}
+\providecommand{\appBox}{$\square$}
+
+%% =====================================================================
+\chapter{Formula Sheet}\label{app:formulas}
+
+The equations of this tutorial on two pages, in the notation of \cref{ch:intro}: $\Tb$ = 1\,UI = 200\,ps, $\fN=2.5$\,GHz, symbols $a_k=\pm1$, TX levels $\pm A$ with $A=0.5$\,V, cursors $p_k$ of a 1\,V, 1-UI pulse.
+
+{\small
+\renewcommand{\arraystretch}{1.32}
+\begin{tabularx}{\linewidth}{@{}>{\centering\arraybackslash}p{0.47\linewidth} L@{}}
+\toprule
+\textbf{Formula} & \textbf{Meaning}\\
+\midrule
+\appGrp{Signals and BER (\cref{ch:signals,ch:linkanalysis})}
+$\fb=1/\Tb,\quad \fN=1/(2\Tb)$ & bit rate and Nyquist frequency: 5\,Gb/s, 2.5\,GHz\\
+$y(t)=A\sum_n a_n\,p(t-n\Tb)+n(t)$ & received signal: superposition of shifted pulse responses\\
+$p_k=p(\ts+k\Tb)$ & cursors: $p_0$ main, $k<0$ pre-, $k>0$ post-cursors\\
+$\mathrm{EH}=2A\big(p_0-\sum_{k\neq0}\lvert p_k\rvert\big)$ & peak-distortion (worst-case) inner eye height\\
+$\BER=\Qf\!\left(\mathrm{EH}/2\sign\right),\ \Qf(x)=\tfrac12\erfc(x/\sqrt2)$ & BER for Gaussian noise of rms $\sign$ at the slicer\\
+$\mathrm{EH}\ge2Q\sign=14.07\,\sign$ & eye needed for $10^{-12}$ ($Q=7.03$)\\
+$S(f)=A^2\Tb\,\mathrm{sinc}^2(f\Tb)$ & NRZ power spectral density; first null at $\fb$\\
+$M=\mathrm{EH}_\mathrm{ISI}-2Q\sign-\Delta V_\mathrm{jit}-2V_\mathrm{os}-V_\mathrm{sens}$ & linear voltage margin at the sampler\\
+\appGrp{Channel (\cref{ch:channel})}
+$v=c/\sqrt{\varepsilon_r},\quad t_d=\ell/v$ & propagation speed and delay; FR-4: 6.67\,ps/mm\\
+$\Gamma=\frac{Z_L-\Zo}{Z_L+\Zo},\quad \mathrm{RL}=-20\log_{10}\lvert S_{11}\rvert$ & reflection coefficient and return loss\\
+$\alpha_D\approx\pi f\sqrt{\varepsilon_r}\tan\delta/c$ & dielectric loss (Np/m), grows as $f$; skin loss grows as $\sqrt f$\\
+$\lvert S_{11}\rvert=x/\sqrt{4+x^2},\ x=\omega\Zo C_p$ & pad capacitance on a doubly terminated node\\
+$f_\mathrm{3dB}=1/(\pi\Zo C_p)$ & pad pole (node sees $\Zo/2$)\\
+$\mathrm{IL}(\fN)-\mathrm{IL}(\fN/2)>9.54$\,dB & PAM4 can win over NRZ only above this octave loss\\
+\appGrp{Equalization (\cref{ch:txffe,ch:ctle,ch:dfe})}
+$y_n=\sum_k c_k x_{n-k},\quad\sum_k\lvert c_k\rvert=1$ & TX FFE under the peak-swing constraint\\
+$\mathrm{DE}=20\log_{10}\frac{\lvert c_0\rvert+\lvert c_1\rvert}{\lvert c_0\rvert-\lvert c_1\rvert}$ & de-emphasis of a 2-tap FFE ($c_1=-0.25$: 6\,dB)\\
+$\Hctle(s)=\frac{1}{A}\frac{1+s/\omega_z}{(1+s/\omega_{p1})(1+s/\omega_{p2})}$ & CTLE model, peaking $A=\omega_{p1}/\omega_z$\\
+$A=1+\gm R_S/2,\ \omega_z=\frac{1}{R_SC_S},\ \omega_{p2}=\frac{1}{R_D\CL}$ & degenerated differential pair\\
+$z_n=y_n-\sum_k w_k\hat d_{n-k},\quad w_k=A\,p_k$ & DFE; zero-forcing taps equal the post-cursors\\
+$t_\mathrm{CK\to Q}+t_\mathrm{settle}+t_\mathrm{setup}\le\Tb$ & DFE tap-1 timing (direct feedback)\\
+$w_k\leftarrow w_k+\mu\,\sgn(e_n)\,\sgn(\hat d_{n-k})$ & sign-sign LMS adaptation\\
+\bottomrule
+\end{tabularx}
+}
+
+{\small
+\renewcommand{\arraystretch}{1.32}
+\begin{tabularx}{\linewidth}{@{}>{\centering\arraybackslash}p{0.47\linewidth} L@{}}
+\toprule
+\textbf{Formula} & \textbf{Meaning}\\
+\midrule
+\appGrp{Circuits (\cref{ch:tx,ch:rx})}
+$\Delta V=I_T\RL,\ \tau=\RL\CL,\ P=V_\mathrm{CC}I_T$ & CML gate: swing, time constant, static power\\
+$V_{d,\mathrm{pp}}=I_T\Zo$ (CML), $I=V_{d,\mathrm{pp}}/4\Zo$ (SST) & driver current, doubly terminated\\
+$\gm=I_C/V_T$; full switching at $\approx4V_T$ & HBT pair: 38.7\,mS/mA, about 100\,mV\\
+$\tau=C/\gm$ (StrongARM), $\tau=\frac{\RL C}{\gm\RL-1}$ (CML) & latch regeneration time constant\\
+$P_\mathrm{meta}=\frac{2V_L}{A\,\Delta V}\,e^{-T/\tau}$ & metastability probability per decision\\
+$\sigma_{\Delta V_t}=A_{VT}/\sqrt{WL}$ & Pelgrom mismatch (offset)\\
+$V_\mathrm{sens}\approx2Q\sigma_s+V_\mathrm{min}+2\lvert V_\mathrm{os,res}\rvert$ & sampler sensitivity\\
+$\overline{v_n^2}=4kTR\,\Delta f,\quad v_{n,\mathrm{rms}}=\sqrt{kT/C}$ & resistor and sampled ($kT/C$) noise\\
+\appGrp{Jitter, PLL and CDR (\cref{ch:jitter,ch:pll,ch:cdr})}
+$\mathrm{TJ}=\mathrm{DJ}_{\delta\delta}+2Q\,\sigma_\mathrm{RJ}$ & total jitter at a BER (dual-Dirac)\\
+$\sigma_\phi^2=2\!\int\!\mathcal{L}(f)\,df,\quad\sigma_t=\sigma_\phi/(2\pi f_0)$ & phase noise to rms jitter\\
+$\omega_n=\sqrt{\frac{\Icp\Kvco}{2\pi NC_1}},\ \zeta=\frac{R}{2}\sqrt{\frac{\Icp\Kvco C_1}{2\pi N}}$ & CP-PLL natural frequency and damping\\
+$f_0=\frac{1}{2\pi\sqrt{LC}},\ R_p=Q\omega_0L,\ \gm R_p/2\ge1$ & LC tank and start-up\\
+$K_\mathrm{BB}=\mathrm{TD}\sqrt{2/\pi}/\sigj$ & bang-bang gain, linearized by jitter\\
+$S=K_P\cdot\mathrm{LSB}/T_\mathrm{upd},\ \mathrm{JTOL}\approx\mathrm{TM}+2S/\omega$ & BB-CDR slew rate and slew-limited JTOL\\
+$\Delta t_\mathrm{PI}=T_\mathrm{clk}/N_\mathrm{steps},\ \text{dither}\approx2S\,T_\mathrm{lat}$ & PI step (6.25\,ps) and limit-cycle dither\\
+\appGrp{Flow and test (\cref{ch:arch,ch:flow})}
+$E_b=P/\fb$ & energy per bit (216\,mW $\to$ 43\,pJ/b)\\
+$N_\mathrm{bits}\ge3/\BER$ & error-free bits for a BER claim at 95\,\% confidence\\
+$N\ge10\,\ell f_\mathrm{max}/v,\quad\Delta\hat\sigma/\sigma\approx1/\sqrt{2N}$ & lumped-line sections; Monte Carlo accuracy\\
+\bottomrule
+\end{tabularx}
+}
+
+%% =====================================================================
+\chapter{Tables and Constants}\label{app:qtable}
+
+\Cref{tab:app-q} converts a target BER into the Gaussian multiplier $Q$, and \cref{tab:app-db} converts loss in decibels into voltage and power ratios. \Cref{tab:app-const} collects the constants used in the examples.
+
+\begin{table}[htbp]
+\centering
+\begin{minipage}[t]{0.46\linewidth}\centering
+\captionof{table}{\textbf{BER against $Q$}, with $\BER=\Qf(Q)$.}
+\label{tab:app-q}
+\small
+\begin{tabular}{@{}lcc@{}}
+\toprule
+BER & $Q$ & $2Q$ (eye/$\sigma$)\\
+\midrule
+$10^{-3}$ & 3.090 & 6.18\\
+$10^{-4}$ & 3.719 & 7.44\\
+$10^{-5}$ & 4.265 & 8.53\\
+$10^{-6}$ & 4.753 & 9.51\\
+$10^{-7}$ & 5.199 & 10.40\\
+$10^{-8}$ & 5.612 & 11.22\\
+$10^{-9}$ & 5.998 & 12.00\\
+$10^{-10}$ & 6.361 & 12.72\\
+$10^{-11}$ & 6.706 & 13.41\\
+\rowcolor{gtint}$10^{-12}$ & \textbf{7.034} & \textbf{14.07}\\
+$10^{-13}$ & 7.349 & 14.70\\
+$10^{-14}$ & 7.651 & 15.30\\
+$10^{-15}$ & 7.941 & 15.88\\
+\bottomrule
+\end{tabular}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.5\linewidth}\centering
+\captionof{table}{\textbf{Decibels to ratios} (loss).}
+\label{tab:app-db}
+\small
+\begin{tabular}{@{}rcc@{}}
+\toprule
+Loss (dB) & Voltage ratio & Power ratio\\
+\midrule
+0.5 & 0.944 & 0.891\\
+1 & 0.891 & 0.794\\
+3 & 0.708 & 0.501\\
+6 & 0.501 & 0.251\\
+10 & 0.316 & 0.100\\
+12 & 0.251 & 0.0631\\
+14 & 0.200 & 0.0398\\
+\rowcolor{gtint}17.4 (REF) & 0.135 & 0.0182\\
+20 & 0.100 & 0.0100\\
+30 & 0.0316 & 0.00100\\
+40 & 0.0100 & 0.000100\\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{\textbf{Handy constants and \OS{} conversions} (at $T=300$\,K where it matters).}
+\label{tab:app-const}
+\small
+\begin{tabularx}{\linewidth}{@{}l l L@{}}
+\toprule
+\textbf{Quantity} & \textbf{Value} & \textbf{Use}\\
+\midrule
+Boltzmann constant $k$ & $1.381\times10^{-23}$\,J/K & noise\\
+Elementary charge $q$ & $1.602\times10^{-19}$\,C & shot noise, $V_T$\\
+Thermal voltage $kT/q$ & 25.85\,mV & HBT $\gm=I_C/V_T$: 38.7\,mS per mA\\
+$kT$ & $4.14\times10^{-21}$\,J = $-173.8$\,dBm/Hz & noise floors\\
+$\sqrt{4kTR}$, $R=\qty{50}{\ohm}$ & 0.91\,nV/$\sqrt{\mathrm{Hz}}$ & termination noise\\
+$\sqrt{kT/C}$, $C=50$\,fF & 0.29\,mV & sampled noise\\
+Vacuum permittivity $\varepsilon_0$ & $8.854\times10^{-12}$\,F/m & capacitance\\
+Speed of light $c$ & $2.998\times10^8$\,m/s & line delay\\
+FR-4 ($\varepsilon_r=4$): $v=c/2$ & $1.50\times10^8$\,m/s = 6.67\,ps/mm = 169\,ps/in & reflections, flight time\\
+1\,UI at 5\,Gb/s & 200\,ps & everything\\
+1 degree of the 2.5\,GHz clock & 1.11\,ps & I/Q and PI errors\\
+1 PI step & 6.25\,ps = 0.031\,UI & CDR\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+%% =====================================================================
+\chapter{Design-Review Checklists}\label{app:checklists}
+
+Use these lists in every design review. Each item points to the section that explains it; the numbers are the targets of \cref{tab:specs}.
+
+{\small
+\setlist[itemize]{label=\appBox,leftmargin=1.3em,itemsep=0.1em,topsep=0.2em}
+\noindent\begin{minipage}[t]{0.485\linewidth}
+\textbf{\sffamily\color{navy}Transmitter}
+\begin{itemize}
+  \item FO4 measured in the PDK; CMOS stages close timing at the slow corner (\cref{sec:serializer}).
+  \item Half-rate mux: glitch-free phases, duty cycle $50\pm1$\,\%.
+  \item Driver $I_T$ for 0.8--1.0\,Vppd; every $V_\mathrm{CE}<\mathrm{BV}_\mathrm{CEO}$ at $V_\mathrm{CC}+5$\,\%, with the real far-end termination.
+  \item FFE presets $-3.5$/$-6$\,dB exact within one LSB; tap paths matched to a few ps.
+  \item Termination trimmed to $\pm10$\,\%; $C_p\le0.85$\,pF; RL $\ge10$\,dB at $\fN$.
+  \item Post-layout eye through REF within 10\,\% of the model.
+\end{itemize}
+\textbf{\sffamily\color{navy}Channel and board}
+\begin{itemize}
+  \item Loss at $\fN$ (not $\fb$) known; REF replaced by measured S-parameters.
+  \item Via stubs short or back-drilled; first resonance above 5\,GHz.
+  \item Pairs length-matched; TX and RX pairs separated (NEXT).
+  \item SMA launches and bond wires modeled; reflections in the pulse tail checked.
+\end{itemize}
+\textbf{\sffamily\color{navy}Receiver}
+\begin{itemize}
+  \item CTLE: 0--12\,dB at every corner; $f_{p2}$ with the real sampler load.
+  \item DFE tap-1 loop $\le1$\,UI post-layout; unrolling ready if not.
+  \item Sampler $\sigma\le1$\,mV; offset DAC $\ge\pm3\sigma$, 5 bits; $\tau\le5$\,ps.
+  \item Two extra latches behind the edge samplers (metastability).
+  \item All four samplers simulated together (kick-back).
+  \item Deserializer FIFO and recovered-clock domain crossing checked.
+\end{itemize}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}
+\textbf{\sffamily\color{navy}PLL and clocks}
+\begin{itemize}
+  \item VCO tunes 2.5\,GHz with $V_\mathrm{ctrl}$ mid-range at all corners; band code range covers PVT.
+  \item Loop: 60$^\circ$ phase margin, $f_u\approx3$\,MHz, $f_\mathrm{ref}/f_u\ge10$.
+  \item VCO phase noise simulated open-loop; RJ $\le1$\,ps rms integrated.
+  \item Loop-filter capacitors MIM, not leaky MOS.
+  \item I/Q error $\le\ang{2}$ ($3\sigma$), duty cycle $50\pm0.5$\,\% after DCC.
+  \item Clock buffers have 2--3$\times f_\mathrm{clk}$ bandwidth.
+\end{itemize}
+\textbf{\sffamily\color{navy}CDR}
+\begin{itemize}
+  \item Phase-detector truth table verified for both half-rate phases.
+  \item $K_P$ from the JTOL slew requirement; $K_P/K_I\ge16$ (baseline 128).
+  \item Latency counted in updates; wander $\le20$\,ps pp in simulation.
+  \item Integral register covers $\pm300$\,ppm; lock $<1$\,\textmu{}s.
+  \item PI INL $\le\ang{1}$ at all 64 codes; code wrap glitch-free.
+  \item Lab~7 model rerun with the real PI and latency.
+\end{itemize}
+\textbf{\sffamily\color{navy}Tape-out}
+\begin{itemize}
+  \item DRC clean (KLayout decks), antenna and density after fill.
+  \item LVS clean per macro and full chip without black boxes.
+  \item Post-layout corners and Monte Carlo pass in \tool{CACE}.
+  \item Model back-annotated with extracted responses; margin $>0$.
+  \item ESD on every pad; supply domains, decaps and guard rings reviewed.
+  \item Test access: PRBS, checker, loopback, PI override, clock monitor.
+  \item Bonding diagram, pinout and test-board plan signed off.
+\end{itemize}
+\end{minipage}
+}
+
+%% =====================================================================
+\chapter{Glossary}\label{app:glossary}
+
+{\small
+\begin{description}[leftmargin=31mm,labelwidth=29mm,labelsep=2mm,itemsep=0.05em,parsep=0pt,topsep=0pt,font=\sffamily\bfseries\color{navy}]
+  \item[Alexander PD] bang-bang phase detector that compares a data, an edge and the next data sample
+  \item[Aperture] time window over which a sampler effectively averages its input
+  \item[Bathtub curve] BER against sampling position across the UI
+  \item[BER] bit-error rate: errors divided by bits; \OS{} targets $10^{-12}$
+  \item[BiCMOS] process with both bipolar (HBT) and CMOS transistors, such as \sgx{}
+  \item[$\mathrm{BV}_\mathrm{CEO}$] collector-emitter breakdown voltage of an HBT with the base open
+  \item[CDR] clock and data recovery: extracts the sampling phase from the data transitions
+  \item[CML] current-mode logic: differential pairs steering a constant tail current into resistors
+  \item[Common centroid] layout that interleaves matched devices so gradients cancel
+  \item[CTLE] continuous-time linear equalizer: an analog high-frequency boost
+  \item[Cursor] sample of the pulse response at an integer number of UIs from the main sample
+  \item[DCD] duty-cycle distortion: unequal high and low times, a two-valued DJ
+  \item[De-emphasis] TX FFE setting that lowers repeated bits instead of raising transitions
+  \item[DFE] decision-feedback equalizer: subtracts ISI predicted from past decisions
+  \item[DJ, RJ] deterministic (bounded) and random (Gaussian) jitter
+  \item[Dual-Dirac model] jitter model with DJ as two impulses convolved with Gaussian RJ
+  \item[ESD] electrostatic discharge, and the diodes that protect the pads from it
+  \item[Eye diagram] overlay of the received waveform folded at one or two UIs
+  \item[FFE] feed-forward equalizer: an FIR filter, here in the TX driver
+  \item[HBT] heterojunction bipolar transistor; \sgx{} npn13G2 with $f_T\approx300$\,GHz
+  \item[Insertion loss] attenuation through the channel, $-20\log_{10}\lvert S_{21}\rvert$
+  \item[ISI] inter-symbol interference: energy of a bit that spills into its neighbors
+  \item[JTOL] jitter tolerance: largest sinusoidal jitter, against frequency, that still meets the BER
+  \item[Loopback] internal path from the TX output to the RX input for self-test
+  \item[LVS, DRC] layout-versus-schematic and design-rule checks before tape-out
+  \item[Metastability] a latch input so small that the decision is late or undefined
+  \item[Monte Carlo] simulation repeated with random device mismatch
+  \item[NRZ, PAM4] two-level and four-level pulse-amplitude modulation
+  \item[Nyquist frequency] half the symbol rate: 2.5\,GHz for 5\,Gb/s NRZ
+  \item[PDA] peak-distortion analysis: worst-case eye from the sum of absolute cursors
+  \item[Phase interpolator] circuit that mixes two clock phases to make any phase between them
+  \item[Phase noise] single-sideband noise power near a clock, $\mathcal{L}(f)$, in dBc/Hz
+  \item[PLL] phase-locked loop: multiplies a clean reference up to the VCO frequency
+  \item[Polyphase filter] RC network that splits a differential clock into I and Q
+  \item[PRBS] pseudo-random binary sequence from a linear-feedback shift register
+  \item[Pulse response] channel output for one isolated 1-UI pulse
+  \item[Return loss] reflection at a port, $-20\log_{10}\lvert S_{11}\rvert$
+  \item[S-parameters] frequency-domain description of a network by incident and reflected waves
+  \item[Sampler] clocked comparator (latch) that decides each bit
+  \item[Serializer] multiplexer tree that turns a parallel word into a serial stream
+  \item[SST driver] source-series-terminated (voltage-mode) driver
+  \item[Statistical eye] eye at a target BER computed from the ISI and noise distributions
+  \item[T-coil] coupled-inductor network that hides pad capacitance from the line
+  \item[UI] unit interval: one bit time, 200\,ps
+  \item[Zero-forcing] equalizer that forces selected cursors to zero, ignoring noise
+\end{description}
+}
+
+%% =====================================================================
+\chapter{Further Reading}\label{app:reading}
+
+\paragraph{Start here} Palermo's ECEN\,720 course~\cite{palermo720} is the backbone of this tutorial; its lectures on channels and link analysis~\cite{palermo720ch}, equalization~\cite{palermo720eq}, circuits~\cite{palermo720ckt} and clocking~\cite{palermo720clk} go deeper on every chapter. The forthcoming book by Shekhar, Palermo and Hanumolu~\cite{shekhar2026} covers the same ground in textbook form. Benjamin Liu's handwritten notes on equalization~\cite{liuEq} and on PLL-based CDRs~\cite{liuCDR} are the quickest way to see each idea derived by hand.
+
+\paragraph{Signal integrity and systems} Dally and Poulton~\cite{dally1998} is the classic on signaling, noise budgets and timing in digital systems. Hall and Heck~\cite{hall2009} treat transmission lines, losses, S-parameters and channel modeling in the detail you need to replace REF with a real board. Stojanovi\'c \emph{et al.}~\cite{stojanovic2005} show a complete adaptive PAM2/4 transceiver and why the equalization partition matters. The IEEE 802.3 backplane clauses~\cite{ieee8023} define the channels, masks and test methods of real 2.5 and 5\,Gb/s Ethernet links.
+
+\paragraph{Circuits} Razavi's analog text~\cite{razaviAnalog} is the reference for differential pairs, noise and mismatch. His optical-communications book~\cite{razaviOptical} covers CML, limiting amplifiers, CDRs and multiplexers at the transistor level, much as \OS{} builds them.
+
+\paragraph{Clocking} Razavi's PLL book~\cite{razaviPLL} takes the charge-pump PLL from the loop equations to the VCO and divider circuits. Gardner~\cite{gardner2005} is the classic on loop dynamics and the source of most PLL design formulas. The team's 2.4\,GHz LC-VCO PLL paper~\cite{smacd2026pll} is the starting point for the \OS{} PLL.
+
+\paragraph{Open-source design} The IHP \sgx{} open PDK~\cite{ihppdk}, the IIC-OSIC-TOOLS image~\cite{iicosic} and the JKU chip template~\cite{jkutemplate} are everything you need to tape out; read the template tutorial before your first \code{make all}. The Purdue OpenSerDes paper~\cite{openserdes2021} is the closest open-source prior art, an all-digital 2\,Gb/s link in SKY130. For modeling, serdespy~\cite{serdespy} powers the labs of \cref{ch:labs}, and PyBERT~\cite{pybert} is the natural next step, with a GUI and IBIS-AMI support.

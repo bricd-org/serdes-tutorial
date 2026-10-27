@@ -1,0 +1,481 @@
+\tikzsetfigurename{10_rx-}
+\chapter{Receiver Front-End and Samplers}\label{ch:rx}
+\chapterlead{The receiver must turn a 100\,mV, 200\,ps-wide eye into clean logic levels, $10^{12}$ times in a row without a mistake. This chapter builds the circuits that do it.}
+
+\begin{objectives}
+\begin{itemize}
+  \item Draw the \OS{} receiver from pad to 16-bit word, and set its termination, common mode and coupling.
+  \item List what a sampler must deliver (sensitivity, offset, aperture, metastability, kick-back, noise) and derive the regeneration time constant of the StrongARM and the HBT CML latch.
+  \item Compute the metastability error probability and explain why edge samplers need extra latch stages.
+  \item Estimate sampler offset from Pelgrom's law and size a 5-bit calibration DAC.
+  \item Build a circuit-level noise and sensitivity budget that supports the system budget of \cref{sec:noisebudget}.
+  \item Deserialize half-rate decisions to 16 bits at 312.5\,MHz and cross into the core clock domain.
+\end{itemize}
+\end{objectives}
+
+%% =====================================================================
+\section{The receiver front-end}\label{sec:rx-frontend}
+
+\Cref{fig:ch10-arch} shows the receive path. The \qty{100}{\ohm} termination absorbs the wave at the pad. The CTLE (\cref{sec:ctle-hbt}) boosts the high frequencies, and the DFE summer subtracts the post-cursor echoes of earlier decisions (\cref{sec:dfe-timing}). Four samplers then decide. At half rate, $D_0$ and $D_1$ sample the data at \ang{0} and \ang{180} of the 2.5\,GHz clock, one bit each per clock period. $E_0$ and $E_1$ sample the transitions between them at \ang{90} and \ang{270}. The deserializer turns these four 2.5\,Gb/s streams into 16 data bits and 16 edge bits at \qty{312.5}{\mega\hertz}. The CDR logic uses both to steer the phase interpolator (\cref{ch:cdr}), which shifts the four clock phases until $E_0$ and $E_1$ sit on the zero crossings.
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm,font=\sffamily\footnotesize,
+  b/.style={blk,minimum width=13mm,minimum height=10mm,font=\sffamily\footnotesize,inner sep=2pt},
+  bb/.style={b,fill=btint}, bg/.style={b,fill=gtint,draw=golddk}, bn/.style={b,fill=navy,text=white},
+  sm/.style={blk,fill=btint,minimum width=16mm,minimum height=7mm,font=\sffamily\footnotesize,inner sep=1pt},
+  ch/.style={font=\sffamily\scriptsize,text=muted}]
+  \node[draw=navy,fill=navy,minimum size=2mm,inner sep=0pt] (pad) at (0,0) {};
+  \draw[sig] (-0.9,0) node[left,text=navy,align=right]{from\\channel} -- (pad.west);
+  \node[bb] (term) at (1.35,0) {100\,$\Omega$\\+ ESD};
+  \node[bb] (ctle) at (3.3,0) {CTLE\\0--12\,dB};
+  \node[sumnode] (sum) at (5.0,0) {$\Sigma$};
+  \draw[navy,line width=0.75pt] (pad.east) -- (term.west);
+  \draw[sig] (term) -- (ctle);
+  \draw[sig] (ctle) -- (sum);
+  \node[ch,anchor=north] at (3.3,-0.6) {Ch.~7};
+  \node[ch,anchor=north,align=center] at (5.0,-0.4) {DFE\\summer};
+  % samplers
+  \draw[region,fill=gtint!25] (6.15,-2.55) rectangle (8.65,2.55);
+  \foreach \y/\n/\t in {1.95/D0/{$D_0$ \ang{0}}, 0.65/E0/{$E_0$ \ang{90}}, -0.65/D1/{$D_1$ \ang{180}}, -1.95/E1/{$E_1$ \ang{270}}}{
+    \node[sm] (\n) at (7.4,\y) {\t};
+    \draw[sig] (6.0,\y) -- (\n.west);
+  }
+  \draw[navy,line width=0.75pt] (sum.east) -- (6.0,0);
+  \draw[navy,line width=0.75pt] (6.0,-1.95) -- (6.0,1.95);
+  \node[dot] at (6.0,0) {};
+  \node[lblb,anchor=south] at (7.4,2.6) {samplers};
+  % deserializer
+  \node[blk,fill=gtint,draw=golddk,minimum width=13mm,minimum height=50mm] (des) at (10.0,0) {1:16\\deser.};
+  \foreach \y/\n in {1.95/D0, 0.65/E0, -0.65/D1, -1.95/E1}{\draw[sig] (\n.east) -- (des.west |- 0,\y);}
+  \node[ch,anchor=south] at (9.0,1.95) {2.5\,Gb/s};
+  \draw[sig,line width=1.4pt] (des.east |- 0,1.4) -- (13.4,1.4) node[above left,text=navy,align=right]{16 data bits\\312.5\,MHz};
+  \node[bg] (cdr) at (12.4,-1.0) {CDR logic\\BB-PD + filter};
+  \draw[sig,line width=1.4pt] (des.east |- 0,-1.0) -- (cdr.west);
+  \node[ch,anchor=south] at (11.0,-1.0) {data + edge};
+  % clocking
+  \node[bn] (pll) at (5.0,-3.6) {PLL\\I/Q 2.5\,GHz};
+  \node[bb] (pi) at (7.4,-3.6) {phase\\interp.};
+  \draw[clk] (pll) -- (pi);
+  \draw[sigg] (cdr.south) |- node[pos=0.75,below,text=golddk,font=\sffamily\scriptsize]{PI code} (pi.east);
+  \draw[clk] (pi.north) -- (7.4,-2.55) node[pos=0.5,right,text=golddk,font=\sffamily\scriptsize]{4 phases};
+  \node[ch,anchor=north] at (10.2,-3.95) {Ch.~12--13};
+  % DFE feedback
+  \draw[sigg] (8.4,1.95) node[dot,fill=golddk]{} |- (5.0,3.15) -- (sum.north);
+  \node[font=\sffamily\scriptsize,text=golddk,anchor=south] at (6.6,3.15) {decisions $\hat a_{n-1},\hat a_{n-2}$ $\times$ taps $w_1,w_2$ (Ch.~8)};
+\end{tikzpicture}
+\caption{\textbf{The \OS{} receiver.} After termination, CTLE and DFE summer, four half-rate samplers decide on the four phases of the 2.5\,GHz clock: data at \ang{0}/\ang{180}, edges at \ang{90}/\ang{270}. The decisions feed back to the summer (gold) and, deserialized to 312.5\,MHz, drive the CDR logic that steers the phase interpolator. The DFE uses separate even and odd summers in practice (\cref{sec:dfe-timing}).}
+\label{fig:ch10-arch}
+\end{figure}
+
+\paragraph{Termination and common mode} The RX termination is two \qty{50}{\ohm} poly resistors in series across the inputs, with their center tap AC-grounded by a capacitor $C_\mathrm{CM}$ (\cref{fig:ch10-term}). Differential signals see \qty{100}{\ohm}. Common-mode noise sees a low impedance and is absorbed too. The termination sits right at the pad, inside the ESD diodes, and shares the pad capacitance budget of \cref{sec:esd-pad}. The CTLE input pair needs its own common mode, and the input stage must stay linear for the largest signal: long runs on a short channel arrive at nearly the full $\pm\qty{0.5}{\volt}$. A switchable input attenuator, or the CTLE's own gain control, handles short channels (\cref{sec:ctle-hbt}).
+
+\paragraph{DC or AC coupling} With \textbf{DC coupling} the RX inherits the TX common mode: about 2.0\,V from the CML driver of \cref{sec:cml-driver}, which suits an HBT CTLE on the same 2.5\,V supply. \textbf{AC coupling} with series capacitors lets each side set its own common mode, at the price of a high-pass corner. A run of $N$ identical bits then droops by $1-e^{-N\Tb/\tau}$ (\textbf{baseline wander}). Off-chip \qty{100}{\nano\farad} capacitors in the \qty{100}{\ohm} loop give $\tau=\qty{10}{\micro\second}$, and PRBS31's 31-bit run droops by only 0.06\,\%. On chip, \qty{2}{\pico\farad} into a \qty{10}{\kilo\ohm} bias resistor gives $\tau=\qty{20}{\nano\second}$ and a 27\,\% droop, which needs DC-balanced (scrambled or 8b/10b) data. \OS{} is DC-coupled for near-end loopback and has board footprints for off-chip capacitors.
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[american, scale=0.72, transform shape, font=\small]
+  \node[draw=navy,fill=navy,minimum size=2mm,inner sep=0pt] at (0,1.6) {};
+  \node[draw=navy,fill=navy,minimum size=2mm,inner sep=0pt] at (0,-1.6) {};
+  \node[left=3pt,text=navy] at (0,1.6) {$\mathrm{in}^+$};
+  \node[left=3pt,text=navy] at (0,-1.6) {$\mathrm{in}^-$};
+  \draw (0.1,1.6) -- (4.0,1.6); \draw (0.1,-1.6) -- (4.0,-1.6);
+  \node[blk,minimum width=9mm,minimum height=6mm,font=\sffamily\footnotesize] (e1) at (1.0,2.75) {ESD};
+  \node[blk,minimum width=9mm,minimum height=6mm,font=\sffamily\footnotesize] (e2) at (1.0,-2.75) {ESD};
+  \draw (1.0,1.6) node[circ]{} -- (e1.south); \draw (1.0,-1.6) node[circ]{} -- (e2.north);
+  \draw (2.4,1.6) to[R, l_=\qty{50}{\ohm}, *-*] (2.4,0) to[R, l_=\qty{50}{\ohm}, -*] (2.4,-1.6);
+  \draw (2.4,0) -- (3.3,0) to[C, l=$C_\mathrm{CM}$] (3.3,-1.1) node[ground]{};
+  \node[lbl,anchor=north west,align=left] at (2.55,1.45) {termination\\at the pad};
+  % optional AC coupling
+  \draw[region] (4.0,-2.3) rectangle (7.7,2.3);
+  \node[lbl,anchor=north] at (5.85,2.25) {optional on-chip AC coupling};
+  \draw (4.0,1.6) to[C, l=$C_\mathrm{AC}$] (5.6,1.6) -- (6.6,1.6);
+  \draw (4.0,-1.6) to[C, l_=$C_\mathrm{AC}$] (5.6,-1.6) -- (6.6,-1.6);
+  \draw (6.2,1.6) to[R, l=$R_B$, *-*] (6.2,0) to[R, l=$R_B$, -*] (6.2,-1.6);
+  \draw (6.2,0) -- (7.1,0) node[right,text=navy]{$V_\mathrm{CM}$};
+  \draw (6.6,1.6) to[short,-o] (8.4,1.6) node[right]{to CTLE$^+$};
+  \draw (6.6,-1.6) to[short,-o] (8.4,-1.6) node[right]{to CTLE$^-$};
+\end{tikzpicture}
+\caption{\textbf{RX input network.} Two \qty{50}{\ohm} resistors terminate the differential signal at the pad; the AC-grounded center tap also absorbs common-mode noise. An optional AC-coupling stage ($C_\mathrm{AC}$, $R_B$) lets the RX set its own common mode $V_\mathrm{CM}$, at the cost of baseline wander for long runs.}
+\label{fig:ch10-term}
+\end{figure}
+
+%% =====================================================================
+\section{Samplers}\label{sec:sampler}
+
+A \textbf{sampler} (clocked comparator, or slicer) looks at its input at one instant and amplifies the sign of the difference to a full logic level. It is a positive-feedback latch, and everything we want from it follows from that. For \OS{} it must deliver:
+\begin{itemize}
+  \item \textbf{Sensitivity:} a correct decision at $10^{-12}$ for inputs down to about \qty{20}{\milli\volt}pp, the value budgeted in \cref{sec:noisebudget};
+  \item \textbf{Offset} below about \qty{5}{\milli\volt} after calibration (\cref{sec:offset});
+  \item \textbf{Aperture} well below 1\,UI, so that it samples a point rather than averaging the eye, and a sampling bandwidth well above $\fN$;
+  \item \textbf{Regeneration} fast enough that even tiny inputs resolve in time (\cref{sec:metastability}), and a clock-to-output delay that fits the DFE loop of \cref{sec:dfe-timing};
+  \item \textbf{Low kick-back:} the large internal swings must not couple back into the CTLE and disturb the other three samplers;
+  \item \textbf{Low noise:} at least the $kT/C$ noise of its internal nodes, $\sqrt{kT/C}=\qty{0.45}{\milli\volt}$ at \qty{20}{\femto\farad}.
+\end{itemize}
+
+\subsection{The StrongARM latch}
+
+The \textbf{StrongARM} latch (\cref{fig:ch10-sa-sch}) is the standard CMOS comparator~\cite{p4:kobayashi1993,p4:razavi2015sa}. It draws no static current and produces rail-to-rail outputs. Its operation has four phases:
+\begin{enumerate}
+  \item \textbf{Reset} (CLK low): $S_1$--$S_4$ precharge out$^\pm$, X and X$'$ to $V_\mathrm{DD}$, and $M_7$ is off.
+  \item \textbf{Integration} (CLK rises): $M_7$ turns on. The input pair $M_1/M_2$ discharges X and X$'$, then the output nodes, with currents $I_D\pm\gm\,v_\mathrm{in}/2$. The common mode falls and a differential voltage grows linearly.
+  \item \textbf{Regeneration:} when the outputs have fallen by $\lvert V_\mathrm{TP}\rvert$, the PMOS $M_5/M_6$ turn on. The two cross-coupled inverters ($M_3/M_5$, $M_4/M_6$) now amplify the difference exponentially. The input pair is in triode and no longer sees the input.
+  \item \textbf{Decision:} one output returns to $V_\mathrm{DD}$ and the other falls to ground. An SR latch holds the result while the next reset begins~\cite{p4:nikolic2000}.
+\end{enumerate}
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[american, scale=0.68, transform shape, font=\small]
+  \draw (-4.6,4.2) -- (9.0,4.2); \draw (2.2,4.2) node[vcc]{$V_\mathrm{DD}=\qty{1.2}{\volt}$};
+  \draw (0,3.1) node[pmos,xscale=-1](M5){};
+  \draw (4.4,3.1) node[pmos](M6){};
+  \draw (0,1.2) node[nmos,xscale=-1](M3){};
+  \draw (4.4,1.2) node[nmos](M4){};
+  \draw (0,-0.7) node[nmos](M1){};
+  \draw (4.4,-0.7) node[nmos,xscale=-1](M2){};
+  \draw (2.2,-2.6) node[nmos](M7){};
+  \draw (-1.8,3.1) node[pmos](S1){};
+  \draw (6.2,3.1) node[pmos,xscale=-1](S2){};
+  \draw (-3.6,1.0) node[pmos](S3){};
+  \draw (8.0,1.0) node[pmos,xscale=-1](S4){};
+  \foreach \m/\t/\dx in {M5/M_5/-0.55,M6/M_6/0.55,M3/M_3/-0.55,M4/M_4/0.55,M1/M_1/0.55,M2/M_2/-0.55,M7/M_7/0.55,S1/S_1/0.5,S2/S_2/-0.5,S3/S_3/0.5,S4/S_4/-0.5}{\node[text=navy] at ($(\m.center)+(\dx,0.1)$) {$\t$};}
+  \draw (M5.S) -- (0,4.2); \draw (M6.S) -- (4.4,4.2); \draw (S1.S) -- (-1.8,4.2); \draw (S2.S) -- (6.2,4.2);
+  \draw (S3.S) -- (-3.6,4.2); \draw (S4.S) -- (8.0,4.2);
+  \draw (M5.D) -- (M3.D); \draw (M6.D) -- (M4.D);
+  \draw (M3.S) -- (M1.D); \draw (M4.S) -- (M2.D);
+  \draw (0,2.15) node[circ]{}; \draw (4.4,2.15) node[circ]{};
+  \draw (S1.D) |- (0,2.15); \draw (S2.D) |- (4.4,2.15);
+  \draw (0,0.27) node[circ]{} node[above left]{X}; \draw (4.4,0.27) node[circ]{} node[above right]{X$'$};
+  \draw (S3.D) |- (0,0.27); \draw (S4.D) |- (4.4,0.27);
+  \draw (M5.G) -- (4.4,2.15); \draw (M6.G) -- (0,2.15);
+  \draw (M3.G) -- (4.4,2.15); \draw (M4.G) -- (0,2.15);
+  \draw (-1.8,2.15) to[short,*-o] (-2.6,2.15) node[below]{$\mathrm{out}^-$};
+  \draw (6.2,2.15) to[short,*-o] (7.0,2.15) node[below]{$\mathrm{out}^+$};
+  \draw (M1.S) -- (0,-1.7) -- (4.4,-1.7) -- (M2.S);
+  \draw (2.2,-1.7) node[circ]{} -- (M7.D);
+  \draw (M7.S) -- (2.2,-3.6) node[ground]{};
+  \draw (M1.G) to[short,-o] ++(-0.4,0) node[left]{$V_\mathrm{in}^+$};
+  \draw (M2.G) to[short,-o] ++(0.4,0) node[right]{$V_\mathrm{in}^-$};
+  \draw (M7.G) -- ++(-0.3,0) node[left]{CLK};
+  \foreach \s in {S1,S3}{\draw (\s.G) -- ++(-0.25,0) node[left,font=\footnotesize]{CLK};}
+  \foreach \s in {S2,S4}{\draw (\s.G) -- ++(0.25,0) node[right,font=\footnotesize]{CLK};}
+\end{tikzpicture}
+\caption{\textbf{The StrongARM latch.} The input pair $M_1/M_2$ integrates the input onto X/X$'$ and the outputs. The cross-coupled inverters $M_3/M_5$ and $M_4/M_6$ (crossing wires) regenerate it, and $S_1$--$S_4$ precharge every internal node while CLK is low. The outputs drive an SR latch (not shown). No current flows once a decision is made.}
+\label{fig:ch10-sa-sch}
+\end{figure}
+
+\begin{derivation}[Regeneration time constant]
+In regeneration each inverter, biased near its switching point, is a transconductance $\gm$ (NMOS plus PMOS) driving its own output capacitance $C$ from the other output: $C\,\dot v_1=-\gm v_2$ and $C\,\dot v_2=-\gm v_1$. Subtracting, the difference $\Delta V=v_1-v_2$ obeys $C\,\dot{\Delta V}=\gm\Delta V$, a growing exponential. The integration phase sets its starting value: the outputs fall at $I_D/C$, so regeneration begins after $t_1=C\lvert V_\mathrm{TP}\rvert/I_D$, and by then the input pair has built $\Delta V(t_1)=g_\mathrm{m,in}v_\mathrm{in}t_1/C=A_\mathrm{int}\,v_\mathrm{in}$.
+\end{derivation}
+
+\begin{keyeq}[StrongARM regeneration and decision time]
+\begin{equation}
+  \Delta V(t)=A_\mathrm{int}\,v_\mathrm{in}\,e^{(t-t_1)/\tau},\qquad \tau=\frac{C}{\gm},\qquad
+  t_\mathrm{dec}=t_1+\tau\ln\frac{V_L}{A_\mathrm{int}\,v_\mathrm{in}} .
+  \label{eq:ch10-sa}
+\end{equation}
+Each factor of 10 less input adds $\tau\ln10=2.3\tau$ to the decision time. $V_L$ is the swing the next stage needs.
+\end{keyeq}
+
+\Cref{fig:ch10-sa} shows a behavioral model with the numbers of \cref{we:ch10-meta}: $C=\qty{20}{\femto\farad}$, $I_D=\qty{200}{\micro\ampere}$ and $\lvert V_\mathrm{TP}\rvert=0.4$\,V give $t_1=\qty{40}{\pico\second}$ and $A_\mathrm{int}=3$; the cross-coupled pair gives $\tau=20\,\mathrm{fF}/1.5\,\mathrm{mS}\approx\qty{13}{\pico\second}$. A 1\,mV input decides in 109\,ps, a 10\,\textmu V input in 169\,ps.
+
+\begin{figure}[tbp]
+\centering
+\includegraphics{ch10_sa}
+\caption{\textbf{A latch amplifies exponentially: halving the input only adds a fixed delay.} Behavioral StrongARM model ($t_1=40$\,ps, $A_\mathrm{int}=3$, $\tau=13$\,ps). (a) Output nodes for 10\,mV and 0.1\,mV inputs: both fall together during integration, then split. (b) Output difference on a log scale for inputs from 100\,mV to 10\,\textmu V. The straight lines have slope $1/\tau$, and each decade of input costs 30\,ps. Inputs below about 4\,\textmu V miss the 180\,ps deadline.}
+\label{fig:ch10-sa}
+\end{figure}
+
+\subsection{The HBT CML latch}
+
+The CML latch (\cref{fig:ch10-cml}) is the bipolar alternative~\cite{palermo720ckt}. While CK is high, the track pair $Q_1/Q_2$ is an ordinary CML buffer and the outputs follow the input with time constant $\RL C$. When CK falls, the tail current switches to the cross-coupled pair $Q_3/Q_4$, which holds and amplifies whatever difference the outputs carried at that instant. Two latches on opposite clock phases form a master--slave flip-flop.
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[american, scale=0.66, transform shape, font=\small]
+  \node[lblb,font=\sffamily\normalsize\bfseries] at (-1.6,4.0) {(a)};
+  \draw (-0.3,4.0) -- (7.7,4.0); \draw (3.7,4.0) node[vcc]{$V_\mathrm{CC}=\qty{2.5}{\volt}$};
+  \draw (0,0) node[npn](Q1){};
+  \draw (2.0,0) node[npn,xscale=-1](Q2){};
+  \draw (4.4,0) node[npn,xscale=-1](Q3){};
+  \draw (7.4,0) node[npn](Q4){};
+  \draw (1.0,-2.3) node[npn](Q5){};
+  \draw (5.9,-2.3) node[npn,xscale=-1](Q6){};
+  \foreach \q/\t/\dx in {Q1/Q_1/0.5,Q2/Q_2/-0.5,Q3/Q_3/-0.5,Q4/Q_4/0.5,Q5/Q_5/0.5,Q6/Q_6/-0.5}{\node[text=navy] at ($(\q.center)+(\dx,0.05)$) {$\t$};}
+  \draw (0,2.0) to[R, l=$\RL$] (0,4.0);
+  \draw (7.4,1.4) to[R, l_=$\RL$] (7.4,4.0);
+  \draw (Q1.C) -- (0,2.0) to[short,*-] (4.4,2.0) -- (Q3.C);
+  \draw (Q2.C) -- (2.0,1.4) to[short,*-] (4.25,1.4) arc[start angle=180,end angle=0,radius=0.15] -- (7.4,1.4) node[circ]{} -- (Q4.C);
+  \draw (0,2.0) to[short,-o] (-1.0,2.0) node[left]{$\mathrm{out}^-$};
+  \draw (7.4,1.4) to[short,-o] (8.4,1.4) node[right]{$\mathrm{out}^+$};
+  \draw (Q3.B) -- (7.4,1.05) node[circ]{};
+  \draw (Q4.B) -- (4.4,1.05) node[circ]{};
+  \draw (Q1.B) to[short,-o] ++(-0.45,0) node[left]{$D^+$};
+  \draw (Q2.B) to[short,-o] ++(0.45,0) node[below]{$D^-$};
+  \draw (Q1.E) -- (0,-1.15) -- (2.0,-1.15) -- (Q2.E);
+  \draw (1.0,-1.15) node[circ]{} -- (Q5.C);
+  \draw (Q3.E) -- (4.4,-1.15) -- (7.4,-1.15) -- (Q4.E);
+  \draw (5.9,-1.15) node[circ]{} -- (Q6.C);
+  \draw (Q5.B) to[short,-o] ++(-0.45,0) node[left]{$\mathrm{CK}^+$};
+  \draw (Q6.B) to[short,-o] ++(0.45,0) node[right]{$\mathrm{CK}^-$};
+  \draw (Q5.E) -- (1.0,-3.45) -- (5.9,-3.45) -- (Q6.E);
+  \draw (3.45,-3.45) node[circ]{} to[I, l=$I_T$] (3.45,-5.0) node[ground]{};
+  \node[lblb] at (1.0,-0.5) {track};
+  \node[lblb] at (5.9,-0.6) {latch};
+  \begin{scope}[xshift=10.8cm,yshift=-0.5cm]
+    \node[lblb,font=\sffamily\normalsize\bfseries,anchor=west] at (-0.6,2.4) {(b) master--slave};
+    \node[blkb,minimum width=14mm,minimum height=12mm] (L1) at (0.8,0.6) {latch\\(master)};
+    \node[blkb,minimum width=14mm,minimum height=12mm] (L2) at (3.6,0.6) {latch\\(slave)};
+    \draw[sig] (-0.6,0.6) node[left,text=navy]{$D$} -- (L1.west);
+    \draw[sig] (L1.east) -- (L2.west);
+    \draw[sig] (L2.east) -- (5.2,0.6) node[right,text=navy]{$Q$};
+    \draw[clk] (0.8,-1.0) node[below,text=golddk]{$\overline{\mathrm{CK}}$} -- (L1.south);
+    \draw[clk] (3.6,-1.0) node[below,text=golddk]{CK} -- (L2.south);
+  \end{scope}
+\end{tikzpicture}
+\caption{\textbf{The HBT CML latch.} (a) With CK high the track pair $Q_1/Q_2$ drives the loads; with CK low the tail current moves to the cross-coupled pair $Q_3/Q_4$ (crossing wires), which regenerates the stored difference. The swing is $I_T\RL$ and the supply current never changes. (b) A master latch on $\overline{\mathrm{CK}}$ followed by a slave on CK forms a flip-flop that samples on the rising edge.}
+\label{fig:ch10-cml}
+\end{figure}
+
+\begin{keyeq}[CML latch regeneration]
+\begin{equation}
+  C\,\dot{\Delta V}=\Big(\gm-\frac{1}{\RL}\Big)\Delta V\qquad\Longrightarrow\qquad \tau=\frac{\RL C}{\gm\RL-1},\qquad \gm=\frac{I_T/2}{V_T}.
+  \label{eq:ch10-cml}
+\end{equation}
+The cross-coupled pair adds $\gm\Delta V$ of current and the loads remove $\Delta V/\RL$; regeneration needs a loop gain $\gm\RL>1$.
+\end{keyeq}
+
+\paragraph{Why it is fast in \sgx{}} With $I_T=\qty{1}{\milli\ampere}$, each side carries 0.5\,mA and $\gm=\qty{19.3}{\milli\siemens}$; $\RL=\qty{400}{\ohm}$ gives a \qty{400}{\milli\volt} swing and $\gm\RL=7.7$. With $C=\qty{30}{\femto\farad}$, \cref{eq:ch10-cml} gives $\tau=\qty{1.8}{\pico\second}$, and 3--\qty{5}{\pico\second} once base resistance and $C_\mu$ are included. That is three to seven times faster than the StrongARM, because the HBT's $\gm/I=1/V_T$ and its 300\,GHz $f_T$ give large $\gm$ with little capacitance. The latch also kicks back less, since its current never changes, and its sampling instant does not move with the input common mode. Its cost is static power: \qty{2.5}{\milli\watt} per latch from 2.5\,V.
+
+\paragraph{The \OS{} choice} All four samplers are HBT CML master--slave flip-flops. The data samplers must, because the direct-feedback DFE needs a clock-to-output delay of 25--35\,ps (\cref{sec:dfe-timing}); a 1.2\,V StrongARM with its SR latch needs 100\,ps or more for small inputs. The edge samplers use the same circuit so that data and edge samplers have the same aperture delay, as the next paragraph shows. A StrongARM remains the right choice where a decision can wait, such as the DFE's error sampler (\cref{sec:adaptation}) or slow monitors.
+
+\paragraph{Aperture} A real sampler does not take an instantaneous sample. Its output is a weighted average $\int v_\mathrm{in}(t)h(t)\,dt$ with $\int h=1$, where $h(t)$ is the \textbf{sampling function}~\cite{p4:kim2009}. The \textbf{aperture} $w_{80}$ is the time that holds the central 80\,\% of the weight. Its Fourier transform is the sampler's own bandwidth. \Cref{fig:ch10-aperture} compares the two latches. The StrongARM integrates during the 40\,ps after the clock edge; the CML latch remembers the input with its track time constant $\RL C=\qty{12}{\pico\second}$ \emph{before} the edge. Both apertures are about 25--30\,ps (0.12--0.14\,UI), and both bandwidths, 12--15\,GHz, cost less than 0.2\,dB at $\fN$. But their centroids differ by 23\,ps. A StrongARM edge sampler next to CML data samplers would make the CDR lock 0.12\,UI away from the true eye center. Keep $w_{80}\le0.2$\,UI with sharp clock edges, and use one sampler type for data and edge.
+
+\begin{figure}[tbp]
+\centering
+\includegraphics{ch10_aperture}
+\caption{\textbf{A sampler averages its input over its aperture.} (a) Sampling functions $h(t)$ of a StrongARM (weight after the clock edge, during integration) and an HBT CML latch (weight before the edge, through the track time constant), with their cumulative weights. Both have $w_{80}\approx$ 25--30\,ps, but their centroids are 23\,ps apart. (b) The same functions as filters: both pass $\fN$ with less than 0.2\,dB of loss.}
+\label{fig:ch10-aperture}
+\end{figure}
+
+%% =====================================================================
+\section{Metastability}\label{sec:metastability}
+
+If the input is close enough to zero, the latch has not reached a valid logic level $V_L$ when its time $T$ runs out. It is then \textbf{metastable}, and downstream logic may read it either way, or both ways at once. By \cref{eq:ch10-sa} the latch fails only if its starting value is below $V_Le^{-T/\tau}$, that is, if $\lvert v_\mathrm{in}\rvert<V_Le^{-T/\tau}/A$, where $A$ is the gain in front of the regenerative node.
+
+\begin{keyeq}[Metastability error probability]
+\begin{equation}
+  P_\mathrm{meta}=\frac{2V_L}{A\,\Delta V}\,e^{-T/\tau},\qquad\text{and for cascaded stages}\quad P_\mathrm{meta}\propto e^{-(T_1/\tau_1+T_2/\tau_2+\dots)} .
+  \label{eq:ch10-meta}
+\end{equation}
+The input is assumed spread uniformly over a range $\Delta V$; the fraction that lands in the failing window of width $2V_Le^{-T/\tau}/A$ is $P_\mathrm{meta}$. Each latch stage behind the first multiplies the probability by its own $e^{-T/\tau}$.
+\end{keyeq}
+
+\begin{example}{StrongARM metastability, data versus edge samplers}\label{we:ch10-meta}
+\textbf{Timing:} the half-rate clock period is 400\,ps, so evaluation lasts 200\,ps. Integration takes $t_1=\qty{40}{\pico\second}$ and the SR latch needs about 20\,ps, which leaves $T=\qty{140}{\pico\second}$ of regeneration with $\tau=\qty{13}{\pico\second}$: a gain of $e^{10.8}=4.8\times10^4$.
+
+\textbf{Data sampler:} reaching $V_L=\qty{0.6}{\volt}$ needs $0.6/4.8\times10^4=\qty{12}{\micro\volt}$ at the latch, or \qty{4}{\micro\volt} at the input with $A_\mathrm{int}=3$. An equalized eye never puts the data sample that close to zero, so data samplers are safe.
+
+\textbf{Edge sampler:} it samples the zero crossing \emph{on purpose}, so its input is often tiny. Take the input spread over $\pm\qty{100}{\milli\volt}$ ($\Delta V=\qty{0.2}{\volt}$) and $A=3$: $P_\mathrm{meta}=(2\cdot0.6/0.6)\,e^{-10.8}=\mathbf{4.2\times10^{-5}}$ per sample, or $10^5$ undefined decisions per second at 2.5\,GS/s. That is far too many for a digital CDR loop.
+
+\textbf{Fix:} two more latch stages, each with 200\,ps and $\tau\approx\qty{20}{\pico\second}$, multiply by $e^{-20}$: $P_\mathrm{meta}=\mathbf{8.7\times10^{-14}}$, below the BER target. A metastable edge decision then costs one bang-bang vote, which the loop filter averages away.
+
+\textbf{HBT CML latch:} with $\tau\approx\qty{4}{\pico\second}$ and the same 140\,ps, $P_\mathrm{meta}\approx4\times10^{-16}$ in the master latch alone (with $V_L=\qty{0.2}{\volt}$).
+\end{example}
+
+\begin{figure}[tbp]
+\centering
+\includegraphics{ch10_meta}
+\caption{\textbf{Metastability falls exponentially with regeneration time, and every extra latch stage adds its own exponent.} \Cref{eq:ch10-meta} with $\Delta V=0.2$\,V and $A=3$. A lone StrongARM leaves $4.2\times10^{-5}$ at the 140\,ps of \cref{we:ch10-meta}; two extra CMOS latches bring it below $10^{-12}$. The HBT CML latch crosses $10^{-12}$ after about 110\,ps.}
+\label{fig:ch10-meta}
+\end{figure}
+
+\begin{insight}[Edge samplers need extra stages]
+A data sampler sees an open eye; an edge sampler is aimed at the zero crossing, so it is metastable thousands of times more often. Always put at least two more latch stages between an edge sampler and the CDR logic, and count their regeneration time. In \OS{} the CML slave latch and the first CMOS flip-flops of the deserializer provide them.
+\end{insight}
+
+%% =====================================================================
+\section{Offset and calibration}\label{sec:offset}
+
+Two transistors drawn identically are not identical. Random dopant and edge fluctuations give the threshold voltages of a matched pair a random difference whose standard deviation falls with gate area~\cite{p4:pelgrom1989}. A sampler with mismatched input devices therefore has an input-referred \textbf{offset} $V_\mathrm{os}$: it decides as if its threshold were $V_\mathrm{os}$ instead of zero.
+
+\begin{keyeq}[Pelgrom mismatch and calibration sizing]
+\begin{equation}
+  \sigma_{V_\mathrm{os}}\approx\frac{A_{VT}}{\sqrt{WL}},\qquad
+  \text{range}=\pm3\sigma_{V_\mathrm{os}},\qquad
+  \mathrm{LSB}=\frac{6\sigma_{V_\mathrm{os}}}{2^n},\qquad \lvert V_\mathrm{os,res}\rvert\le\frac{\mathrm{LSB}}{2}.
+  \label{eq:ch10-pelgrom}
+\end{equation}
+Halving $\sigma$ needs four times the area, and so four times the input capacitance. A DAC is cheaper.
+\end{keyeq}
+
+\begin{example}{Sizing the offset DAC}\label{we:ch10-offset}
+\textbf{Given:} an input pair of $W/L=\qty{4}{\micro\meter}/\qty{0.13}{\micro\meter}$ ($WL=\qty{0.52}{\micro\meter\squared}$) and $A_{VT}\approx\qty{3.5}{\milli\volt\micro\meter}$. That $A_{VT}$ is an assumption for 130\,nm; extract the real value by Monte Carlo if the \sgx{} models include mismatch.
+
+\textbf{Offset:} $\sigma=3.5/\sqrt{0.52}=\qty{4.9}{\milli\volt}$, so $\pm3\sigma=\pm\qty{14.6}{\milli\volt}$. Untrimmed, only 70\,\% of samplers meet $\lvert V_\mathrm{os}\rvert<\qty{5}{\milli\volt}$, and all four in one receiver do so on only 24\,\% of chips (\cref{fig:ch10-offset}).
+
+\textbf{DAC:} a residual of $\pm\qty{1}{\milli\volt}$ needs $\mathrm{LSB}\le\qty{2}{\milli\volt}$, so $n\ge\log_2(29.2/2)=3.9$. Choose \textbf{5 bits}: LSB = \qty{0.91}{\milli\volt}, residual $\pm\qty{0.46}{\milli\volt}$. After trim, 99.8\,\% of samplers are within 1\,mV.
+
+\textbf{The no-calibration alternative} needs $\sigma=\qty{1}{\milli\volt}$, or $WL=\qty{12.2}{\micro\meter\squared}$: 24 times the area, with the capacitance, kick-back and slower $\tau$ that come with it.
+\end{example}
+
+\begin{figure}[tbp]
+\centering
+\includegraphics{ch10_offset}
+\caption{\textbf{Mismatch spreads sampler offsets over tens of millivolts; a 5-bit DAC pulls them inside half a millivolt.} Monte Carlo of 20\,000 samplers with $\sigma=4.9$\,mV (\cref{we:ch10-offset}). (a) Distribution before and after trimming with a $\pm3\sigma$, 5-bit DAC. (b) Fraction of samplers within a given offset. Untrimmed, 70\,\% of single samplers but only 24\,\% of four-sampler receivers meet the 5\,mV budget of \cref{sec:noisebudget}.}
+\label{fig:ch10-offset}
+\end{figure}
+
+\paragraph{Calibrating the \OS{} receiver} The HBT pairs of the CML samplers match better than MOS pairs, but the CTLE, the summer and the load resistors add offsets of their own. \OS{} therefore trims the whole path, one DAC per sampler, by injecting a differential current into the DFE summer load (\cref{fig:ch10-cal}). The total current stays constant, so the common mode does not move. Referred to the input with unity front-end gain, one LSB of 0.91\,mV across the \qty{250}{\ohm} summer load is \qty{3.6}{\micro\ampere}, and the full $\pm16$\,LSB range is $\pm\qty{58}{\micro\ampere}$. The procedure is a short digital loop: short the inputs to the common mode, count ones and zeros for a few thousand cycles, step the code toward 50/50, repeat until it toggles by one LSB, then freeze it. Capacitive trim on the StrongARM's internal nodes is the alternative for CMOS samplers; it costs aperture time.
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm,font=\sffamily\footnotesize,
+  b/.style={blk,minimum height=10mm,font=\sffamily\footnotesize,inner sep=2pt}]
+  \node[b,fill=btint,minimum width=22mm] (fe) at (2.3,0) {CTLE +\\DFE summer};
+  \node[b,fill=btint,minimum width=16mm] (smp) at (5.2,0) {sampler};
+  \node[b,fill=gtint,draw=golddk,minimum width=30mm] (cnt) at (8.6,0) {count 1s vs 0s\\over $N$ cycles; code $\pm1$};
+  \node[b,fill=gtint,draw=golddk,minimum width=24mm] (dac) at (5.2,-1.75) {5-bit offset DAC\\$I_\mathrm{os}=(\mathrm{code}-16)\,I_\mathrm{LSB}$};
+  \draw[navy,line width=0.75pt] (-0.4,0.25) node[left,text=navy]{$\mathrm{in}^\pm$} -- (0.2,0.25);
+  \draw[navy,line width=0.75pt] (0.2,0.25) -- (0.62,0.5);
+  \node[dot] at (0.2,0.25) {};
+  \node[dot] (sw) at (0.7,0.25) {};
+  \draw[navy,line width=0.75pt] (0.7,0.25) -- (fe.west |- 0,0.25);
+  \draw[navy,line width=0.75pt] (0.7,-0.25) -- (fe.west |- 0,-0.25);
+  \draw[navy,line width=0.75pt] (0.7,0.25) -- (0.7,-0.25) node[dot]{};
+  \node[lbl,anchor=north] at (0.45,-0.35) {$S_\mathrm{cal}$: short to $V_\mathrm{CM}$};
+  \draw[sig] (fe) -- (smp);
+  \draw[sig] (smp) -- (cnt);
+  \draw[sigg] (cnt.south) |- (dac.east);
+  \draw[sigg] (dac.west) -| node[pos=0.75,left,text=golddk,font=\sffamily\scriptsize]{current into the summer load} (fe.south);
+  \draw[sig] (cnt.east) -- (11.6,0) node[right,text=navy,align=left]{freeze code\\when it toggles};
+\end{tikzpicture}
+\caption{\textbf{Offset calibration is a slow digital loop.} With the inputs shorted, a sampler with zero offset outputs ones and zeros equally often. The counter steps a 5-bit current DAC in the summer load until the code toggles by one LSB (0.91\,mV, or \qty{3.6}{\micro\ampere} into \qty{250}{\ohm}), then freezes it. Running it at power-up and after large temperature changes keeps the residual offset inside the budget.}
+\label{fig:ch10-cal}
+\end{figure}
+
+\begin{insight}
+Do not buy offset with area. Use minimum-capacitance input devices for speed, calibrate the whole path with a 5-bit DAC sized for $\pm3\sigma$, and leave the 5\,mV of the system budget for drift between calibrations. Simulate offset with Monte Carlo mismatch, never with ideal devices.
+\end{insight}
+
+%% =====================================================================
+\section{Noise and the sensitivity budget}\label{sec:ch10-noise}
+
+\Cref{sec:noisebudget} budgeted the receiver with three numbers: $\sign=\qty{1.5}{\milli\volt}$ rms input-referred noise, $V_\mathrm{os}=\qty{5}{\milli\volt}$ after calibration, and a sampler sensitivity $V_\mathrm{sens}=\qty{20}{\milli\volt}$. Here we check them against the circuits. The sensitivity of a sampler collects its own Gaussian noise $\sigma_s$ at the BER multiplier, the minimum overdrive $V_\mathrm{min}$ that resolves in time (metastability, hysteresis and kick-back memory), and its residual offset~\cite{palermo720ckt}:
+
+\begin{keyeq}[Sampler sensitivity]
+\begin{equation}
+  V_\mathrm{sens}\approx 2Q\,\sigma_s+V_\mathrm{min}+2\lvert V_\mathrm{os,res}\rvert,\qquad 2Q=14.07\ \text{at}\ 10^{-12}.
+  \label{eq:ch10-sens}
+\end{equation}
+\end{keyeq}
+
+\begin{example}{Circuit-level noise and sensitivity budget}\label{we:ch10-noise}
+All terms are rms and referred to the RX input, conservatively with unity front-end gain.
+\begin{center}
+\small
+\begin{tabular}{@{}lrl@{}}
+\toprule
+Source & $\sigma$ (mV) & How it was estimated\\
+\midrule
+Termination and line, \qty{50}{\ohm} diff. & 0.10 & 0.91\,nV/$\sqrt{\mathrm{Hz}}$ over an 11.8\,GHz noise bandwidth\\
+CTLE (shot noise, $R_E$, $R_C$) & 0.25 & \cref{sec:ctle-hbt} densities; confirm with \code{.noise}\\
+DFE summer loads & 0.32 & $\sqrt{2kT/C}$, $C=\qty{80}{\femto\farad}$\\
+Sampler, input-referred & 1.0 & $kT/C$ floor 0.45--0.64\,mV; 0.7--0.85\,mV measured~\cite{p4:kim2009}\\
+\midrule
+\textbf{Total (RSS)} & \textbf{1.08} & system budget assumes 1.5\\
+\bottomrule
+\end{tabular}
+\end{center}
+\textbf{Sensitivity:} with $\sigma_s=\qty{1}{\milli\volt}$, $V_\mathrm{min}\approx\qty{5}{\milli\volt}$ and the 5-bit residual of \qty{0.46}{\milli\volt}, \cref{eq:ch10-sens} gives $14.1+5+0.9=\mathbf{20}$\,mV, the value of \cref{sec:noisebudget}.
+
+\textbf{Margin:} with the circuit noise, the linear budget of \cref{sec:noisebudget} becomes $131-14.07\times1.08-3.5-10-20=\mathbf{82}$\,mV instead of 76\,mV. Since $V_\mathrm{sens}$ already contains the sampler's own noise and residual offset, the system budget counts them twice and is about 15\,mV conservative.
+\end{example}
+
+The budget follows Palermo's rule for noise sources~\cite{palermo720ckt}: classify each one as bounded or Gaussian, and as proportional to swing or independent of it. Thermal noise, offset and sensitivity are independent of swing, so they shrink in relative terms as the eye grows. Residual ISI and crosstalk are proportional to swing, and no TX amplitude can beat them. With 82\,mV of margin, the receiver circuits are not the weak link; equalization is.
+
+%% =====================================================================
+\section{The deserializer}\label{sec:deserializer}
+
+The first 1:2 of the deserializer is free: a half-rate receiver already delivers even and odd bits on separate samplers. The rest mirrors the transmitter (\cref{fig:ch10-deser}). Each sampler's 2.5\,Gb/s output is converted from CML to CMOS levels and enters a 1:8 tree of CMOS 1:2 stages clocked at 1.25\,GHz, 625\,MHz and 312.5\,MHz. That is 400\,ps per bit at the first CMOS flip-flop, or 9.5\,FO4, which a 1.2\,V CMOS flip-flop handles; a CMOS 1:2 demux is also far less sensitive to duty cycle than the TX mux. The two data lanes interleave into the 16-bit word, and the two edge lanes give 16 edge bits for the CDR logic. The clocks come from the recovered 2.5\,GHz clock through $\div2$ stages, so the whole tree lives in the \textbf{recovered clock domain}.
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm,font=\sffamily\footnotesize,
+  b/.style={blk,minimum width=11mm,minimum height=8mm,font=\sffamily\footnotesize,inner sep=1pt},
+  rate/.style={font=\sffamily\scriptsize,text=golddk,align=center}]
+  \draw[region,fill=gtint!35] (2.0,-2.6) rectangle (10.15,1.9);
+  \node[lblb,anchor=north west] at (2.05,1.85) {CMOS, 1.2\,V, recovered clock domain};
+  \foreach \y/\n/\t in {0.7/a/{$D_0$}, -0.7/b/{$D_1$}}{
+    \node[blk,fill=btint,minimum width=11mm,minimum height=8mm] (s\n) at (0.6,\y) {\t};
+    \node[b,fill=btint] (c\n) at (2.75,\y) {CML$\to$\\CMOS};
+    \node[b,fill=gtint,draw=golddk] (x\n) at (4.55,\y) {1:2};
+    \node[b,fill=gtint,draw=golddk] (y\n) at (6.15,\y) {1:2};
+    \node[b,fill=gtint,draw=golddk] (z\n) at (7.75,\y) {1:2};
+    \draw[sig] (s\n) -- (c\n); \draw[sig] (c\n) -- (x\n); \draw[sig] (x\n) -- (y\n); \draw[sig] (y\n) -- (z\n);
+  }
+  \node[rate,anchor=south] at (1.65,0.75) {2.5\,Gb/s};
+  \node[rate,anchor=south] at (5.35,0.75) {$2\times$1.25};
+  \node[rate,anchor=south] at (6.95,0.75) {$4\times$625};
+  \node[blk,fill=gtint,draw=golddk,minimum width=13mm,minimum height=22mm] (il) at (9.35,0) {interleave\\16\,b};
+  \draw[sig] (za.east) -- (il.west |- 0,0.7); \draw[sig] (zb.east) -- (il.west |- 0,-0.7);
+  \node[rate,anchor=south] at (8.6,0.75) {8\,b};
+  \node[blk,fill=gtint,draw=golddk,minimum width=15mm,minimum height=12mm] (ff) at (11.6,0) {async\\FIFO};
+  \draw[sig,line width=1.3pt] (il.east) -- (ff.west);
+  \draw[sig,line width=1.3pt] (ff.east) -- (14.2,0) node[above left,text=navy,align=right]{16 b to core\\312.5\,MHz (PLL)};
+  % edges
+  \node[lbl,anchor=west,align=left] at (0.1,-1.55) {$E_0$, $E_1$: same 1:8 trees $\to$ 16 edge bits $\to$ CDR logic};
+  % clock chain
+  \node[blk,fill=navy,text=white,minimum width=13mm,minimum height=7mm] (rc) at (0.6,-3.3) {PI clock};
+  \foreach \x/\n in {4.55/k1,6.15/k2,7.75/k3}{\node[blk,minimum width=8mm,minimum height=6mm,inner sep=1pt] (\n) at (\x-0.8,-3.3) {$\div2$};}
+  \draw[clk] (rc) -- (k1); \draw[clk] (k1) -- (k2); \draw[clk] (k2) -- (k3); \draw[clk] (k3.east) -- (11.6,-3.3) -- (ff.south);
+  \node[rate,anchor=north] at (2.4,-3.45) {2.5\,GHz};
+  \node[rate,anchor=north] at (4.55,-3.45) {1.25\,GHz};
+  \node[rate,anchor=north] at (6.15,-3.45) {625\,MHz};
+  \node[rate,anchor=north] at (9.4,-3.45) {312.5\,MHz (recovered) writes};
+  \foreach \x in {4.55,6.15,7.75}{\node[dot,fill=gold] at (\x,-3.3) {}; \draw[clk] (\x,-3.3) -- (\x,-1.1);}
+\end{tikzpicture}
+\caption{\textbf{The deserializer mirrors the serializer.} The half-rate samplers already provide the first 1:2. Each data lane goes from CML to CMOS and through three 1:2 stages to 8 bits at 312.5\,MHz; the two lanes interleave into the 16-bit word. The edge lanes do the same for the CDR. All clocks are divided from the recovered (PI) clock, and an asynchronous FIFO hands the word to the core clock.}
+\label{fig:ch10-deser}
+\end{figure}
+
+\paragraph{Crossing into the core clock} The recovered 312.5\,MHz clock and the core's 312.5\,MHz clock, which comes from the local PLL, have the same frequency in near-end loopback, or when both ends share a reference, but an unknown and wandering phase. A small asynchronous FIFO, 4--8 words deep with Gray-coded pointers, absorbs that. If the far end has its own reference ($\pm\qty{100}{\ppm}$ each), the frequencies differ by up to \qty{200}{\ppm}: one word slips every 5000 words, or every \qty{16}{\micro\second}. That needs an elastic buffer with skip and insert symbols, which is a protocol feature. For bring-up, run the PRBS checker directly in the recovered domain, before the FIFO, so a BER measurement needs no clock crossing at all.
+
+%% =====================================================================
+\section{RX design checklist}\label{sec:ch10-checklist}
+
+\Cref{tab:ch10-check} collects the RX checks and a first-cut power estimate of about 70\,mW, without the PLL, phase interpolator and CDR logic (\cref{sec:power-budget}).
+
+\begin{table}[tbp]
+\centering
+\caption{\textbf{RX checklist and first-cut power.} CML currents from the worked examples here and in \cref{ch:ctle,ch:dfe}. Confirm every line in \tool{ngspice} with extracted parasitics.}
+\label{tab:ch10-check}
+\small
+\begin{tabularx}{\linewidth}{@{}l L r@{}}
+\toprule
+Block & Check before layout & Power\\
+\midrule
+Termination, ESD, pad & \qty{100}{\ohm} diff., AC-grounded center tap; $C_p<0.85$\,pF; RL $\ge10$\,dB at $\fN$ & --\\
+CTLE and buffer & linear range for the long-run level; 0--12\,dB peaking (2\,mA + 3\,mA) & 12.5\,mW\\
+DFE summers ($\times2$), taps & settles within the tap-1 budget; offset DAC injection (6\,mA) & 15\,mW\\
+4 CML samplers (M--S) & $\tau\le5$\,ps; $t_\mathrm{CK\to Q}\le35$\,ps; same type for data and edge (12\,mA) & 30\,mW\\
+I/Q clock buffers & sharp edges ($w_{80}\le0.2$\,UI); phase error $\le\ang{5}$ (5.6\,ps) & 10\,mW\\
+Offset DACs ($\times4$) & 5 bits, $\pm3\sigma$ range, LSB 0.91\,mV & 0.6\,mW\\
+Deserializer (1.2\,V) & two extra latch stages behind $E_0$/$E_1$; FIFO or in-domain PRBS checker & 5\,mW\\
+\midrule
+\textbf{Total RX} & 27\,mA from 2.5\,V, 4\,mA from 1.2\,V & \textbf{$\approx$73\,mW}\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{takeaways}
+\begin{itemize}
+  \item The \OS{} receiver is termination, CTLE, DFE summer and four half-rate samplers (data at \ang{0}/\ang{180}, edges at \ang{90}/\ang{270}), followed by a 1:16 deserializer and the CDR logic.
+  \item A latch amplifies exponentially, $\Delta V\propto e^{t/\tau}$: $\tau=C/\gm\approx13$\,ps for a 130\,nm StrongARM and $\tau=\RL C/(\gm\RL-1)\approx$ 2--5\,ps for an \sgx{} HBT CML latch.
+  \item \OS{} uses HBT CML master--slave samplers everywhere: the DFE loop needs their 25--35\,ps clock-to-output, and one sampler type keeps the data and edge apertures aligned.
+  \item $P_\mathrm{meta}=(2V_L/A\Delta V)\,e^{-T/\tau}$. A lone StrongARM edge sampler gives $4\times10^{-5}$; two extra latch stages bring it below $10^{-13}$.
+  \item Pelgrom's law gives $\sigma\approx\qty{4.9}{\milli\volt}$ for a small 130\,nm pair; a 5-bit DAC over $\pm3\sigma$ leaves $\pm0.46$\,mV.
+  \item The circuit noise is about 1.1\,mV rms and the sensitivity about 20\,mV, which supports the system budget with about 80\,mV of margin.
+  \item Half rate gives the first 1:2 for free; CMOS does the rest, and a small FIFO crosses from the recovered to the core clock.
+\end{itemize}
+\end{takeaways}

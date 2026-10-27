@@ -1,0 +1,453 @@
+---
+title: "3. The Channel"
+parent: "Part I · Foundations"
+nav_order: 3
+permalink: "/chapters/03-the-channel/"
+---
+{% raw %}
+<h1 id="ch:channel"><span class="chapnum">Chapter 3</span>The Channel</h1>
+<div class="chapterlead">
+<p>Copper is not a wire at 5 Gb/s: it is a lossy, reflective transmission line, and its pulse response sets almost every number in the rest of this book.</p>
+</div>
+<div class="tbox tbox-objectives">
+<div class="tbox-title">
+<p>In this chapter you will learn</p>
+</div>
+<ul>
+<li><p>Decide when a trace is a transmission line, and compute <span class="math inline">\(Z_0\)</span> and the delay from its RLGC parameters.</p></li>
+<li><p>Explain why conductor loss grows as <span class="math inline">\(\sqrt f\)</span> and dielectric loss as <span class="math inline">\(f\)</span>, and estimate FR-4 loss in dB per inch.</p></li>
+<li><p>Predict reflections from terminations, pads, bondwires and via stubs, and read them in a TDR plot.</p></li>
+<li><p>Use S-parameters, including the mixed-mode <span class="math inline">\(S_{dd21}\)</span> of a differential pair.</p></li>
+<li><p>Turn <span class="math inline">\(S_{21}(f)\)</span> into a causal impulse response and a pulse response.</p></li>
+<li><p>Know the Open-SERDES reference channel REF and its cursors.</p></li>
+</ul>
+</div>
+<h2 id="sec:ch3-what"><span class="secnum">3.1</span>What is the channel?</h2>
+<p>The <strong>channel</strong> is everything between the transmitter’s output transistors and the receiver’s input transistors. <a href="#fig:ch3-path">Figure 3.1</a> follows a bit across a typical board-to-board link. Long traces and cables attenuate high frequencies (<strong>loss</strong>). Short lumps such as bondwires, pads and vias change the impedance and send part of the wave back (<strong>reflections</strong>). Dense pins and connectors couple neighboring lanes (<strong>crosstalk</strong>). We treat each mechanism in turn and then combine them into one transfer function <span class="math inline">\(H_\mathrm{ch}(f)\)</span> and one pulse response <span class="math inline">\(p(t)\)</span>, the two objects that the link-analysis tools of <a href="{% endraw %}{{ '/chapters/04-link-budgets-and-statistical-analysis/' | relative_url }}{% raw %}">Chapter 4</a> work with.</p>
+<div id="fig:ch3-path">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/tikz/03_channel-0.svg' | relative_url }}{% raw %}" style="width:628px" alt="The physical path of one bit, with the main impairment of each segment." loading="lazy" />
+<figcaption><span class="capnum">Figure 3.1.</span> <strong>The physical path of one bit, with the main impairment of each segment.</strong> Long, uniform segments (gold) cause most of the loss; short lumps cause reflections; dense pin fields cause crosstalk. The Open-SERDES reference channel REF lumps the long interconnect into 1 m of FR-4 stripline with a 300 fF pad at each end.</figcaption>
+</figure>
+<h2 id="sec:tline"><span class="secnum">3.2</span>Transmission lines</h2>
+<h3 id="sec3.2.1-when-is-a-wire-a-transmission-line"><span class="secnum">3.2.1</span>When is a wire a transmission line?</h3>
+<p>A wire is <strong>lumped</strong> when its voltage is the same everywhere at any instant. It becomes a <strong>transmission line</strong> when the signal changes noticeably while the wave travels along it. The usual rule compares the one-way delay <span class="math inline">\(t_d\)</span> with the rise time <span class="math inline">\(t_r\)</span> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p2:johnson1993">15</a>, <a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-hall2009">16</a>]: <span id="eq:ch3-tline-rule"></span><span class="math display">\[t_d \gtrsim \frac{t_r}{6}
+  \quad\Longleftrightarrow\quad
+  \ell \gtrsim \frac{t_r\, v}{6}, \tag{3.1}\]</span> where <span class="math inline">\(v\)</span> is the propagation velocity. Equivalently, a line longer than about a tenth of a wavelength at the highest frequency of interest is a transmission line.</p>
+<h3 id="sec3.2.2-the-telegrapher-model"><span class="secnum">3.2.2</span>The telegrapher model</h3>
+<p>A transmission line is a ladder of tiny identical sections (<a href="#fig:ch3-rlgc">Figure 3.2</a>). Each section of length <span class="math inline">\(\Delta z\)</span> has a series resistance <span class="math inline">\(R\,\Delta z\)</span> (the copper), a series inductance <span class="math inline">\(L\,\Delta z\)</span> (the magnetic field around the current), a shunt capacitance <span class="math inline">\(C\,\Delta z\)</span> (the electric field to the return plane) and a shunt conductance <span class="math inline">\(G\,\Delta z\)</span> (leakage through the dielectric). KVL and KCL around one section, in the limit <span class="math inline">\(\Delta z\to0\)</span>, give the <strong>telegrapher equations</strong> <span class="math display">\[\frac{\partial V}{\partial z} = -(R + j\omega L)\, I, \qquad
+  \frac{\partial I}{\partial z} = -(G + j\omega C)\, V .\]</span> Eliminating <span class="math inline">\(I\)</span> gives <span class="math inline">\(\partial^2 V/\partial z^2 = \gamma^2 V\)</span>, whose solution is a forward and a backward wave, <span class="math inline">\(V(z) = V^+e^{-\gamma z} + V^-e^{+\gamma z}\)</span>.</p>
+<div id="fig:ch3-rlgc">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/tikz/03_channel-1.svg' | relative_url }}{% raw %}" style="width:559px" alt="One RLGC section of a transmission line." loading="lazy" />
+<figcaption><span class="capnum">Figure 3.2.</span> <strong>One RLGC section of a transmission line.</strong> The series elements carry the current and the shunt elements hold the voltage. On a board at 5 Gb/s, <span class="math inline">\(\omega L \gg R\)</span> and <span class="math inline">\(\omega C \gg G\)</span>: the line is an <span class="math inline">\(LC\)</span> ladder with small loss terms.</figcaption>
+</figure>
+<div class="tbox tbox-keyeq">
+<div class="tbox-title">
+<p>Key equation · Propagation constant, impedance and velocity</p>
+</div>
+<div id="eq:ch3-z0">
+
+</div>
+<p><span class="math display">\[\begin{gathered}
+  \gamma = \alpha + j\beta = \sqrt{(R + j\omega L)(G + j\omega C)}, \qquad
+  Z_0= \sqrt{\frac{R + j\omega L}{G + j\omega C}} \;\xrightarrow{\ \text{low loss}\ }\; \sqrt{\frac{L}{C}},\\[2pt]
+  v = \frac{1}{\sqrt{LC}} = \frac{c}{\sqrt{\varepsilon_r}} \quad\text{(lossless)}.
+  \end{gathered} \tag{3.3}\]</span></p>
+</div>
+<p><span class="math inline">\(\alpha\)</span> (Np/m) is the attenuation and <span class="math inline">\(\beta\)</span> (rad/m) the phase constant. The <strong>characteristic impedance</strong> <span class="math inline">\(Z_0\)</span> is the ratio <span class="math inline">\(V^+/I^+\)</span> of one traveling wave: the impedance the wave sees before it meets the far end, not something an ohmmeter can measure. Inductance takes over from resistance above <span class="math inline">\(f = R/(2\pi L)\)</span>. For the REF line (<span class="math inline">\(R_\mathrm{DC} = 7\,\Omega /\mathrm{m}\)</span>, <span class="math inline">\(L = 334\,\mathrm{nH}/\mathrm{m}\)</span>) that is only 3.3 MHz, so every board trace is an LC line at gigahertz frequencies. Thin on-chip wires have far more resistance per meter and stay RC lines.</p>
+<div class="tbox tbox-example">
+<div class="tbox-title">
+<p>Worked Example 3.1 · FR-4 delay and the transmission-line length</p>
+</div>
+<p><span id="we:ch3-delay"></span> <strong>Given:</strong> FR-4 stripline, <span class="math inline">\(\varepsilon_r = 4.0\)</span>, <span class="math inline">\(Z_0= 50\,\Omega\)</span>, and a 5 Gb/s CML edge with <span class="math inline">\(t_r \approx 50\,\mathrm{ps}\)</span> (0.25 UI, a reasonable value for an SG13G2 HBT driver).</p>
+<p><strong>Solution:</strong> <span class="math inline">\(v = c/\sqrt4 = 1.50\times 10^{8}\,\mathrm{m}/\mathrm{s}\)</span>, so the delay is 6.67 ps/mm (169 ps per inch); one meter of REF takes 6.67 ns, or 33.4 UI. The line has <span class="math inline">\(L = Z_0/v = 334\,\mathrm{nH}/\mathrm{m}\)</span> and <span class="math inline">\(C = 1/(Z_0v) = 133\,\mathrm{pF}/\mathrm{m}\)</span>. By <a href="#eq:ch3-tline-rule">Equation (3.1)</a>, a trace is a transmission line beyond <span class="math inline">\(t_r v/6 = 1.25\,\mathrm{mm}\)</span>. The wavelength rule agrees: <span class="math inline">\(\lambda/10\)</span> at 7.5 GHz, the third harmonic of <span class="math inline">\(f_\mathrm{N}\)</span>, is 2.0 mm.</p>
+<p><strong>Conclusion:</strong> everything off-chip longer than about a millimeter, package traces included, is a transmission line at 5 Gb/s. On-chip routes of a few hundred micrometers are lumped.</p>
+</div>
+<h2 id="sec:loss"><span class="secnum">3.3</span>Loss mechanisms</h2>
+<p>A line loses energy in the copper and in the dielectric. In the low-loss limit (<span class="math inline">\(R\ll\omega L\)</span>, <span class="math inline">\(G\ll\omega C\)</span>), a first-order expansion of <a href="#eq:ch3-z0">Equation (3.3)</a> splits the attenuation into two independent terms, <span class="math inline">\(\alpha \approx \alpha_R + \alpha_D\)</span>.</p>
+<h5 id="skin-effect-conductor-loss-grows-as-sqrt-f">Skin effect: conductor loss grows as <span class="math inline">\(\sqrt f\)</span></h5>
+<p>At DC the current fills the whole cross-section of the trace. At high frequency, the changing magnetic field inside the conductor induces eddy currents that cancel the current in the middle, and the current crowds into a surface layer of thickness <span id="eq:ch3-skin"></span><span class="math display">\[\delta = \sqrt{\frac{\rho}{\pi f \mu_0}}, \tag{3.4}\]</span> the <strong>skin depth</strong> (<span class="math inline">\(\rho\)</span> is the resistivity, <span class="math inline">\(\mu_0 = 4\pi\times10^{-7}\)</span> H/m). For copper (<span class="math inline">\(\rho = 1.72\times 10^{-8}\,\Omega \,\mathrm{m}\)</span>) at 2.5 GHz, <span class="math inline">\(\delta = 1.32\,\mu\mathrm{m}\)</span>. Once <span class="math inline">\(\delta\)</span> is below half the conductor thickness, the current flows in a sheet <span class="math inline">\(\delta\)</span> thick around the effective perimeter <span class="math inline">\(P\)</span>, so <span class="math display">\[R(f) \approx \frac{\rho}{P\,\delta} = \frac{\sqrt{\pi f \mu_0 \rho}}{P} \;\propto\; \sqrt f .\]</span> The numerator <span class="math inline">\(R_s = \rho/\delta\)</span> is the <strong>surface resistance</strong> in ohms per square. <a href="#fig:ch3-skin">Figure 3.3</a> shows both effects for a 5-mil (127 µm) wide, half-ounce (17.5 µm) copper trace. On chip, the SG13G2 thick top metals are aluminum, with <span class="math inline">\(\delta = 1.6\,\mu\mathrm{m}\)</span> at 2.5 GHz, close to half the 3 µm TopMetal2 thickness. That matters for inductors and long clock lines, not for the board channel.</p>
+<div id="fig:ch3-skin">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch03_skin.svg' | relative_url }}{% raw %}" style="width:753px" alt="Skin effect makes resistance grow as \sqrt f." loading="lazy" />
+<figcaption><span class="capnum">Figure 3.3.</span> <strong>Skin effect makes resistance grow as <span class="math inline">\(\sqrt f\)</span>.</strong> (a) Skin depth falls as <span class="math inline">\(1/\sqrt f\)</span>; below half the conductor thickness (dotted lines) the current no longer uses the whole cross-section. (b) Resistance of a 5-mil, half-ounce stripline: flat at <span class="math inline">\(R_\mathrm{DC} = 7.7\,\Omega\)</span>/m up to about 57 MHz, then <span class="math inline">\(\propto\sqrt f\)</span>, reaching about 46 <span class="math inline">\(\Omega\)</span>/m at the 2.5 GHz Nyquist frequency.</figcaption>
+</figure>
+<h5 id="dielectric-loss-grows-as-f">Dielectric loss grows as <span class="math inline">\(f\)</span></h5>
+<p>The alternating field also rotates the dipoles in the board material, and each rotation dissipates a little heat. A lossy dielectric acts like a capacitor with a conductance in parallel, <span class="math inline">\(G = \omega C \tan\delta\)</span>, where the <strong>loss tangent</strong> <span class="math inline">\(\tan\delta\)</span> is roughly constant over frequency (0.02 for FR-4, 0.002–0.005 for low-loss laminates). Because <span class="math inline">\(G\)</span> grows with <span class="math inline">\(\omega\)</span>, dielectric loss grows linearly with frequency. (The loss angle <span class="math inline">\(\delta\)</span> is unrelated to the skin depth <span class="math inline">\(\delta\)</span>.)</p>
+<div class="tbox tbox-keyeq">
+<div class="tbox-title">
+<p>Key equation · Conductor and dielectric attenuation</p>
+</div>
+<div id="eq:ch3-alpha">
+
+</div>
+<p><span class="math display">\[\alpha_R = \frac{R(f)}{2Z_0}, \qquad
+  \alpha_D = \frac{GZ_0}{2} = \frac{\pi f\sqrt{\varepsilon_r}\,\tan\delta}{c}
+  \ [\mathrm{Np/m}], \qquad
+  \mathrm{IL}(f) = 8.686\,(\alpha_R+\alpha_D)\,\ell\ [\mathrm{dB}]. \tag{3.6}\]</span></p>
+</div>
+<p><a href="#fig:ch3-loss">Figure 3.4</a> plots both terms in dB per inch (1 Np = 8.686 dB). Conductor loss dominates only below about 0.5 GHz. At the 2.5 GHz Nyquist frequency of Open-SERDES, dielectric loss is already more than twice as large, and the gap widens because <span class="math inline">\(f\)</span> outruns <span class="math inline">\(\sqrt f\)</span>.</p>
+<div id="fig:ch3-loss">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch03_loss.svg' | relative_url }}{% raw %}" style="width:753px" alt="Above about 0.5 GHz, dielectric loss dominates FR-4." loading="lazy" />
+<figcaption><span class="capnum">Figure 3.4.</span> <strong>Above about 0.5 GHz, dielectric loss dominates FR-4.</strong> Conductor loss (dashed) grows as <span class="math inline">\(\sqrt f\)</span>, dielectric loss (dash-dot) as <span class="math inline">\(f\)</span>. At the NRZ Nyquist frequency a smooth 5-mil stripline loses 0.33 dB/in; a low-loss laminate cuts that to 0.15 dB/in. The REF model (dotted) has a rougher, lossier conductor and loses 0.44 dB/in.</figcaption>
+</figure>
+<div class="tbox tbox-example">
+<div class="tbox-title">
+<p>Worked Example 3.2 · Loss per inch and reach for a 10 dB budget</p>
+</div>
+<p><span id="we:ch3-loss"></span> <strong>Given:</strong> the 5-mil, half-ounce, 50 Ω FR-4 stripline of <a href="#fig:ch3-skin">Figure 3.3</a> (<span class="math inline">\(\varepsilon_r = 4.0\)</span>, <span class="math inline">\(\tan\delta = 0.02\)</span>) at <span class="math inline">\(f_\mathrm{N}= 2.5\)</span> GHz.</p>
+<p><strong>Dielectric:</strong> <span class="math inline">\(\alpha_D = \pi(2.5\times10^9)(2)(0.02)/(3\times10^8) = 1.047\,\mathrm{Np/m}\)</span>: 9.10 dB/m or <strong>0.231 dB/in</strong>.</p>
+<p><strong>Conductor:</strong> <span class="math inline">\(R_s = \rho/\delta = 13.0\,\mathrm{m\Omega }\)</span> per square. With <span class="math inline">\(P \approx 2(w+t) = 289\,\mu\mathrm{m}\)</span>, <span class="math inline">\(R \approx 45\,\Omega /\mathrm{m}\)</span>, so <span class="math inline">\(\alpha_R = 45/(2\cdot50) = 0.45\,\mathrm{Np/m}\)</span> or <strong>0.10 dB/in</strong>. Copper roughness and return current in the planes add tens of percent in real boards.</p>
+<p><strong>Total and reach:</strong> <span class="math inline">\(\alpha \approx 0.33\)</span> dB/in. A 10 dB budget allows <span class="math inline">\(10/0.33 = 30\)</span> in (76 cm) of bare trace, or 21 in (54 cm) if 3 dB is set aside for two packages and a connector pair. The REF model reaches 10 dB at 0.572 m (22.5 in, the 10 dB entry of <code>LOSS_FAMILY</code>) because its conductor term is twice as large (0.21 dB/in) and it includes the pads.</p>
+</div>
+<div class="tbox tbox-insight">
+<div class="tbox-title">
+<p>Why everyone quotes the loss at Nyquist</p>
+</div>
+<p>NRZ puts most of its power below <span class="math inline">\(f_\mathrm{N}= f_\mathrm{b}/2\)</span> (<a href="{% endraw %}{{ '/chapters/02-signals-systems-and-the-language-of-links/' | relative_url }}{% raw %}#sec:nrz">Section 2.1</a>), and the fastest pattern, 1010…, is a square wave whose fundamental is exactly <span class="math inline">\(f_\mathrm{N}\)</span>. The loss at <span class="math inline">\(f_\mathrm{N}\)</span> therefore predicts how much the channel closes the eye, and how much equalization you need, far better than the length or the loss at <span class="math inline">\(f_\mathrm{b}\)</span>. For Open-SERDES, budget <em>insertion loss at 2.5 GHz</em>: REF has 17.4 dB. Up to about 10 dB, a small TX FFE or a CTLE is enough; from 10 to 25 dB you need a CTLE and a DFE (<a href="{% endraw %}{{ '/chapters/05-equalization-fundamentals/' | relative_url }}{% raw %}">Chapter 5</a>).</p>
+</div>
+<h2 id="sec:reflections"><span class="secnum">3.4</span>Reflections and termination</h2>
+<p>A wave on a line of impedance <span class="math inline">\(Z_0\)</span> that meets a load <span class="math inline">\(Z_L\)</span> must satisfy <span class="math inline">\(V = Z_L I\)</span> at the load and <span class="math inline">\(V/I = Z_0\)</span> in the wave. One wave cannot do both, so a reflected wave is launched back toward the source, with relative amplitude given by the <strong>reflection coefficient</strong>.</p>
+<div class="tbox tbox-keyeq">
+<div class="tbox-title">
+<p>Key equation · Reflection coefficient and return loss</p>
+</div>
+<div id="eq:ch3-gamma">
+
+</div>
+<p><span class="math display">\[\Gamma_L = \frac{Z_L - Z_0}{Z_L + Z_0}, \qquad
+  \Gamma_S = \frac{R_S - Z_0}{R_S + Z_0}, \qquad
+  V_i = V_S\frac{Z_0}{R_S + Z_0}, \qquad
+  \mathrm{RL} = -20\log_{10}\lvert\Gamma\rvert . \tag{3.7}\]</span></p>
+</div>
+<p>A matched load gives <span class="math inline">\(\Gamma = 0\)</span>, an open <span class="math inline">\(+1\)</span> and a short <span class="math inline">\(-1\)</span>. <span class="math inline">\(V_i\)</span> is the wave launched by a source of open-circuit voltage <span class="math inline">\(V_S\)</span> and resistance <span class="math inline">\(R_S\)</span>. The <strong>return loss</strong> RL is <span class="math inline">\(\lvert\Gamma\rvert\)</span> in positive decibels: larger is better. With both ends mismatched, the wave bounces back and forth. The <strong>lattice diagram</strong> of <a href="#fig:ch3-bounce">Figure 3.5</a> tracks each bounce, with position across and time down. Each arrival at the load adds <span class="math inline">\((1+\Gamma_L)\)</span> times the incident wave, and the load voltage converges to the DC divider value only after several round trips of <span class="math inline">\(2t_d\)</span>.</p>
+<div id="fig:ch3-bounce">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/tikz/03_channel-2.svg' | relative_url }}{% raw %}" style="width:619px" alt="A lattice (bounce) diagram tracks every reflection." loading="lazy" />
+<figcaption><span class="capnum">Figure 3.5.</span> <strong>A lattice (bounce) diagram tracks every reflection.</strong> Left: a 1 V step from a 25 <span class="math inline">\(\Omega\)</span> source into a 50 <span class="math inline">\(\Omega\)</span> line ending in 100 <span class="math inline">\(\Omega\)</span>. Each arrow is one traveling wave with its amplitude. Right: the load voltage overshoots to 0.889 V, undershoots to 0.790 V and settles to 0.8 V, one step every <span class="math inline">\(2t_d\)</span>. In a link, the same echoes appear as bumps in the pulse response many UI after the main cursor.</figcaption>
+</figure>
+<h5 id="termination-choices">Termination choices</h5>
+<p><strong>Source termination</strong> (<span class="math inline">\(R_S = Z_0\)</span>, open load) absorbs reflections at the driver. <strong>Load termination</strong> (<span class="math inline">\(R_L = Z_0\)</span>) absorbs the wave at the receiver but only works if nothing in between reflects. <strong>Double termination</strong> (<span class="math inline">\(R_S = R_L = Z_0\)</span>) absorbs every returning echo at either end. It halves the received swing, but echoes are worse than a smaller signal, so serial links use it. Open-SERDES has 50 Ω per side (100 Ω differential) at TX and RX; <a href="{% endraw %}{{ '/chapters/09-the-transmitter/' | relative_url }}{% raw %}#sec:termination">Section 9.3</a> builds these resistors in SG13G2. A <span class="math inline">\(\pm20\%\)</span> resistor error (40–60 Ω) gives <span class="math inline">\(\lvert\Gamma\rvert \le 0.11\)</span>, i.e. RL <span class="math inline">\(\ge 19\)</span> dB, which is acceptable. The parasitics around the resistor are the bigger problem.</p>
+<h5 id="pad-capacitance">Pad capacitance</h5>
+<p>The bond pad, the ESD diodes and the input devices add a shunt capacitance <span class="math inline">\(C_p\)</span> across the termination. With <span class="math inline">\(R_T = Z_0\)</span>, the load is <span class="math inline">\(Z_0\parallel 1/(j\omega C_p)\)</span> and <a href="#eq:ch3-gamma">Equation (3.7)</a> becomes <span id="eq:ch3-padgamma"></span><span class="math display">\[\Gamma(f) = \frac{-j\omega Z_0C_p}{2 + j\omega Z_0C_p}, \qquad
+  \lvert\Gamma\rvert = \frac{\omega Z_0C_p}{\sqrt{4 + (\omega Z_0C_p)^2}} , \tag{3.8}\]</span> plotted in <a href="#fig:ch3-pad">Figure 3.6</a>(a) for several values of <span class="math inline">\(C_p\)</span>.</p>
+<div class="tbox tbox-example">
+<div class="tbox-title">
+<p>Worked Example 3.3 · Pad capacitance and return loss</p>
+</div>
+<p><span id="we:ch3-pad"></span> <strong>Given:</strong> <span class="math inline">\(R_T = 50\,\Omega\)</span> in parallel with <span class="math inline">\(C_p = 300\,\mathrm{fF}\)</span> (the REF pad), at 2.5 GHz.</p>
+<p><strong>Solution:</strong> <span class="math inline">\(\omega Z_0C_p = 2\pi(2.5\times10^9)(50)(300\times10^{-15}) = 0.236\)</span>, so <span class="math inline">\(\lvert\Gamma\rvert = 0.236/\sqrt{4.056} = 0.117\)</span> and <span class="math inline">\(\mathrm{RL} = 18.6\,\mathrm{dB}\)</span> (12.8 dB at 5 GHz).</p>
+<p><strong>Budget:</strong> inverting <a href="#eq:ch3-padgamma">Equation (3.8)</a>, <span class="math inline">\(\omega Z_0C_p = 2\lvert\Gamma\rvert/\sqrt{1-\lvert\Gamma\rvert^2}\)</span>. RL <span class="math inline">\(\ge 10\)</span> dB at 2.5 GHz allows <span class="math inline">\(C_p \le 0.85\,\mathrm{pF}\)</span>; RL <span class="math inline">\(\ge 15\)</span> dB allows <span class="math inline">\(C_p \le 0.46\,\mathrm{pF}\)</span>. Pad, ESD and input devices share this budget (<a href="{% endraw %}{{ '/chapters/09-the-transmitter/' | relative_url }}{% raw %}#sec:esd-pad">Section 9.6</a>).</p>
+</div>
+<div id="fig:ch3-pad">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch03_pad.svg' | relative_url }}{% raw %}" style="width:753px" alt="Pad capacitance spoils the termination at high frequency, and the reflections return as echoes." loading="lazy" />
+<figcaption><span class="capnum">Figure 3.6.</span> <strong>Pad capacitance spoils the termination at high frequency, and the reflections return as echoes.</strong> (a) Return loss of a 50 <span class="math inline">\(\Omega\)</span> termination with shunt <span class="math inline">\(C_p\)</span>; a 2.5 nH bondwire (dashed) is as bad as 1 pF. (b) Pulse response of a 10 cm REF-type line. With 1 pF pads, the wave reflected at the RX pad returns from the TX pad and arrives <span class="math inline">\(2t_d = 6.7\)</span> UI after the main cursor. A short, low-loss line does not attenuate this echo.</figcaption>
+</figure>
+<div class="tbox tbox-example">
+<div class="tbox-title">
+<p>Worked Example 3.4 · Bondwire inductance</p>
+</div>
+<p><span id="we:ch3-bond"></span> <strong>Given:</strong> a 2.5 mm bondwire, <span class="math inline">\(L \approx 2.5\,\mathrm{nH}\)</span> (about 1 nH/mm), in series between two 50 Ω environments, at 2.5 GHz.</p>
+<p><strong>Solution:</strong> a series impedance <span class="math inline">\(Z = j\omega L\)</span> between matched lines gives <span class="math inline">\(S_{11} = (Z/2Z_0)/(1 + Z/2Z_0)\)</span> and <span class="math inline">\(S_{21} = 1/(1 + Z/2Z_0)\)</span>. Here <span class="math inline">\(\omega L = 39.3\,\Omega\)</span> and <span class="math inline">\(\omega L/2Z_0= 0.393\)</span>. So <span class="math inline">\(\lvert S_{21}\rvert = 1/\sqrt{1.154} = 0.931\)</span> (<span class="math inline">\(-0.62\)</span> dB) but <span class="math inline">\(\lvert S_{11}\rvert = 0.393/1.075 = 0.366\)</span>: <strong>RL = 8.7 dB</strong>, failing a 10 dB target on its own.</p>
+<p><strong>Fix:</strong> keep bondwires below about 1 mm, use flip-chip bumps, or absorb the inductance into a matched section: 2.5 nH with 1.0 pF of pad capacitance forms an artificial line with <span class="math inline">\(\sqrt{L/C} = 50\,\Omega\)</span> and a cutoff of <span class="math inline">\(1/(\pi\sqrt{LC}) = 6.4\)</span> GHz.</p>
+</div>
+<h5 id="via-stubs">Via stubs</h5>
+<p>A through-hole via connects traces on different layers. If the signal enters on the top layer and leaves on an inner layer, the rest of the barrel is an unused <strong>stub</strong>: a short open-ended line hanging off the signal path (<a href="#fig:ch3-via">Figure 3.7</a>a). Where the stub is a quarter wavelength long, its open end is transformed into a short at the signal path, and almost nothing gets through: <span id="eq:ch3-stub"></span><span class="math display">\[f_\mathrm{null} \approx \frac{v}{4\,\ell_\mathrm{stub}} . \tag{3.9}\]</span></p>
+<div id="fig:ch3-via">
+
+</div>
+<figure>
+<div class="mpcol" style="--w:43%">
+<img src="{% endraw %}{{ '/assets/figs/tikz/03_channel-3.svg' | relative_url }}{% raw %}" style="width:215px" alt="A via stub is a quarter-wave resonator that notches \lvert S_{21}\rvert." loading="lazy" />
+</div>
+<div class="mpcol" style="--w:54%">
+<img src="{% endraw %}{{ '/assets/figs/ch03_via.svg' | relative_url }}{% raw %}" style="width:363px" alt="A via stub is a quarter-wave resonator that notches \lvert S_{21}\rvert." loading="lazy" />
+</div>
+<figcaption><span class="capnum">Figure 3.7.</span> <strong>A via stub is a quarter-wave resonator that notches <span class="math inline">\(\lvert S_{21}\rvert\)</span>.</strong> (a) The signal turns at L3, so the barrel below is an open stub. (b) Through-path <span class="math inline">\(\lvert S_{21}\rvert\)</span> with 2, 4 and 6 mm stubs, labeled with their null frequencies. A 6 mm stub puts the notch at 6.2 GHz, close enough to the 0–5 GHz NRZ main lobe (shaded) to distort the pulse.</figcaption>
+</figure>
+<div class="tbox tbox-example">
+<div class="tbox-title">
+<p>Worked Example 3.5 · Via-stub notch</p>
+</div>
+<p><span id="we:ch3-via"></span> <strong>Given:</strong> FR-4 (<span class="math inline">\(v = 1.5\times 10^{8}\,\mathrm{m}/\mathrm{s}\)</span>), stubs of 1.5, 3 and 5 mm.</p>
+<p><strong>Solution:</strong> <a href="#eq:ch3-stub">Equation (3.9)</a> gives <span class="math inline">\(f_\mathrm{null} = 25\)</span>, 12.5 and 7.5 GHz. To keep the first null above <span class="math inline">\(3f_\mathrm{N}= 7.5\)</span> GHz, stubs must be shorter than <span class="math inline">\(v/(4\times7.5\,\mathrm{GHz}) = 5\,\mathrm{mm}\)</span>. The barrel’s extra capacitance slows the wave, so in practice keep stubs below about 3 mm, route on layers near the bottom, or backdrill. The Open-SERDES test board should follow this rule for every high-speed via (<a href="{% endraw %}{{ '/chapters/15-design-and-verification-flow-with-open-tools/' | relative_url }}{% raw %}#sec:layout-hs">Section 15.4</a>).</p>
+</div>
+<div class="tbox tbox-insight">
+<div class="tbox-title">
+<p>What this means for your design</p>
+</div>
+<p>Every discontinuity sends back a small, filtered copy of the signal. Two discontinuities form a cavity, and the copy that bounces between them reaches the receiver <span class="math inline">\(2t_d\)</span> late, about 1.7 UI per inch of FR-4 between them. In the pulse response this shows up as <em>ripples and bumps in the tail</em>, often 5–20 UI after the main cursor (<a href="#fig:ch3-pad">Figure 3.6</a>b). A two-tap DFE cannot cancel ISI that far out, so control reflections at the source: accurate termination, small pad capacitance, short bondwires and no long via stubs. A short, low-loss channel does not attenuate its echoes, so it can be harder to equalize than a longer one.</p>
+</div>
+<h2 id="sec:sparams"><span class="secnum">3.5</span>S-parameters</h2>
+<p>At gigahertz frequencies we cannot measure with opens and shorts, because a short wire is already a transmission line. A vector network analyzer instead drives each port from 50 Ω, terminates the others in 50 Ω, and measures traveling waves: <span class="math inline">\(a_j\)</span> into port <span class="math inline">\(j\)</span> and <span class="math inline">\(b_i\)</span> out of port <span class="math inline">\(i\)</span>. The <strong>scattering parameters</strong> are <span class="math inline">\(S_{ij} = b_i/a_j\)</span> with all other inputs matched. For a two-port, <span class="math inline">\(S_{11}\)</span> is the input reflection (return loss <span class="math inline">\(-20\log_{10}\lvert S_{11}\rvert\)</span>) and <span class="math inline">\(S_{21}\)</span> the transmission; the <strong>insertion loss</strong> is <span class="math inline">\(\mathrm{IL} = -20\log_{10}\lvert S_{21}\rvert\)</span>, a positive number. Because a doubly terminated link has the same 50 Ω reference, <span class="math inline">\(S_{21}\)</span> is the transfer function <span class="math inline">\(H_\mathrm{ch}(f) = 2V_\mathrm{out}/V_S\)</span> that we need. To cascade elements, convert each to an ABCD matrix, multiply, and convert back; <code>link.py</code> builds REF this way.</p>
+<h5 id="differential-channels-and-mixed-mode-s-parameters">Differential channels and mixed-mode S-parameters</h5>
+<p>Open-SERDES is differential: the information is <span class="math inline">\(V_P - V_N\)</span>. A differential channel has four single-ended ports, numbered as in <a href="#fig:ch3-ports">Figure 3.8</a>(a): ports 1 and 3 are the P and N inputs, 2 and 4 the P and N outputs. Driving the input differentially (<span class="math inline">\(a_1 = -a_3\)</span>) and reading the differential output <span class="math inline">\((b_2 - b_4)/\sqrt2\)</span> gives the <strong>mixed-mode</strong> parameters, referenced to 100 Ω differential: <span id="eq:ch3-sdd"></span><span class="math display">\[S_{dd21} = \tfrac12\left(S_{21} - S_{23} - S_{41} + S_{43}\right), \qquad
+  S_{dd11} = \tfrac12\left(S_{11} - S_{13} - S_{31} + S_{33}\right). \tag{3.10}\]</span> <span class="math inline">\(S_{cd21} = \tfrac12(S_{21} - S_{23} + S_{41} - S_{43})\)</span> measures how much differential signal turns into common mode, for example through a P/N length mismatch. For a symmetric, weakly coupled pair, <span class="math inline">\(S_{dd21}\approx S_{21}\)</span> of one leg, which is why REF can be modeled as a single-ended 50 Ω line.</p>
+<div id="fig:ch3-ports">
+
+</div>
+<figure>
+<div class="mpcol" style="--w:49%">
+<img src="{% endraw %}{{ '/assets/figs/tikz/03_channel-4.svg' | relative_url }}{% raw %}" style="width:312px" alt="Differential channels are 4-ports, and neighboring lanes couple." loading="lazy" />
+</div>
+<div class="mpcol" style="--w:49%">
+<img src="{% endraw %}{{ '/assets/figs/tikz/03_channel-5.svg' | relative_url }}{% raw %}" style="width:323px" alt="Differential channels are 4-ports, and neighboring lanes couple." loading="lazy" />
+</div>
+<figcaption><span class="capnum">Figure 3.8.</span> <strong>Differential channels are 4-ports, and neighboring lanes couple.</strong> (a) Ports 1 and 3 are the P and N inputs, 2 and 4 the outputs. Check the port map of every Touchstone file: many tools number the pair (1,2) in and (3,4) out. (b) An aggressor couples into the victim at the near end (NEXT) and the far end (FEXT).</figcaption>
+</figure>
+<h5 id="crosstalk">Crosstalk</h5>
+<p>Mutual capacitance <span class="math inline">\(C_m\)</span> and inductance <span class="math inline">\(L_m\)</span> couple an <strong>aggressor</strong> line into a <strong>victim</strong> (<a href="#fig:ch3-ports">Figure 3.8</a>b). <strong>Near-end crosstalk</strong> (NEXT) travels back toward the aggressor’s source and is the dangerous kind in a transceiver: a full-swing local TX lane couples into a local RX lane whose own signal has already lost 17 dB. A 0.8 Vppd aggressor at <span class="math inline">\(-30\)</span> dB NEXT injects about 25 mVpp, comparable with the residual ISI after equalization. <strong>Far-end crosstalk</strong> (FEXT) travels with the victim’s signal, is attenuated with it, and nearly cancels in a homogeneous stripline. Route TX and RX on different layers or connector rows, and prefer stripline.</p>
+<h5 id="time-domain-reflectometry">Time-domain reflectometry</h5>
+<p>A <strong>TDR</strong> launches a fast step and records the reflected voltage at the source. A reflection at round-trip time <span class="math inline">\(t\)</span> comes from distance <span class="math inline">\(x = vt/2\)</span>, and its amplitude gives the local impedance through <span class="math inline">\(Z = Z_0(1+\rho)/(1-\rho)\)</span>, with <span class="math inline">\(\rho = V_r/V_i\)</span>. <a href="#fig:ch3-tdr">Figure 3.9</a> shows the two signature shapes: a series inductance bumps above 50 Ω and a shunt capacitance dips below. For a lumped element, the size of the feature depends on the rise time: with a 25 ps step a 1 nH pin reads 97 Ω, with a 100 ps step only 61 Ω. A TDR result always comes with its rise time, which sets its resolution.</p>
+<div id="fig:ch3-tdr">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch03_tdr.svg' | relative_url }}{% raw %}" style="width:752px" alt="TDR: inductance bumps up, capacitance dips down." loading="lazy" />
+<figcaption><span class="capnum">Figure 3.9.</span> <strong>TDR: inductance bumps up, capacitance dips down.</strong> Simulated TDR of a 50 <span class="math inline">\(\Omega\)</span> line with a 1 nH series inductance at 15 mm and a 0.5 pF shunt capacitance at 68 mm, ending in a matched load. The top axis converts round-trip time to distance. A slower step (amber) blurs and shrinks both features. The wiggles near 1.4 ns are the wave re-reflected between the two discontinuities.</figcaption>
+</figure>
+<h2 id="sec:ch3-f2t"><span class="secnum">3.6</span>From frequency to time</h2>
+<p>The tools of <a href="{% endraw %}{{ '/chapters/04-link-budgets-and-statistical-analysis/' | relative_url }}{% raw %}">Chapter 4</a> need the pulse response <span class="math inline">\(p(t)\)</span> of <a href="{% endraw %}{{ '/chapters/02-signals-systems-and-the-language-of-links/' | relative_url }}{% raw %}#sec:pulse-response">Section 2.4</a>. We get it from <span class="math inline">\(S_{21}(f)\)</span> in two steps.</p>
+<h5 id="causality">Causality</h5>
+<p>A physical channel cannot respond before it is driven. In the frequency domain this means the magnitude and phase of <span class="math inline">\(H_\mathrm{ch}(f)\)</span> are linked: a given loss curve comes with a specific phase (dispersion). A model built from <span class="math inline">\(\lvert S_{21}\rvert\)</span> alone with a pure delay gives a symmetric impulse response that starts long before the wave could arrive (<a href="#fig:ch3-causal">Figure 3.10</a>). A dielectric model with <span class="math inline">\(\varepsilon_r\)</span> and <span class="math inline">\(\tan\delta\)</span> held exactly constant has the same flaw in a milder form. REF uses a causal dielectric whose capacitance varies as <span class="math inline">\((j\omega/\omega_0)^{-2\tan\delta/\pi}\)</span>, the simplest of the causal FR-4 models [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p2:djordjevic2001">17</a>]. A non-causal model produces <em>fake pre-cursors</em>, which then mislead the design of the TX FFE pre-tap.</p>
+<h5 id="impulse-and-pulse-response">Impulse and pulse response</h5>
+<p>The impulse response is the inverse Fourier transform of the conjugate-symmetric spectrum, <span class="math inline">\(h(t) = \mathcal F^{-1}\{H_\mathrm{ch}(f)\}\)</span> with <span class="math inline">\(H_\mathrm{ch}(-f) = H_\mathrm{ch}^*(f)\)</span>. The pulse response is <span class="math inline">\(h(t)\)</span> convolved with a 1-UI rectangle.</p>
+<div class="tbox tbox-keyeq">
+<div class="tbox-title">
+<p>Key equation · From <span class="math inline">\(S_{21}\)</span> to the pulse response</p>
+</div>
+<div id="eq:ch3-pulse">
+
+</div>
+<p><span class="math display">\[p(t) = \int_{t-T_\mathrm{b}}^{t} h(\tau)\,d\tau
+  \;\;\Longleftrightarrow\;\;
+  P(f) = H_\mathrm{ch}(f)\,T_\mathrm{b}\,\mathrm{sinc}(fT_\mathrm{b})\,e^{-j\pi fT_\mathrm{b}} \tag{3.11}\]</span></p>
+</div>
+<p>On a grid of <span class="math inline">\(N\)</span> points spaced <span class="math inline">\(\Delta f\)</span> up to <span class="math inline">\(f_\mathrm{max}\)</span>, the IFFT gives a time step <span class="math inline">\(\Delta t = 1/(2f_\mathrm{max})\)</span> and a window <span class="math inline">\(T_w = 1/\Delta f\)</span>. <code>common.py</code> uses 0–160 GHz in 10 MHz steps: <span class="math inline">\(\Delta t = 3.125\,\mathrm{ps}\)</span> (64 samples per UI) and <span class="math inline">\(T_w = 100\,\mathrm{ns}\)</span>, far longer than the REF delay plus tail. <a href="#fig:ch3-imp-pulse">Figure 3.11</a> compares the two responses: the 1-UI rectangle averages <span class="math inline">\(h\)</span> over 200 ps, so <span class="math inline">\(p(t)\)</span> is smoother and lower, and its tail coincides with that of <span class="math inline">\(h(t)\cdot T_\mathrm{b}\)</span>.</p>
+<div id="fig:ch3-causal">
+
+</div>
+<div id="fig:ch3-imp-pulse">
+
+</div>
+<figure>
+<div class="mpcol" style="--w:49%">
+<img src="{% endraw %}{{ '/assets/figs/ch03_causal.svg' | relative_url }}{% raw %}" style="width:363px" alt="The pulse response is the impulse response averaged over one UI." loading="lazy" />
+</div>
+<div class="mpcol" style="--w:49%">
+<img src="{% endraw %}{{ '/assets/figs/ch03_imp_pulse.svg' | relative_url }}{% raw %}" style="width:363px" alt="The pulse response is the impulse response averaged over one UI." loading="lazy" />
+</div>
+<figcaption><span class="capnum">Figure 3.11.</span> <strong>The pulse response is the impulse response averaged over one UI.</strong> REF, with <span class="math inline">\(h(t)\)</span> scaled by <span class="math inline">\(T_\mathrm{b}\)</span> so both curves are in volts. The peak <span class="math inline">\(p_0 = 0.340\)</span> V arrives 6.82 ns after launch.</figcaption>
+</figure>
+<p><a href="#fig:ch3-family">Figure 3.12</a> shows how the pulse response changes with loss, using the <code>LOSS_FAMILY</code> lines of <code>link.py</code>. From 5 to 25 dB of Nyquist loss, the main cursor falls from 0.77 to 0.22 V while the first post-cursor stays near 0.16–0.18 V, so <span class="math inline">\(p_1/p_0\)</span> grows from 0.12 to 0.71. That ratio, more than the loss itself, is what the equalizer must fight.</p>
+<div id="fig:ch3-family">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch03_family.svg' | relative_url }}{% raw %}" style="width:753px" alt="More loss means a smaller main cursor and a relatively larger tail." loading="lazy" />
+<figcaption><span class="capnum">Figure 3.12.</span> <strong>More loss means a smaller main cursor and a relatively larger tail.</strong> Pulse responses of the <code>LOSS_FAMILY</code> channels, aligned at their peaks; open dots mark the post-cursors <span class="math inline">\(p_1\ldots p_{10}\)</span>. At 15 dB (close to REF) the first post-cursor is already 46% of the main cursor.</figcaption>
+</figure>
+<div class="tbox tbox-pitfall">
+<div class="tbox-title">
+<p>IFFT mistakes that change your cursors</p>
+</div>
+<p>Forgetting conjugate symmetry gives a complex <span class="math inline">\(h(t)\)</span>. A coarse <span class="math inline">\(\Delta f\)</span> makes the window shorter than the delay plus tail, so the tail wraps around and looks like pre-cursor ISI. Data cut abruptly at its last frequency rings (Gibbs), and data without a DC point must be extrapolated. And the cursors are samples of <span class="math inline">\(p(t)\)</span>, not of <span class="math inline">\(h(t)\)</span>.</p>
+</div>
+<h2 id="sec:refchannel"><span class="secnum">3.7</span>The Open-SERDES reference channel</h2>
+<p>Every model, figure and lab in this book uses one synthetic channel, <strong>REF</strong>: a 50 Ω source, a 300 fF pad, 1 m of lossy FR-4 stripline, another 300 fF pad and a 50 Ω load. It is built from serdespy’s ABCD functions [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-serdespy">3</a>] by <code>channel(1.0)</code> in <code>tutorial/figsrc/link.py</code> and <code>tutorial/code/common.py</code>. <a href="#tab:ch3-refparams">Table 3.1</a> lists the parameters, and <a href="#fig:ch3-ref-s21">Figure 3.13</a> shows the insertion loss: −17.4 dB at 2.5 GHz. The pads cost only 0.1 dB of that; their real damage is the reflections they add.</p>
+<div id="tab:ch3-refparams">
+
+</div>
+<div id="fig:ch3-ref-s21">
+
+</div>
+<figure>
+<div class="mpcol" style="--w:47%">
+<div class="captionblock">
+<p><span class="capnum">Table 3.1.</span> <strong>REF model parameters</strong> and the matching <code>channel()</code> arguments.</p>
+</div>
+<p><span></span></p>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Quantity</th>
+<th style="text-align: left;">Value</th>
+<th style="text-align: left;">Arg.</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Length</td>
+<td style="text-align: left;">1.0 m</td>
+<td style="text-align: left;"><code>length</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><span class="math inline">\(Z_0\)</span> per side</td>
+<td style="text-align: left;">50 <span class="math inline">\(\Omega\)</span></td>
+<td style="text-align: left;"><code>z0</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><span class="math inline">\(\varepsilon_r\)</span></td>
+<td style="text-align: left;">4.0 (6.67 ns/m)</td>
+<td style="text-align: left;"><code>er</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><span class="math inline">\(\tan\delta\)</span></td>
+<td style="text-align: left;">0.02 at 1 GHz, causal</td>
+<td style="text-align: left;"><code>tand</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><span class="math inline">\(R_\mathrm{DC}\)</span></td>
+<td style="text-align: left;">7 <span class="math inline">\(\Omega\)</span>/m</td>
+<td style="text-align: left;"><code>rdc</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Skin <span class="math inline">\(R\)</span></td>
+<td style="text-align: left;">60 <span class="math inline">\(\Omega\)</span>/m at 1 GHz, <span class="math inline">\(\propto\!\sqrt f\)</span></td>
+<td style="text-align: left;"><code>kr</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Pads</td>
+<td style="text-align: left;">300 fF each end</td>
+<td style="text-align: left;"><code>c_pad</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Source, load</td>
+<td style="text-align: left;">50 <span class="math inline">\(\Omega\)</span> each</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Grid</td>
+<td style="text-align: left;">0–160 GHz, 10 MHz</td>
+<td style="text-align: left;"><code>F</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Loss</td>
+<td style="text-align: left;">0.59 / 10.4 / 17.4 / 30.1 dB</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">at 0 / 1.25 / 2.5 / 5 GHz</td>
+<td style="text-align: left;"></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="mpcol" style="--w:50%">
+<img src="{% endraw %}{{ '/assets/figs/ch03_ref_s21.svg' | relative_url }}{% raw %}" style="width:363px" alt="REF loses 17.4 dB at Nyquist." loading="lazy" />
+</div>
+<figcaption><span class="capnum">Figure 3.13.</span> <strong>REF loses 17.4 dB at Nyquist.</strong> <span class="math inline">\(\lvert S_{21}\rvert\)</span> with and without the 300 fF pads, which barely change the loss.</figcaption>
+</figure>
+<p><a href="#fig:ref-pulse">Figure 3.14</a> shows the REF pulse response sampled every UI from its peak, and <a href="#tab:ref-cursors">Table 3.2</a> lists the cursors. These thirteen numbers are the most-used data in this book.</p>
+<div id="fig:ref-pulse">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch03_ref_pulse.svg' | relative_url }}{% raw %}" style="width:753px" alt="The REF pulse response and its cursors." loading="lazy" />
+<figcaption><span class="capnum">Figure 3.14.</span> <strong>The REF pulse response and its cursors.</strong> A 1 V, 1-UI pulse arrives as a 0.340 V peak with a long tail. Sampling every UI from the peak gives the pre-cursor <span class="math inline">\(p_{-1}\)</span> (red), the main cursor <span class="math inline">\(p_0\)</span> (gold) and the post-cursors <span class="math inline">\(p_1, p_2, \ldots\)</span> (blue). The first post-cursor alone is 53.5% of the main cursor.</figcaption>
+</figure>
+<div id="tab:ref-cursors">
+
+</div>
+<div>
+<table>
+<caption><span class="capnum">Table 3.2.</span> <strong>REF cursors</strong> in volts for a 1 V, 1-UI pulse, sampled at the pulse peak (<span class="math inline">\(t_\mathrm{s}= 6.82\)</span> ns), from <code>link.cursors</code>.</caption>
+<thead>
+<tr class="header">
+<th style="text-align: left;"><span class="math inline">\(k\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(-2\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(-1\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(\mathbf{0}\)</span></th>
+<th style="text-align: center;">1</th>
+<th style="text-align: center;">2</th>
+<th style="text-align: center;">3</th>
+<th style="text-align: center;">4</th>
+<th style="text-align: center;">5</th>
+<th style="text-align: center;">6</th>
+<th style="text-align: center;">7</th>
+<th style="text-align: center;">8</th>
+<th style="text-align: center;">9</th>
+<th style="text-align: center;">10</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><span class="math inline">\(p_k\)</span></td>
+<td style="text-align: center;">0.000</td>
+<td style="text-align: center;">0.0486</td>
+<td style="text-align: center;"><strong>0.3396</strong></td>
+<td style="text-align: center;">0.1817</td>
+<td style="text-align: center;">0.0909</td>
+<td style="text-align: center;">0.0537</td>
+<td style="text-align: center;">0.0356</td>
+<td style="text-align: center;">0.0255</td>
+<td style="text-align: center;">0.0192</td>
+<td style="text-align: center;">0.0150</td>
+<td style="text-align: center;">0.0121</td>
+<td style="text-align: center;">0.0100</td>
+<td style="text-align: center;">0.0084</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h5 id="why-this-channel-is-hard">Why this channel is hard</h5>
+<p>Three numbers tell the story. First, <span class="math inline">\(p_0 = 0.34\)</span>: only a third of the transmitted pulse arrives in its own UI. Second, <span class="math inline">\(p_1/p_0 = 0.535\)</span>: the previous bit contributes more than half as much as the current one. Third, the ISI magnitudes <span class="math inline">\(\sum_{k\ne0}\lvert p_k\rvert\)</span> of these cursors add up to 0.501 V, more than <span class="math inline">\(p_0\)</span>. A worst-case pattern can push a “1” below zero, and the peak-distortion eye of <a href="{% endraw %}{{ '/chapters/04-link-budgets-and-statistical-analysis/' | relative_url }}{% raw %}#sec:pda">Section 4.2</a> is <span class="math inline">\(1\,\mathrm{V}\times(0.340 - 0.501) = -0.161\)</span> V: <em>closed</em>. A PRBS7 simulation agrees (<a href="{% endraw %}{{ '/chapters/16-hands-on-labs-with-serdespy/' | relative_url }}{% raw %}#sec:lab2">Section 16.3</a>). REF cannot be received without equalization, and the Open-SERDES link must still reach BER <span class="math inline">\(\le 10^{-12}\)</span> over it, with margin up to the 20–25 dB end of <code>LOSS_FAMILY</code> (<a href="{% endraw %}{{ '/chapters/08-decision-feedback-equalization-and-adaptation/' | relative_url }}{% raw %}#sec:eq-partition">Section 8.5</a>, <a href="{% endraw %}{{ '/chapters/14-the-open-serdes-architecture/' | relative_url }}{% raw %}#tab:specs">Table 14.1</a>).</p>
+<h5 id="replacing-ref-with-real-s-parameters">Replacing REF with real S-parameters</h5>
+<p>REF is a teaching model. Once the Open-SERDES test board is measured, or its traces are simulated with <strong>openEMS</strong> or <strong>Palace</strong>, you will swap in a 4-port Touchstone file. <strong>scikit-rf</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p2:skrf2022">18</a>] reads it, converts it to mixed mode and extrapolates it to DC; the rest of the flow is unchanged:</p>
+<div class="sourceCode" id="cb1" data-language="Python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> skrf <span class="im">as</span> rf</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> common <span class="im">import</span> <span class="op">*</span>                       <span class="co"># grid F, impulse(), pulse(), SPS</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>ch <span class="op">=</span> rf.Network(<span class="st">&quot;board.s4p&quot;</span>)               <span class="co"># measured or EM-simulated 4-port</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>ch.renumber([<span class="dv">1</span>, <span class="dv">2</span>], [<span class="dv">2</span>, <span class="dv">1</span>])                <span class="co"># book map (1,3 in; 2,4 out) -&gt; skrf (0,1 in)</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>ch.se2gmm(p<span class="op">=</span><span class="dv">2</span>)                             <span class="co"># mixed mode: ports d-in, d-out, c-in, c-out</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>ch <span class="op">=</span> ch.extrapolate_to_dc(kind<span class="op">=</span><span class="st">&quot;linear&quot;</span>)   <span class="co"># add 0 Hz, uniform frequency step</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>sdd21 <span class="op">=</span> ch.s[:, <span class="dv">1</span>, <span class="dv">0</span>]</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>H <span class="op">=</span> np.interp(F, ch.f, sdd21.real, right<span class="op">=</span><span class="dv">0</span>) <span class="op">+</span> <span class="ot">1j</span> <span class="op">*</span> np.interp(F, ch.f, sdd21.imag, right<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>h, t <span class="op">=</span> impulse(H)<span class="op">;</span> p <span class="op">=</span> pulse(h)            <span class="co"># then cursors(), pda_eye(), ... as for REF</span></span></code></pre></div>
+<p>Check the port map first (<a href="#fig:ch3-ports">Figure 3.8</a>), and taper the data toward its highest frequency instead of cutting it to zero. serdespy’s <code>four_port_to_diff</code> does the same job but assumes through paths <span class="math inline">\(1\to2\)</span> and <span class="math inline">\(3\to4\)</span> and ignores its <code>port_def</code> argument.</p>
+<div class="tbox tbox-tryit">
+<div class="tbox-title">
+<p>Lab 1: the channel</p>
+</div>
+<p>Run <code>lab1_channel.py</code> (<a href="{% endraw %}{{ '/chapters/16-hands-on-labs-with-serdespy/' | relative_url }}{% raw %}#sec:lab1">Section 16.2</a>). It plots <span class="math inline">\(\lvert S_{21}\rvert\)</span> of REF, converts it to <span class="math inline">\(h(t)\)</span> and <span class="math inline">\(p(t)\)</span>, and prints the cursors of <a href="#tab:ref-cursors">Table 3.2</a>. Then set <code>c_pad</code> to 1 pF and <code>length</code> to 0.3 m and watch the reflections of <a href="#fig:ch3-pad">Figure 3.6</a>(b) appear in the tail.</p>
+</div>
+<h2 id="sec:ch3-exercises"><span class="secnum">3.8</span>Exercises</h2>
+<ol>
+<li><p><strong>Is it a line?</strong> A package trace is 8 mm long on a substrate with <span class="math inline">\(\varepsilon_r = 3.5\)</span>, driven with <span class="math inline">\(t_r = 40\,\mathrm{ps}\)</span>. Compute its delay. Must it be modeled as a transmission line?</p></li>
+<li><p><strong>Better laminate.</strong> Repeat <a href="#we:ch3-loss">Worked Example 3.2</a> for a low-loss laminate (<span class="math inline">\(\varepsilon_r = 3.7\)</span>, <span class="math inline">\(\tan\delta = 0.004\)</span>) with the same copper. How long can the trace be for 17.4 dB at 2.5 GHz? Which loss term now dominates?</p></li>
+<li><p><strong>ESD budget.</strong> The RX must have RL <span class="math inline">\(\ge 15\)</span> dB at 2.5 GHz. The pad is 120 fF and the input devices add 60 fF. How much capacitance is left for ESD protection?</p></li>
+<li><p><strong>Via stub.</strong> A 3.2 mm thick board routes a signal from L1 to an inner layer 0.8 mm deep, and the via’s capacitance gives <span class="math inline">\(\varepsilon_{r,\mathrm{eff}} = 6\)</span>. Where is the stub null? Is it acceptable for Open-SERDES? What if the signal exits on the bottom layer instead?</p></li>
+<li><p><strong>Cursor ratio.</strong> With <code>channel()</code> from <code>link.py</code>, find the length at which <span class="math inline">\(p_1/p_0 = 0.5\)</span> and its Nyquist loss. Repeat with <code>tand=0.01</code> and explain why the answer moves.</p></li>
+</ol>
+<div class="tbox tbox-takeaways">
+<div class="tbox-title">
+<p>Key takeaways</p>
+</div>
+<ul>
+<li><p>Off-chip, every trace longer than about 1 mm is a transmission line at 5 Gb/s. FR-4 delay is 6.67 ps/mm (169 ps/in); REF takes 6.67 ns, or 33 UI.</p></li>
+<li><p>Conductor loss grows as <span class="math inline">\(\sqrt f\)</span> (skin depth 1.32 m at 2.5 GHz); dielectric loss grows as <span class="math inline">\(f\tan\delta\)</span> and dominates FR-4 above 0.5 GHz. A smooth FR-4 stripline loses about 0.33 dB/in at 2.5 GHz.</p></li>
+<li><p>Quote and budget insertion loss at Nyquist, 2.5 GHz. REF loses 17.4 dB there.</p></li>
+<li><p>Discontinuities reflect: 300 fF of pad gives RL = 18.6 dB, a 2.5 nH bondwire only 8.7 dB, and a via stub notches <span class="math inline">\(S_{21}\)</span> at <span class="math inline">\(v/(4\ell)\)</span>. Echoes return as late bumps in the pulse response.</p></li>
+<li><p>Use mixed-mode <span class="math inline">\(S_{dd21}\)</span> for differential channels and check the port map. On a TDR, inductance bumps up and capacitance dips down.</p></li>
+<li><p>A causal model and a correct IFFT turn <span class="math inline">\(S_{21}\)</span> into <span class="math inline">\(h(t)\)</span> and <span class="math inline">\(p(t)\)</span>. REF has <span class="math inline">\(p_{-1} = 0.049\)</span>, <span class="math inline">\(p_0 = 0.340\)</span> and <span class="math inline">\(p_1 = 0.182\)</span> (<span class="math inline">\(p_1/p_0 = 0.535\)</span>), and its unequalized peak-distortion eye is closed (<span class="math inline">\(-0.161\)</span> V).</p></li>
+</ul>
+</div>
+
+<nav class="prev-next" aria-label="Chapter navigation"><a class="pn-link prev" href="{% endraw %}{{ '/chapters/02-signals-systems-and-the-language-of-links/' | relative_url }}{% raw %}"><small>← Previous</small>Signals, Systems and the Language of Links</a><a class="pn-link next" href="{% endraw %}{{ '/chapters/04-link-budgets-and-statistical-analysis/' | relative_url }}{% raw %}"><small>Next →</small>Link Budgets and Statistical Analysis</a></nav>
+<p class="page-source">Generated from <a href="https://github.com/bricd-org/serdes-tutorial/blob/main/book/tutorial/chapters/03_channel.tex">book/tutorial/chapters/03_channel.tex</a>. Figure, table and equation numbers match the <a href="{% endraw %}{{ '/assets/pdf/Open-SERDES_Tutorial.pdf' | relative_url }}{% raw %}">PDF edition</a>.</p>
+{% endraw %}

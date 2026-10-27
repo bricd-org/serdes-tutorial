@@ -1,0 +1,255 @@
+\tikzsetfigurename{11_jitter-}
+\chapter{Jitter}\label{ch:jitter}
+\chapterlead{A 200\,ps bit leaves no room for sloppy clock edges: this chapter turns ``the clock wobbles'' into numbers you can budget, measure and design against.}
+
+\begin{objectives}
+\begin{itemize}
+  \item Define time-interval error, period jitter and cycle-to-cycle jitter, and say which one a serial link cares about.
+  \item Convert voltage noise into timing jitter through the slew rate.
+  \item Separate random from deterministic jitter and combine them with the dual-Dirac model, $\mathrm{TJ} = \mathrm{DJ}_{\delta\delta} + 2Q\,\sigma_\mathrm{RJ}$.
+  \item Integrate a phase-noise spectrum $\mathcal{L}(f)$ into rms jitter with the right limits.
+  \item Build the \OS{} jitter budget and check it against 0.3\,UI at $10^{-12}$.
+\end{itemize}
+\end{objectives}
+
+%% =====================================================================
+\section{What jitter is}\label{sec:jitter-defs}
+
+An ideal clock has edges at exactly $t = nT$; a real clock has edges at $t_n$, each a little early or late. \textbf{Jitter} is that deviation. Three measures are in common use (\cref{fig:ch11-tie}a):
+\begin{equation}
+  \mathrm{TIE}_n = t_n - nT, \qquad
+  J_{\mathrm{per},n} = T_n - T = \mathrm{TIE}_{n+1} - \mathrm{TIE}_n, \qquad
+  J_{\mathrm{cc},n} = T_{n+1} - T_n ,
+  \label{eq:ch11-tie}
+\end{equation}
+where $T_n = t_{n+1} - t_n$ is the $n$-th period. The \textbf{time-interval error} (TIE, also called absolute jitter) is the one a link cares about, because the sampler compares a clock edge with a data edge, not one clock period with the next. \textbf{Period jitter} and \textbf{cycle-to-cycle jitter} matter for digital setup and hold, but they can be tiny while the TIE is large, because small period errors add up.
+
+\begin{figure}[tbp]
+\centering
+\includegraphics[width=\linewidth]{ch11_tie}
+\caption{\textbf{Jitter is measured against an ideal clock, and it accumulates.} (a) TIE$_n$ is the offset of each edge from $nT$; the period $T_n$ differs from $T$ by the period jitter. (b) TIE of the team's 2.5\,GHz LC VCO (73\,fs rms period jitter, \cref{we:ch11-pn}). Free-running, the TIE is a random walk that grows as $\kappa\sqrt{t}$ and passes 10\,ps within 8\,\textmu{}s. Locked in a 3\,MHz PLL it stays near 0.6\,ps rms.}
+\label{fig:ch11-tie}
+\end{figure}
+
+\Cref{fig:ch11-tie}(b) shows the difference. A free-running oscillator has no memory of where its edges should be, so its TIE random-walks. A phase-locked loop (\cref{ch:pll}) compares its edges with a clean reference and keeps the TIE bounded. The CDR (\cref{ch:cdr}) does the same for the data: it tracks slow jitter and leaves only the fast part to close the eye.
+
+\begin{example}{Three jitter numbers from six edges}\label{we:ch11-defs}
+\textbf{Given:} $T = 400$\,ps and edges at 0, 401.0, 799.5, 1201.5, 1600.0 and 2000.8\,ps.
+\textbf{TIE:} 0, 1.0, $-0.5$, 1.5, 0, 0.8\,ps: 2.0\,ps peak-to-peak, 0.69\,ps rms about the mean.
+\textbf{Period jitter:} 1.0, $-1.5$, 2.0, $-1.5$, 0.8\,ps: 1.42\,ps rms.
+\textbf{Cycle-to-cycle:} $-2.5$, 3.5, $-3.5$, 2.3\,ps: 3.0\,ps rms.
+
+\textbf{Lesson:} $J_\mathrm{cc} > J_\mathrm{per} > \mathrm{TIE}$ is typical of a locked clock: a bounded TIE means a long period is usually followed by a short one. Always say which measure a number is.
+\end{example}
+
+\paragraph{Voltage noise becomes timing noise}
+Near a threshold crossing, a noise voltage moves the crossing by the noise divided by the slope of the edge (\cref{fig:ch11-slope}a):
+\begin{keyeq}[Noise-to-jitter conversion]
+\begin{equation}
+  \sigma_t = \frac{\sigma_v}{\mathrm{SR}}, \qquad \mathrm{SR} = \left.\frac{dv}{dt}\right|_\text{crossing} = 2\pi f_0 A_c \ \text{for a sine of amplitude } A_c .
+  \label{eq:ch11-slope}
+\end{equation}
+\end{keyeq}
+A 2.5\,GHz CML clock of 0.4\,V$_\mathrm{ppd}$ ($A_c = 0.2$\,V) slews at \qty{3.14}{\milli\volt\per\pico\second}, so 1\,mV rms of noise costs 0.32\,ps rms. Attenuated to 0.1\,V$_\mathrm{ppd}$ by a lossy route, the same clock turns the same noise into 1.27\,ps (\cref{fig:ch11-slope}b). The relation also works in reverse: \cref{sec:eye} showed that sampling a few picoseconds off the eye centre costs millivolts.
+
+\begin{figure}[tbp]
+\centering
+\includegraphics[width=\linewidth]{ch11_slope}
+\caption{\textbf{Timing jitter is voltage noise divided by the slope.} (a) Noisy edges (noise exaggerated to 30\,mV rms) cross the threshold at spread-out times, with spread $\sigma_v/\mathrm{SR}$. (b) $\sigma_t$ against slew rate. Attenuating a 2.5\,GHz clock from 0.4 to 0.1\,V$_\mathrm{ppd}$ makes it four times more jitter-sensitive.}
+\label{fig:ch11-slope}
+\end{figure}
+
+\begin{insight}[Design rule of thumb]
+Keep clock swings large and edges fast wherever a clock is buffered or sampled: halving the slew rate doubles the jitter from the same noise. This is why \OS{} restores its 2.5\,GHz clocks with CML limiting buffers (\cref{sec:quadrature}) instead of letting them decay along long wires.
+\end{insight}
+
+%% =====================================================================
+\section{Random and deterministic jitter}\label{sec:ch11-rjdj}
+
+Jitter sources fall into two families with different statistics (\cref{fig:ch11-tree}).
+\textbf{Random jitter} (RJ) comes from thermal, shot and flicker noise. It is Gaussian and \emph{unbounded}, and is described by its rms $\sigma_\mathrm{RJ}$; a peak-to-peak RJ is meaningless without a BER.
+\textbf{Deterministic jitter} (DJ) is \emph{bounded}. Its parts are \textbf{data-dependent jitter} (DDJ), mainly ISI from the channel plus \textbf{duty-cycle distortion} (DCD); \textbf{periodic jitter} (PJ) from supply tones, reference spurs or spread-spectrum clocking, whose arcsine PDF piles up at its peaks; and \textbf{bounded uncorrelated jitter} (BUJ), mostly crosstalk.
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[font=\sffamily\small,
+  nd/.style={blk,minimum width=17mm,minimum height=6.5mm,inner sep=2pt},
+  ds/.style={lbl,align=center,text width=30mm},
+  ed/.style={navy,line width=0.7pt},
+  gauss/.pic={\draw[c1,line width=0.9pt] plot[domain=-0.55:0.55,samples=41,smooth] (\x,{0.38*exp(-(\x/0.17)^2)}); \draw[muted,line width=0.4pt] (-0.6,0)--(0.6,0);},
+  dirac2/.pic={\draw[muted,line width=0.4pt] (-0.6,0)--(0.6,0); \foreach \x in {-0.3,0.3}{\draw[golddk,line width=1pt,-{Stealth[length=1.4mm]}] (\x,0)--(\x,0.38);}},
+  isi/.pic={\draw[muted,line width=0.4pt] (-0.6,0)--(0.6,0); \foreach \x/\h in {-0.45/0.16,-0.27/0.29,-0.09/0.38,0.09/0.38,0.27/0.29,0.45/0.16}{\draw[golddk,line width=1pt,-{Stealth[length=1.2mm]}] (\x,0)--(\x,\h);}},
+  arcs/.pic={\draw[muted,line width=0.4pt] (-0.6,0)--(0.6,0); \draw[golddk,line width=0.9pt] plot[domain=-0.47:0.47,samples=41,smooth] (\x,{0.065/sqrt(1-(\x/0.5)^2)}); \draw[golddk,line width=0.9pt] (-0.47,0.19)--(-0.5,0.38) (0.47,0.19)--(0.5,0.38);},
+  buj/.pic={\draw[muted,line width=0.4pt] (-0.6,0)--(0.6,0); \draw[golddk,line width=0.9pt] (-0.5,0)--(-0.35,0.28)--(0.35,0.28)--(0.5,0);}]
+  \node[blkn,minimum width=26mm,minimum height=7mm] (tj) at (0,0) {Total jitter (TJ)};
+  \node[nd,fill=btint] (rj) at (-5.3,-1.15) {Random (RJ)};
+  \node[nd,fill=gtint,draw=golddk,minimum width=26mm] (dj) at (2.0,-1.15) {Deterministic (DJ)};
+  \draw[ed] (tj.south) -- ++(0,-0.25) -| (rj.north);
+  \draw[ed] (tj.south) -- ++(0,-0.25) -| (dj.north);
+  \pic at (-5.3,-2.05) {gauss};
+  \node[ds] at (-5.3,-2.65) {Gaussian, unbounded;\\thermal, shot, flicker;\\rms $\sigma_\mathrm{RJ}$, adds in RSS};
+  \node[nd] (ddj) at (-0.9,-2.4) {DDJ};
+  \node[nd] (pj) at (2.4,-2.4) {PJ};
+  \node[nd] (bu) at (5.4,-2.4) {BUJ};
+  \foreach \n in {ddj,pj,bu}{\draw[ed] (dj.south) -- ++(0,-0.3) -| (\n.north);}
+  \node[nd,minimum width=12mm] (isi) at (-2.1,-3.55) {ISI};
+  \node[nd,minimum width=12mm] (dcd) at (0.3,-3.55) {DCD};
+  \draw[ed] (ddj.south) -- ++(0,-0.3) -| (isi.north);
+  \draw[ed] (ddj.south) -- ++(0,-0.3) -| (dcd.north);
+  \pic at (-2.1,-4.5) {isi};   \node[ds,text width=24mm] at (-2.1,-5.0) {channel loss,\\reflections};
+  \pic at (0.3,-4.5) {dirac2}; \node[ds,text width=24mm] at (0.3,-5.0) {duty cycle,\\rise/fall mismatch};
+  \pic at (2.4,-3.3) {arcs};   \node[ds] at (2.4,-3.85) {sinusoidal: supply tones,\\reference spurs, SSC};
+  \pic at (5.4,-3.3) {buj};    \node[ds] at (5.4,-3.85) {uncorrelated with\\the data: crosstalk};
+  \node[lbl,text=golddk,align=left,anchor=west] at (3.45,-1.15) {bounded, DJ$_\mathrm{pp}$; adds linearly};
+\end{tikzpicture}
+\caption{\textbf{Jitter splits into an unbounded random part and bounded deterministic parts.} Each leaf shows the shape of its probability density. RJ terms are independent Gaussians and add in root-sum-square; DJ terms are added linearly, which is conservative.}
+\label{fig:ch11-tree}
+\figsrc{After Palermo~\cite{palermo720clk}.}
+\end{figure}
+
+When independent sources act on the same edge, the PDF of the total is the \emph{convolution} of their PDFs, the rule \cref{sec:stateye} used for ISI. In \cref{fig:ch11-hist} a 2\,ps RJ convolved with 20\,ps$_\mathrm{pp}$ of DJ gives a total whose centre looks like the DJ and whose tails are Gaussian.
+
+\begin{figure}[tbp]
+\centering
+\includegraphics[width=\linewidth]{ch11_hist}
+\caption{\textbf{Total jitter is the convolution of RJ and DJ, and its tails are Gaussian} (log scale). (a) RJ never ends. (b) DJ, here DCD of $\pm4$\,ps convolved with ISI from three earlier bits, stops at $\pm10$\,ps. (c) The convolution. The dashed dual-Dirac model is fitted to the tails between BER $10^{-4}$ and $10^{-12}$; it ignores the centre and returns DJ$_{\delta\delta}$ = 15.6\,ps, less than the true 20\,ps peak-to-peak.}
+\label{fig:ch11-hist}
+\end{figure}
+
+%% =====================================================================
+\section{The dual-Dirac model and total jitter}\label{sec:dualdirac}
+
+At $10^{-12}$ only the far tails of the jitter PDF matter. The \textbf{dual-Dirac model} keeps the tails and simplifies the rest: all DJ becomes two impulses at $\pm\mathrm{DJ}_{\delta\delta}/2$, each carrying a Gaussian of rms $\sigma_\mathrm{RJ}$ (\cref{fig:ch11-bathtub}a).
+
+\begin{derivation}[From two Gaussians to total jitter]
+Measure the sampling instant $x$ from the left crossing of the eye. Far out, only the Gaussian centred at $+\mathrm{DJ}_{\delta\delta}/2$ can put an edge later than $x$, with probability $\Qf\big((x - \mathrm{DJ}_{\delta\delta}/2)/\sigma_\mathrm{RJ}\big)$. Adding the mirror image from the right crossing gives the \textbf{bathtub curve}
+\[
+  \BER(x) \approx \Qf\!\left(\frac{x - \mathrm{DJ}_{\delta\delta}/2}{\sigma_\mathrm{RJ}}\right) + \Qf\!\left(\frac{\UI - x - \mathrm{DJ}_{\delta\delta}/2}{\sigma_\mathrm{RJ}}\right).
+\]
+The target BER is reached where $x - \mathrm{DJ}_{\delta\delta}/2 = Q_\BER\,\sigma_\mathrm{RJ}$ on each side, with $\Qf(Q_\BER) = \BER$. The eye that remains is $\UI - \mathrm{DJ}_{\delta\delta} - 2Q_\BER\,\sigma_\mathrm{RJ}$; the rest is \emph{total jitter}.
+\end{derivation}
+
+\begin{keyeq}[Total jitter at a BER (dual-Dirac)]
+\begin{equation}
+  \mathrm{TJ}(\BER) = \mathrm{DJ}_{\delta\delta} + 2\,Q_\BER\,\sigma_\mathrm{RJ},
+  \qquad \text{eye width} = 1\,\UI - \mathrm{TJ}, \qquad 2Q_{10^{-12}} = 14.07 .
+  \label{eq:tj}
+\end{equation}
+\end{keyeq}
+$Q_\BER$ is the Gaussian quantile of \cref{eq:ber-q}: 6.00 at $10^{-9}$, 7.03 at $10^{-12}$, 7.94 at $10^{-15}$. The derivation drops two factors of $\tfrac12$ (each impulse carries half the edges, and about half the bits have no transition); keeping them gives $Q = 6.84$. The industry keeps 7.03, which is 3\% conservative, and so do we.
+
+\begin{figure}[tbp]
+\centering
+\includegraphics[width=\linewidth]{ch11_bathtub}
+\caption{\textbf{The bathtub: BER against sampling instant.} (a) Dual-Dirac PDFs at both crossings of the eye, DJ$_{\delta\delta}$ = 40\,ps and $\sigma_\mathrm{RJ}$ = 3\,ps. (b) Bathtubs for DJ$_{\delta\delta}$ = 40\,ps. At $10^{-12}$ the eye is 0.71\,UI wide with the \OS{} budget ($\sigma = 1.32$\,ps), 0.59\,UI with 3\,ps and 0.45\,UI with 5\,ps.}
+\label{fig:ch11-bathtub}
+\end{figure}
+
+\Cref{fig:ch11-bathtub}(b) completes the teaser of \cref{sec:ber}. Note the factor 14.07 in \cref{eq:tj}: a picosecond of RJ costs 14\,ps of eye at $10^{-12}$, while a picosecond of DJ costs one.
+
+\begin{pitfall}[DJ$_{\delta\delta}$ is not DJ$_\mathrm{pp}$]
+DJ$_{\delta\delta}$ is a model parameter fitted to the tails. It is smaller than the true peak-to-peak DJ unless the DJ is two-valued, such as pure DCD (15.6 versus 20\,ps in \cref{fig:ch11-hist}). Use DJ$_{\delta\delta}$ in \cref{eq:tj}, and fit the tails at deep BER (Q of 4 or more): a fit at $10^{-3}$ overestimates $\sigma_\mathrm{RJ}$. A direct TJ($10^{-12}$) measurement needs about $10^{13}$ bits, half an hour per point at 5\,Gb/s.
+\end{pitfall}
+
+%% =====================================================================
+\section{From phase noise to jitter}\label{sec:phasenoise}
+
+Oscillators are specified in the frequency domain. The \textbf{single-sideband phase noise} $\mathcal{L}(f)$ is the noise power in 1\,Hz at offset $f$ from the carrier, relative to the carrier, in dBc/Hz. For small noise it is half the one-sided phase spectrum $S_\phi(f)$, so integrating it gives the phase variance, and dividing by $2\pi f_0$ turns phase into time:
+\begin{keyeq}[Phase noise to rms jitter]
+\begin{equation}
+  \sigma_t = \frac{\sigma_\phi}{2\pi f_0} = \frac{1}{2\pi f_0}\sqrt{2\!\int_{f_1}^{f_2}\!\mathcal{L}(f)\,df}, \qquad \mathcal{L} \text{ in linear units } \big(10^{\mathcal{L}_\mathrm{dB}/10}\big).
+  \label{eq:ch11-pn2j}
+\end{equation}
+\end{keyeq}
+The limits matter. The upper limit $f_2$ is about $f_0/2$. The lower limit $f_1$ is set by what the receiver tracks: jitter far below the CDR bandwidth moves the clock and the data together and does not close the eye. Integrating from 10\,kHz gives the clock's absolute jitter; integrating from the CDR bandwidth gives the jitter that reaches the sampler (\cref{fig:ch11-pn}).
+
+\begin{figure}[tbp]
+\centering
+\includegraphics[width=\linewidth]{ch11_pn}
+\caption{\textbf{Integrating phase noise gives jitter, and the lower limit decides the answer.} (a) The free-running VCO ($-100.8$\,dBc/Hz at 1\,MHz), the PLL's in-band floor, and the output of the 3\,MHz PLL of \cref{sec:pll-loop}: the output follows the floor inside the loop bandwidth and the VCO outside it. (b) rms jitter from $f_1$ to 1.25\,GHz. The PLL output has 1.01\,ps from 10\,kHz, but only 0.61\,ps above a 4\,MHz CDR bandwidth. The free-running VCO diverges as $f_1 \to 0$, which is the random walk of \cref{fig:ch11-tie}(b).}
+\label{fig:ch11-pn}
+\end{figure}
+
+\paragraph{A useful shortcut} In the $1/f^2$ region of an LC oscillator, $\mathcal{L}(f) = \mathcal{L}(\Delta f)(\Delta f/f)^2$, and the free-running TIE grows as $\kappa\sqrt{t}$ with $\kappa = (\Delta f/f_0)\sqrt{\mathcal{L}(\Delta f)}$. If a loop tracks this noise below a corner $f_c$ (a first-order high-pass), \cref{eq:ch11-pn2j} integrates in closed form to
+\begin{equation}
+  \sigma_t \approx \kappa/\sqrt{4\pi f_c} ,
+  \label{eq:ch11-kappa}
+\end{equation}
+so jitter falls only as $1/\sqrt{f_c}$: quadrupling the bandwidth halves the VCO's share.
+
+\begin{example}{Phase noise of the team PLL as jitter}\label{we:ch11-pn}
+\textbf{Given:} $\mathcal{L} = -100.8$\,dBc/Hz at 1\,MHz~\cite{smacd2026pll}, applied at $f_0 = 2.5$\,GHz.
+\textbf{Assumptions} (they change the answer): the value describes the \emph{free-running} VCO with a $1/f^2$ slope and a 100\,kHz $1/f^3$ corner; the in-band floor from reference and charge pump is $-110$\,dBc/Hz; the PLL is the 3\,MHz design of \cref{sec:pll-loop}.
+
+\textbf{Free-running:} $\mathcal{L} = 8.3\times10^{-11}$, so $\kappa = 4\times10^{-4}\sqrt{8.3\times10^{-11}} = 3.65\times10^{-9}\,\sqrt{\mathrm{s}}$. Period jitter $\kappa\sqrt{400\,\mathrm{ps}} = 73$\,fs; TIE after 1\,\textmu{}s $= 3.65$\,ps.
+\textbf{Locked, shortcut:} $3.65\times10^{-9}/\sqrt{4\pi\times3\,\mathrm{MHz}} = 0.59$\,ps from the VCO.
+\textbf{Locked, full model} (\cref{fig:ch11-pn}): \textbf{1.01\,ps} rms from 10\,kHz, \textbf{0.61\,ps} above 4\,MHz.
+
+\textbf{Check the assumption:} \cref{sec:lcvco} shows that a $Q = 16.8$ tank should be about 20\,dB quieter than $-100.8$\,dBc/Hz, so the number may be a closed-loop value. If so, every VCO term here is pessimistic. Confirm with the team before freezing the PLL bandwidth.
+\end{example}
+
+%% =====================================================================
+\section{The Open-SERDES jitter budget}\label{sec:jitter-budget}
+
+A \textbf{jitter budget} divides the UI among the blocks that move edges, so each designer gets a number to meet. Add DJ$_{\delta\delta}$ linearly, add RJ in RSS, and combine with \cref{eq:tj}. The \OS{} target is \textbf{TJ $\le$ 0.3\,UI = 60\,ps at $10^{-12}$}, measured at the sampler; the remaining 0.7\,UI covers the sampler aperture and setup time (\cref{sec:sampler}), static phase offsets and margin. Only jitter the CDR does \emph{not} track is counted: the clock RJ rows use the phase noise above the CDR bandwidth (0.61\,ps from \cref{we:ch11-pn}, rounded up to cover the buffers), and the CDR row is the CDR's own tracking error (\cref{tab:ch11-budget}, \cref{fig:ch11-budget}).
+
+\begin{table}[htbp]
+\centering
+\caption{The \OS{} jitter budget at $10^{-12}$. DJ terms are dual-Dirac values; RJ terms are rms.}
+\label{tab:ch11-budget}
+\small
+\begin{tabularx}{\linewidth}{L r r l}
+\toprule
+Contributor & DJ$_{\delta\delta}$ (ps) & RJ (ps rms) & Owner \\
+\midrule
+TX: half-rate mux DCD, driver data-dependent jitter & 8 & -- & \cref{ch:tx} \\
+Channel: residual ISI after equalization (DDJ) & 6 & -- & \cref{ch:dfe} \\
+RX clock path: I/Q error, duty cycle, PI nonlinearity & 6 & -- & \cref{sec:quadrature} \\
+CDR: PI quantization and bang-bang dither & 20 & -- & \cref{sec:picdr} \\
+TX clock: PLL plus buffers, not tracked by the CDR & -- & 1.0 & \cref{ch:pll} \\
+RX clock: PLL, PI and buffers, not tracked & -- & 0.7 & \cref{ch:pll} \\
+Samplers: aperture and noise & -- & 0.5 & \cref{sec:sampler} \\
+\midrule
+Total & \textbf{40} & \textbf{1.32} (RSS) & \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{ch11_budget}
+\caption{\textbf{The jitter budget fills 29\% of the UI.} DJ terms (gold) stack linearly; the RJ terms are combined in RSS and multiplied by $2Q = 14.07$ (blue). The total, 58.6\,ps, sits just inside the 0.3\,UI line and leaves a 0.71\,UI eye.}
+\label{fig:ch11-budget}
+\end{figure}
+
+\begin{example}{Does the budget close?}\label{we:ch11-budget}
+\textbf{DJ:} $8 + 6 + 6 + 20 = 40$\,ps. \textbf{RJ:} $\sigma = \sqrt{1.0^2 + 0.7^2 + 0.5^2} = 1.32$\,ps, so $2Q\sigma = 14.07\times1.32 = 18.6$\,ps.
+\textbf{TJ:} $40 + 18.6 = \mathbf{58.6}$\,ps $=$ \textbf{0.293\,UI}, inside 0.3\,UI with 1.4\,ps to spare; the eye at $10^{-12}$ is 141\,ps wide.
+
+\textbf{Turn it around:} with DJ at 40\,ps, RJ may be at most $(60-40)/14.07 = 1.42$\,ps rms; with RJ fixed, DJ may grow by only 1.4\,ps. Tight budgets are normal.
+\textbf{Consistency:} \cref{sec:stateye} used 2\,ps RJ and 20\,ps DJ for the sampling clock; the CDR row here is that 20\,ps, and 2\,ps conservatively covers the RX share of the RJ.
+\end{example}
+
+\begin{insight}
+The largest line is the CDR's own dither, and the most expensive per picosecond is RJ, because of the factor 14. So: design the CDR loop for low dither (\cref{sec:picdr}); keep the PLL's untracked jitter below 1\,ps rms (\cref{ch:pll}); and keep duty-cycle and quadrature errors small, because they become DJ at the half-rate samplers (\cref{sec:quadrature}).
+\end{insight}
+
+%% =====================================================================
+\section{Jitter transfer, generation and tolerance}\label{sec:ch11-jtran}
+
+Three more terms describe how a block treats jitter versus jitter frequency. \textbf{Jitter transfer} is the ratio of output to input jitter: a PLL is low-pass to its reference, a CDR low-pass to the data. \textbf{Jitter generation} is the jitter a block adds with a clean input. \textbf{Jitter tolerance} (JTOL) is the largest sinusoidal jitter a receiver can take at a given frequency and still meet the BER. Because the CDR tracks slow jitter, a receiver tolerates many UI at low frequency but only its eye margin at high frequency; \cref{sec:jtol} checks the \OS{} CDR against a mask.
+
+\begin{tryit}[Lab 6: jitter and the bathtub]
+\Cref{sec:lab6} adds RJ and DJ to the REF link and plots the bathtub. Reproduce \cref{fig:ch11-bathtub}(b), then change $\sigma_\mathrm{RJ}$ by 0.5\,ps and watch the eye width move by 7\,ps.
+\end{tryit}
+
+\begin{takeaways}
+\begin{itemize}
+  \item A link cares about time-interval error, and only the part the CDR does not track.
+  \item Voltage noise becomes jitter through the slope, $\sigma_t = \sigma_v/\mathrm{SR}$: keep clock swings large and edges fast.
+  \item RJ is Gaussian and unbounded (rms, adds in RSS); DJ is bounded (DDJ, DCD, PJ, BUJ; adds linearly). Their PDFs convolve.
+  \item Dual-Dirac: $\mathrm{TJ} = \mathrm{DJ}_{\delta\delta} + 2Q\sigma_\mathrm{RJ}$ with $2Q = 14.07$ at $10^{-12}$; one picosecond of RJ costs 14\,ps of eye.
+  \item $\sigma_t = \sqrt{2\int\mathcal{L}\,df}/(2\pi f_0)$, integrated from the CDR bandwidth. The team PLL model gives 1.01\,ps from 10\,kHz and 0.61\,ps above 4\,MHz.
+  \item The \OS{} budget (40\,ps DJ, 1.32\,ps RJ) gives TJ = 58.6\,ps = 0.293\,UI against 0.3\,UI; the CDR's 20\,ps is the largest line.
+\end{itemize}
+\end{takeaways}

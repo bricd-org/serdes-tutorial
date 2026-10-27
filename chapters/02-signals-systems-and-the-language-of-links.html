@@ -1,0 +1,388 @@
+---
+title: "2. Signals, Systems and the Language of Links"
+parent: "Part I · Foundations"
+nav_order: 2
+permalink: "/chapters/02-signals-systems-and-the-language-of-links/"
+---
+{% raw %}
+<h1 id="ch:signals"><span class="chapnum">Chapter 2</span>Signals, Systems and the Language of Links</h1>
+<div class="chapterlead">
+<p>Five ideas carry the whole book: the unit interval, the pulse response, the cursors, the eye diagram and the bit-error rate.</p>
+</div>
+<div class="tbox tbox-objectives">
+<div class="tbox-title">
+<p>In this chapter you will learn</p>
+</div>
+<ul>
+<li><p>describe an NRZ stream by its unit interval, bit rate and Nyquist frequency, and explain why most of its energy lies below <span class="math inline">\(f_\mathrm{N}\)</span>;</p></li>
+<li><p>generate PRBS test patterns with an LFSR and know what PRBS7 and PRBS31 stress;</p></li>
+<li><p>predict how a simple low-pass channel slows edges, using impulse, step and frequency responses;</p></li>
+<li><p>build a received waveform from shifted pulse responses and read the main, pre- and post-cursors;</p></li>
+<li><p>read an eye diagram (height, width, crossing, slope) and turn an eye opening and an rms noise into a BER.</p></li>
+</ul>
+</div>
+<p>Here the channel is deliberately simple, a one-pole RC filter or a short line; the realistic REF channel waits for <a href="{% endraw %}{{ '/chapters/03-the-channel/' | relative_url }}{% raw %}#sec:refchannel">Section 3.7</a>, and the tools carry over unchanged.</p>
+<h2 id="sec:nrz"><span class="secnum">2.1</span>NRZ signaling: bits, symbols and the unit interval</h2>
+<p>A link carries <strong>bits</strong> <span class="math inline">\(b_k \in \{0,1\}\)</span>. The simplest way to put them on a wire is <strong>non-return-to-zero</strong> (NRZ) signaling, also called PAM2: each bit becomes a <strong>symbol</strong> <span class="math inline">\(a_k = 2b_k - 1 \in \{-1,+1\}\)</span>, and the transmitter holds the voltage <span class="math inline">\(A\,a_k\)</span> for one bit period (<a href="#fig:ch2-nrz">Figure 2.1</a>). In Open-SERDES, <span class="math inline">\(A = 0.5\,\mathrm{V}\)</span> (1 V<sub>ppd</sub>). One symbol lasts one <strong>unit interval</strong> (UI). NRZ sends one bit per symbol, so the <strong>bit rate</strong> <span class="math inline">\(f_\mathrm{b}\)</span> equals the <strong>baud rate</strong>; PAM4 sends two (<a href="{% endraw %}{{ '/chapters/04-link-budgets-and-statistical-analysis/' | relative_url }}{% raw %}#sec:pam4">Section 4.5</a>).</p>
+<div id="fig:ch2-nrz">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch02_nrz_wave.svg' | relative_url }}{% raw %}" style="width:753px" alt="An NRZ waveform is a sequence of \pm A levels, one per UI." loading="lazy" />
+<figcaption><span class="capnum">Figure 2.1.</span> <strong>An NRZ waveform is a sequence of <span class="math inline">\(\pm A\)</span> levels, one per UI.</strong> Each bit <span class="math inline">\(b_k\)</span> maps to a symbol <span class="math inline">\(a_k = \pm1\)</span> held for <span class="math inline">\(T_\mathrm{b}= 200\,\mathrm{ps}\)</span>. Gold dots mark the transitions that clock recovery feeds on; a run of identical bits carries no timing information.</figcaption>
+</figure>
+<p>The fastest NRZ pattern, <code>1010…</code>, is a square wave with a period of <span class="math inline">\(2T_\mathrm{b}\)</span>. Its fundamental frequency is the <strong>Nyquist frequency</strong>, the single most important frequency in link design.</p>
+<div class="tbox tbox-keyeq">
+<div class="tbox-title">
+<p>Key equation · Unit interval and Nyquist frequency</p>
+</div>
+<div id="eq:ch2-nyquist">
+
+</div>
+<p><span class="math display">\[T_\mathrm{b}= 1\,\mathrm{UI}= \frac{1}{f_\mathrm{b}}, \qquad f_\mathrm{N}= \frac{1}{2T_\mathrm{b}} = \frac{f_\mathrm{b}}{2} \tag{2.1}\]</span> For Open-SERDES: <span class="math inline">\(f_\mathrm{b}= 5\,\mathrm{Gb}/\mathrm{s}\)</span>, <span class="math inline">\(T_\mathrm{b}= 200\,\mathrm{ps}\)</span> and <span class="math inline">\(f_\mathrm{N}= 2.5\,\mathrm{GHz}\)</span>.</p>
+</div>
+<h5 id="the-spectrum-of-random-nrz">The spectrum of random NRZ</h5>
+<p>An NRZ waveform is a sum of rectangular pulses, <span class="math display">\[x(t) = A\sum_n a_n\, g(t - nT_\mathrm{b}),\]</span> where <span class="math inline">\(g(t)\)</span> is a 1-UI rectangle with Fourier transform <span class="math inline">\(G(f) = T_\mathrm{b}\,\mathrm{sinc}(fT_\mathrm{b})\,e^{-j\pi fT_\mathrm{b}}\)</span> and <span class="math inline">\(\mathrm{sinc}(u) = \sin(\pi u)/(\pi u)\)</span>. If the symbols are independent and equally likely to be <span class="math inline">\(\pm1\)</span>, then <span class="math inline">\(\mathrm{E}[a_n a_m]\)</span> is 1 for <span class="math inline">\(n = m\)</span> and 0 otherwise. The cross terms average away, and each pulse contributes its own energy spectrum <span class="math inline">\(A^2\lvert G(f)\rvert^2\)</span> once every <span class="math inline">\(T_\mathrm{b}\)</span> seconds. The power spectral density (PSD) is therefore <span class="math inline">\(A^2\lvert G(f)\rvert^2/T_\mathrm{b}\)</span>:</p>
+<div class="tbox tbox-keyeq">
+<div class="tbox-title">
+<p>Key equation · PSD of random NRZ</p>
+</div>
+<div id="eq:ch2-psd">
+
+</div>
+<p><span class="math display">\[S_x(f) = A^2\,T_\mathrm{b}\,\mathrm{sinc}^2(fT_\mathrm{b}), \qquad \text{nulls at } f = f_\mathrm{b}, 2f_\mathrm{b}, \dots \tag{2.2}\]</span></p>
+</div>
+<p><a href="#fig:ch2-psd">Figure 2.2</a>a plots <a href="#eq:ch2-psd">Equation (2.2)</a>. The main lobe runs from DC to the first null at <span class="math inline">\(f_\mathrm{b}= 5\,\mathrm{GHz}\)</span>, and at <span class="math inline">\(f_\mathrm{N}\)</span> the PSD is <span class="math inline">\(\mathrm{sinc}^2(0.5) = (2/\pi)^2\)</span>, or −3.9 dB. Integrating the PSD (<a href="#fig:ch2-psd">Figure 2.2</a>b) shows that 77% of the power lies below <span class="math inline">\(f_\mathrm{N}\)</span> and 90% below <span class="math inline">\(f_\mathrm{b}\)</span>.</p>
+<div id="fig:ch2-psd">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch02_nrz_psd.svg' | relative_url }}{% raw %}" style="width:753px" alt="Random NRZ puts most of its power below the Nyquist frequency." loading="lazy" />
+<figcaption><span class="capnum">Figure 2.2.</span> <strong>Random NRZ puts most of its power below the Nyquist frequency.</strong> (a) The PSD follows <span class="math inline">\(\mathrm{sinc}^2(fT_\mathrm{b})\)</span>, with nulls at multiples of <span class="math inline">\(f_\mathrm{b}= 5\,\mathrm{GHz}\)</span> and only 3.9 dB of roll-off at <span class="math inline">\(f_\mathrm{N}= 2.5\,\mathrm{GHz}\)</span>. (b) Cumulative power: 77% lies below <span class="math inline">\(f_\mathrm{N}\)</span> and 90% below <span class="math inline">\(f_\mathrm{b}\)</span>. This is why channel loss is always quoted at <span class="math inline">\(f_\mathrm{N}\)</span>.</figcaption>
+</figure>
+<div class="tbox tbox-example">
+<div class="tbox-title">
+<p>Worked Example 2.1 · Where the power of a 5 Gb/s stream sits</p>
+</div>
+<p><span id="we:ch2-nyquist"></span> The fraction of power below <span class="math inline">\(f_\mathrm{N}\)</span> is <span class="math inline">\(2\int_0^{1/2}\mathrm{sinc}^2(u)\,du = 0.774\)</span>, so an ideal low-pass filter at 2.5 GHz would still pass three quarters of the power. The REF channel’s 17.4 dB at 2.5 GHz, a factor of 7.4 in amplitude, attacks exactly that band.</p>
+</div>
+<div class="tbox tbox-insight">
+<div class="tbox-title">
+<p>What this means for your design</p>
+</div>
+<p>Treat <span class="math inline">\(f_\mathrm{N}= 2.5\,\mathrm{GHz}\)</span> as the frequency your link lives at: quote channel loss there, and give every block enough bandwidth around it (<a href="#sec:ch2-isi">Section 2.5</a>). The energy above <span class="math inline">\(f_\mathrm{b}\)</span> is under 10% and mostly edge sharpness.</p>
+</div>
+<h2 id="sec:prbs"><span class="secnum">2.2</span>PRBS test patterns</h2>
+<p>Testing needs data that looks random but is reproducible, so the receiver can check every bit. A <strong>pseudo-random bit sequence</strong> (PRBS) does this. It comes from a <strong>linear-feedback shift register</strong> (LFSR): a chain of <span class="math inline">\(n\)</span> flip-flops whose input is the XOR of two of its outputs. <a href="#fig:ch2-lfsr">Figure 2.3</a> shows PRBS7, defined by the polynomial <span class="math inline">\(x^7 + x^6 + 1\)</span>: the new bit is stage 6 XOR stage 7. With the right taps, the register steps through all <span class="math inline">\(2^n - 1\)</span> non-zero states before it repeats, producing a <strong>maximal-length sequence</strong>.</p>
+<div id="fig:ch2-lfsr">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/tikz/02_signals-0.svg' | relative_url }}{% raw %}" style="width:718px" alt="A 7-stage LFSR generates PRBS7." loading="lazy" />
+<figcaption><span class="capnum">Figure 2.3.</span> <strong>A 7-stage LFSR generates PRBS7.</strong> Each clock edge shifts the bits right and feeds stage 6 XOR stage 7 into stage 1; from any non-zero state the output repeats after <span class="math inline">\(2^7 - 1 = 127\)</span> bits. A 31-stage register with taps 28 and 31 gives PRBS31.</figcaption>
+</figure>
+<p>A PRBS-<span class="math inline">\(n\)</span> sequence has a few properties worth remembering (<a href="#fig:ch2-prbs">Figure 2.4</a>):</p>
+<ul>
+<li><p><strong>Period</strong> <span class="math inline">\(2^n - 1\)</span> bits, during which every <span class="math inline">\(n\)</span>-bit word except all zeros appears exactly once.</p></li>
+<li><p><strong>Nearly balanced:</strong> <span class="math inline">\(2^{n-1}\)</span> ones and <span class="math inline">\(2^{n-1} - 1\)</span> zeros (64 and 63 for PRBS7).</p></li>
+<li><p><strong>Run lengths:</strong> the longest run is <span class="math inline">\(n\)</span> ones and <span class="math inline">\(n-1\)</span> zeros. Half of all runs have length 1, a quarter length 2, and so on, like a fair coin.</p></li>
+<li><p><strong>Line spectrum:</strong> because the pattern repeats, its spectrum is a set of lines spaced <span class="math inline">\(f_\mathrm{b}/(2^n-1)\)</span> apart under the same <span class="math inline">\(\mathrm{sinc}^2\)</span> envelope as random NRZ.</p></li>
+</ul>
+<div id="fig:ch2-prbs">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch02_prbs7.svg' | relative_url }}{% raw %}" style="width:753px" alt="PRBS7 behaves like random data with short memory." loading="lazy" />
+<figcaption><span class="capnum">Figure 2.4.</span> <strong>PRBS7 behaves like random data with short memory.</strong> (a) One full period of 127 bits, with the longest runs (seven 1s, six 0s) shaded. (b) Run-length histogram: 32 runs of length 1, 16 of length 2, halving at each step, as for coin flips. (c) The line spectrum follows the <span class="math inline">\(\mathrm{sinc}^2\)</span> envelope of <a href="#fig:ch2-psd">Figure 2.2</a>. (d) Zoom near DC: lines every <span class="math inline">\(f_\mathrm{b}/127 = 39.4\,\mathrm{MHz}\)</span>, with an almost empty DC line because the pattern is balanced.</figcaption>
+</figure>
+<h5 id="choosing-a-prbs">Choosing a PRBS</h5>
+<p>PRBS7 repeats every 25.4 ns and never holds a level longer than 7 UI: ideal for bring-up. PRBS31 (<span class="math inline">\(x^{31}+x^{28}+1\)</span>) has runs of up to 31 bits and a period of 0.43 s; its low-frequency content stresses AC coupling (baseline wander), long ISI tails and the CDR’s ability to hold phase without transitions, so it is the compliance pattern. Model work uses PRBS13 (8191 bits), far longer than the channel’s ISI memory. Real protocols also <em>encode</em> the data: <strong>8b/10b</strong> (PCIe 1/2, USB 3.2 Gen 1, SATA) maps each byte to 10 bits with at most five equal bits in a row and long-term DC balance, at 25% overhead.</p>
+<div class="tbox tbox-pitfall">
+<div class="tbox-title">
+<p>A short pattern can hide a long problem</p>
+</div>
+<p>If the link remembers more bits than the pattern varies over, the eye looks too good: PRBS7 can pass where PRBS31 fails on baseline wander or a long reflection. Confirm designs with a pattern longer than every memory in the link.</p>
+</div>
+<h2 id="sec:lti"><span class="secnum">2.3</span>Linear systems in one section</h2>
+<p>Between the TX output and the RX sampler, the link is close to a <strong>linear time-invariant</strong> (LTI) system, fully described by its <strong>impulse response</strong> <span class="math inline">\(h(t)\)</span>, the output for a very short unit-area pulse. For any input <span class="math inline">\(x(t)\)</span> the output is the <strong>convolution</strong> <span id="eq:ch2-conv"></span><span class="math display">\[y(t) = (x * h)(t) = \int_{-\infty}^{\infty} x(\tau)\,h(t-\tau)\,d\tau ,
+  \qquad Y(f) = X(f)\,H(f), \tag{2.3}\]</span> where the <strong>frequency response</strong> <span class="math inline">\(H(f)\)</span> is the Fourier transform of <span class="math inline">\(h(t)\)</span>. Convolution becomes multiplication, so cascaded blocks multiply. Gains are quoted in decibels, <span class="math inline">\(\lvert H\rvert_\mathrm{dB} = 20\log_{10}\lvert H(f)\rvert\)</span>: −3 dB is a factor 0.707, −6 dB one half, −20 dB one tenth, and in a cascade the dB values add. A <strong>Bode plot</strong> shows <span class="math inline">\(\lvert H\rvert_\mathrm{dB}\)</span> against log frequency.</p>
+<h5 id="the-one-pole-system">The one-pole system</h5>
+<p>A resistor driving a capacitor is the simplest low-pass filter and a good first model of a slow channel or a CML stage with load <span class="math inline">\(R_\mathrm{L}C_\mathrm{L}\)</span> (<a href="#fig:ch2-onepole">Figure 2.5</a>):</p>
+<div class="tbox tbox-keyeq">
+<div class="tbox-title">
+<p>Key equation · One-pole low-pass filter</p>
+</div>
+<div id="eq:ch2-onepole">
+
+</div>
+<p><span class="math display">\[H(f) = \frac{1}{1 + jf/f_\mathrm{3dB}},\quad
+  h(t) = \frac{1}{\tau}e^{-t/\tau},\quad
+  s(t) = 1 - e^{-t/\tau},\quad
+  t_r^{10\text{--}90} = \tau\ln 9 \approx \frac{0.35}{f_\mathrm{3dB}} \tag{2.4}\]</span></p>
+</div>
+<p>Here <span class="math inline">\(\tau = RC = 1/(2\pi f_\mathrm{3dB})\)</span>, <span class="math inline">\(s(t)\)</span> is the unit step response (for <span class="math inline">\(t \ge 0\)</span>) and <span class="math inline">\(t_r\)</span> is the 10–90% rise time. Above <span class="math inline">\(f_\mathrm{3dB}\)</span> the gain falls by 20 dB per decade.</p>
+<div id="fig:ch2-onepole">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch02_onepole.svg' | relative_url }}{% raw %}" style="width:753px" alt="Bandwidth and rise time are two views of the same pole." loading="lazy" />
+<figcaption><span class="capnum">Figure 2.5.</span> <strong>Bandwidth and rise time are two views of the same pole.</strong> (a) A one-pole response with <span class="math inline">\(f_\mathrm{3dB} = 2.5\,\mathrm{GHz}\)</span>: −3 dB at the corner, then −20 dB per decade. (b) Its step response rises from 10% to 90% in 140 ps <span class="math inline">\(= 0.35/f_\mathrm{3dB}\)</span>, which is 0.7 UI at 5 Gb/s.</figcaption>
+</figure>
+<div class="tbox tbox-example">
+<div class="tbox-title">
+<p>Worked Example 2.2 · What bandwidth keeps ISI small at 5 Gb/s?</p>
+</div>
+<p><span id="we:ch2-bw"></span> For a bit to barely affect the next, the output must almost settle within one UI. One UI after a step, a one-pole system still has an error of <span class="math inline">\(e^{-T_\mathrm{b}/\tau}\)</span>. Asking for at most 5%:</p>
+<ul>
+<li><p><span class="math inline">\(e^{-T_\mathrm{b}/\tau} \le 0.05 \;\Rightarrow\; T_\mathrm{b}/\tau \ge \ln 20 = 3.0 \;\Rightarrow\; \tau \le 66.8\,\mathrm{ps}\)</span>;</p></li>
+<li><p><span class="math inline">\(f_\mathrm{3dB} = 1/(2\pi\tau) \ge 3.0/(2\pi\times200\,\mathrm{ps}) = 2.38\,\mathrm{GHz}\)</span>;</p></li>
+<li><p>the rise time is then <span class="math inline">\(0.35/2.38\,\mathrm{GHz} = 147\,\mathrm{ps} \approx 0.73\,\mathrm{UI}\)</span>.</p></li>
+</ul>
+<p>A one-pole bandwidth close to the Nyquist frequency, <span class="math inline">\(f_\mathrm{3dB} \approx f_\mathrm{N}= 2.5\,\mathrm{GHz}\)</span>, keeps the ISI to a few percent. <a href="#sec:ch2-isi">Section 2.5</a> turns this into an exact eye opening.</p>
+</div>
+<h2 id="sec:pulse-response"><span class="secnum">2.4</span>The pulse response</h2>
+<p>A link never sends impulses; it sends 1-UI rectangles. The response to one isolated rectangle of 1 V and width <span class="math inline">\(T_\mathrm{b}\)</span> is the <strong>pulse response</strong> <span class="math inline">\(p(t)\)</span>, the most useful single picture of a link: <span id="eq:ch2-pulse"></span><span class="math display">\[p(t) = h(t) * \Pi_{T_\mathrm{b}}(t) = \int_{t-T_\mathrm{b}}^{t} h(\tau)\,d\tau = s(t) - s(t - T_\mathrm{b}), \tag{2.5}\]</span> where <span class="math inline">\(\Pi_{T_\mathrm{b}}(t)\)</span> is 1 for <span class="math inline">\(0 \le t &lt; T_\mathrm{b}\)</span>: a step up, then a step down one UI later. An NRZ waveform is a sum of shifted, signed rectangles and the channel is linear, so the received signal is a sum of shifted, signed pulse responses (<a href="#fig:ch2-superposition">Figure 2.7</a>). Sample it once per UI at <span class="math inline">\(t_\mathrm{s}+ nT_\mathrm{b}\)</span>, with <span class="math inline">\(t_\mathrm{s}\)</span> usually at the peak of <span class="math inline">\(p(t)\)</span>. The samples of the pulse response at integer UI offsets are the <strong>cursors</strong> <span class="math inline">\(p_{k} = p(t_\mathrm{s}+ kT_\mathrm{b})\)</span> (<a href="#fig:ch2-pulse">Figure 2.6</a>). The <strong>main cursor</strong> <span class="math inline">\(p_{0}\)</span> carries the wanted bit. <strong>Post-cursors</strong> <span class="math inline">\(p_{k}\)</span>, <span class="math inline">\(k &gt; 0\)</span>, are the tail of a pulse sent <span class="math inline">\(k\)</span> bits <em>earlier</em>. <strong>Pre-cursors</strong> <span class="math inline">\(p_{k}\)</span>, <span class="math inline">\(k &lt; 0\)</span>, are the leading edge of a pulse sent <span class="math inline">\(\lvert k\rvert\)</span> bits <em>later</em>.</p>
+<div class="tbox tbox-keyeq">
+<div class="tbox-title">
+<p>Key equation · Superposition of pulse responses</p>
+</div>
+<div id="eq:ch2-isi">
+
+</div>
+<p><span class="math display">\[y(t) = A\sum_n a_n\, p(t - nT_\mathrm{b})
+  \qquad\Longrightarrow\qquad
+  y_n = y(t_\mathrm{s}+ nT_\mathrm{b}) = \underbrace{A\,a_n\,p_{0}}_{\text{wanted}} \;+\; \underbrace{A\sum_{k\neq0} a_{n-k}\,p_{k}}_{\text{intersymbol interference (ISI)}} \tag{2.6}\]</span></p>
+</div>
+<p>The channel acts like an FIR filter whose taps are the cursors; everything except the main cursor is <strong>intersymbol interference</strong> (ISI), the echo of neighboring bits at the sampling instant.</p>
+<div id="fig:ch2-pulse">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch02_pulse_cursors.svg' | relative_url }}{% raw %}" style="width:753px" alt="The pulse response and its cursors." loading="lazy" />
+<figcaption><span class="capnum">Figure 2.6.</span> <strong>The pulse response and its cursors.</strong> (a) A 1 V, 1-UI pulse through a mild 10 dB-at-Nyquist line (<span class="math inline">\(0.57\)</span> m of the loss family) comes out lower, wider and with a long tail. Sampling it once per UI around the peak gives the cursors. (b) The main cursor <span class="math inline">\(p_{0} = 0.556\)</span> is the useful signal; <span class="math inline">\(p_{-1} = 0.020\)</span> is a pre-cursor and <span class="math inline">\(p_{1} = 0.160\)</span>, <span class="math inline">\(p_{2} = 0.063\)</span>, … are post-cursors.</figcaption>
+</figure>
+<div id="fig:ch2-superposition">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch02_superposition.svg' | relative_url }}{% raw %}" style="width:753px" alt="A received waveform is a sum of shifted pulse responses." loading="lazy" />
+<figcaption><span class="capnum">Figure 2.7.</span> <strong>A received waveform is a sum of shifted pulse responses.</strong> (a) Each bit launches its own pulse <span class="math inline">\(A\,a_n\,p(t-nT_\mathrm{b})\)</span> (blue for <span class="math inline">\(+1\)</span>, amber for <span class="math inline">\(-1\)</span>). (b) Their sum is the received signal; gold dots are the samples at <span class="math inline">\(t_\mathrm{s}+ nT_\mathrm{b}\)</span>. A 1 that follows another 1 gets help from its neighbor’s tail (334 mV), while a lone 1 after three 0s is pulled down to 156 mV. The line is idle before bit 0.</figcaption>
+</figure>
+<div class="tbox tbox-example">
+<div class="tbox-title">
+<p>Worked Example 2.3 · Reading a sample from the cursors</p>
+</div>
+<p><span id="we:ch2-cursors"></span> Bit 7 in <a href="#fig:ch2-superposition">Figure 2.7</a> is a lone 1 after three 0s, followed by a 0. With <span class="math inline">\(A = 0.5\,\mathrm{V}\)</span> and the cursors of <a href="#fig:ch2-pulse">Figure 2.6</a>:</p>
+<ul>
+<li><p>wanted signal: <span class="math inline">\(Ap_{0} = 0.5\times0.5561 = 278\,\mathrm{mV}\)</span>;</p></li>
+<li><p>the three previous 0s and the next 0 subtract: <span class="math inline">\(-A(p_{1}+p_{2}+p_{3}+p_{-1}) = -0.5\,(0.1605+0.0629+0.0340+0.0205) = -139\,\mathrm{mV}\)</span>;</p></li>
+<li><p>the older bits (<span class="math inline">\(a_3 = a_2 = a_0 = +1\)</span>, <span class="math inline">\(a_1 = -1\)</span>) add <span class="math inline">\(0.5\,(0.0216+0.0151-0.0112+0.0087) = 17\,\mathrm{mV}\)</span>.</p></li>
+</ul>
+<p>The sample is <span class="math inline">\(278 - 139 + 17 = 156\,\mathrm{mV}\)</span>, as simulated: ISI took 44% of the wanted signal.</p>
+</div>
+<div class="tbox tbox-insight">
+<div class="tbox-title">
+<p>What this means for your design</p>
+</div>
+<p>The cursors are the channel’s fingerprint, and every equalizer in Part II acts on them: the TX FFE reshapes the pulse (<a href="{% endraw %}{{ '/chapters/06-transmit-ffe/' | relative_url }}{% raw %}">Chapter 6</a>), the CTLE sharpens it (<a href="{% endraw %}{{ '/chapters/07-continuous-time-linear-equalizer/' | relative_url }}{% raw %}">Chapter 7</a>) and the DFE subtracts post-cursors (<a href="{% endraw %}{{ '/chapters/08-decision-feedback-equalization-and-adaptation/' | relative_url }}{% raw %}#ch:dfe">Chapter 8</a>). Faced with a new channel, plot its pulse response first.</p>
+</div>
+<div class="tbox tbox-tryit">
+<div class="tbox-title">
+<p>Lab 1: pulse response and cursors</p>
+</div>
+<p><code>lab1_channel.py</code> turns the REF channel’s <span class="math inline">\(S_{21}\)</span> into a pulse response and its cursors. Lengthen the line and watch <span class="math inline">\(p_{1}/p_{0}\)</span> grow (<a href="{% endraw %}{{ '/chapters/16-hands-on-labs-with-serdespy/' | relative_url }}{% raw %}#sec:lab1">Section 16.2</a>).</p>
+</div>
+<h2 id="sec:ch2-isi"><span class="secnum">2.5</span>ISI: how pulse spreading closes the eye</h2>
+<p>The one-pole channel shows in closed form how bandwidth turns into ISI. Its pulse response peaks at the end of the bit, <span class="math inline">\(t = T_\mathrm{b}\)</span>. Sampling there and writing <span class="math inline">\(r = e^{-T_\mathrm{b}/\tau}\)</span> gives <span class="math inline">\(p_{0} = 1 - r\)</span> and <span class="math inline">\(p_{k} = (1-r)\,r^{k}\)</span> for <span class="math inline">\(k \ge 1\)</span>, with no pre-cursors. The post-cursors form a geometric series that sums to <span class="math inline">\(r\)</span>. The worst case for a 1 is that every earlier bit is a 0, so each tail pulls it down. The smallest 1 is then <span class="math inline">\(A(p_{0} - \sum_{k\ge1}p_{k})\)</span>, and by symmetry the eye opening at the sampling instant is</p>
+<div class="tbox tbox-keyeq">
+<div class="tbox-title">
+<p>Key equation · Worst-case eye of a one-pole channel</p>
+</div>
+<div id="eq:ch2-onepole-eye">
+
+</div>
+<p><span class="math display">\[\mathrm{EH} = 2A\Bigl(p_{0} - \sum_{k\ge1}p_{k}\Bigr) = 2A\,\bigl(1 - 2e^{-T_\mathrm{b}/\tau}\bigr), \qquad \frac{T_\mathrm{b}}{\tau} = 2\pi f_\mathrm{3dB}T_\mathrm{b}= \pi\,\frac{f_\mathrm{3dB}}{f_\mathrm{N}} \tag{2.7}\]</span></p>
+</div>
+<p><a href="#fig:ch2-isi-tau">Figure 2.8</a> shows the pulse and the eye for three time constants. With <span class="math inline">\(\tau = 0.2\,\mathrm{UI}\)</span> (<span class="math inline">\(f_\mathrm{3dB} = 4.0\,\mathrm{GHz}\)</span>) the eye is 98.7% open. At <span class="math inline">\(\tau = 0.5\,\mathrm{UI}\)</span> (1.6 GHz) it is 73% open, and at <span class="math inline">\(\tau = 1\,\mathrm{UI}\)</span> (0.8 GHz) only 26%. The eye closes completely when <span class="math inline">\(r = 1/2\)</span>, that is <span class="math inline">\(\tau = T_\mathrm{b}/\ln 2 = 1.44\,\mathrm{UI}\)</span>, or <span class="math inline">\(f_\mathrm{3dB} = 552\,\mathrm{MHz}\)</span>. For the bandwidth of <a href="#we:ch2-bw">Worked Example 2.2</a>, <span class="math inline">\(f_\mathrm{3dB} = f_\mathrm{N}\)</span>, the exponent is <span class="math inline">\(\pi\)</span> and <span class="math inline">\(\mathrm{EH} = 2A(1 - 2e^{-\pi}) = 0.91 \times 2A\)</span>.</p>
+<div id="fig:ch2-isi-tau">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch02_isi_tau.svg' | relative_url }}{% raw %}" style="width:753px" alt="Slower channels spread each pulse over more UIs and close the eye." loading="lazy" />
+<figcaption><span class="capnum">Figure 2.8.</span> <strong>Slower channels spread each pulse over more UIs and close the eye.</strong> Top: one-pole pulse responses for <span class="math inline">\(\tau = 0.2\)</span>, 0.5 and 1 UI; filled dots are the main cursor, open dots the post-cursors. Bottom: PRBS7 eyes through the same channels (<span class="math inline">\(2A = 1\,\mathrm{V}\)</span>). The measured openings, 987, 729 and 265 mV, match <span class="math inline">\(2A(1-2e^{-T_\mathrm{b}/\tau})\)</span> from <a href="#eq:ch2-onepole-eye">Equation (2.7)</a>. The arrow sits at the best sampling instant, which for a one-pole channel is the pulse peak at the end of the bit, not the visual center of the eye.</figcaption>
+</figure>
+<p>Subtracting the magnitudes of all other cursors from the main cursor works for any channel; this is <strong>peak-distortion analysis</strong> (<a href="{% endraw %}{{ '/chapters/04-link-budgets-and-statistical-analysis/' | relative_url }}{% raw %}#sec:pda">Section 4.2</a>). For the 10 dB line of <a href="#fig:ch2-pulse">Figure 2.6</a> it gives 230 mV out of 1 V; for the REF channel it is negative: the eye is closed.</p>
+<div class="tbox tbox-insight">
+<div class="tbox-title">
+<p>Design rule of thumb</p>
+</div>
+<p>Each one-pole block in the data path needs <span class="math inline">\(f_\mathrm{3dB} \gtrsim f_\mathrm{N}= 2.5\,\mathrm{GHz}\)</span> to cost less than about 10% of eye height. A cascade of several poles has less bandwidth than any single one, so in practice each CML stage of Open-SERDES should reach 0.7–1 <span class="math inline">\(f_\mathrm{b}\)</span> (3.5–5 GHz).</p>
+</div>
+<h2 id="sec:eye"><span class="secnum">2.6</span>Eye diagrams</h2>
+<p>An <strong>eye diagram</strong> cuts the received waveform into 2-UI windows aligned to the bit clock and overlays them (<a href="#fig:ch2-eye-fold">Figure 2.9</a>). Every bit pattern draws its own trace, so the overlay shows at a glance how much the patterns differ at each instant.</p>
+<div id="fig:ch2-eye-fold">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch02_eye_fold.svg' | relative_url }}{% raw %}" style="width:753px" alt="An eye diagram folds the waveform every 2 UI." loading="lazy" />
+<figcaption><span class="capnum">Figure 2.9.</span> <strong>An eye diagram folds the waveform every 2 UI.</strong> (a) Twelve UI of PRBS7 after a one-pole channel (<span class="math inline">\(\tau = 0.45\,\mathrm{UI}\)</span>), cut into six 2-UI windows. (b) The same segments, same colors, overlaid on 600 others (grey).</figcaption>
+</figure>
+<p><a href="#fig:eye-anatomy">Figure 2.10</a> names the parts you will measure throughout this book.</p>
+<ul>
+<li><p><strong>Eye height</strong> (EH): the vertical opening at the sampling instant, between the lowest 1 and the highest 0. It must beat noise, offset and sampler sensitivity.</p></li>
+<li><p><strong>Eye width</strong> (EW): the horizontal opening at the threshold, between adjacent crossings. It must beat clock jitter and the sampler aperture.</p></li>
+<li><p><strong>Crossing points</strong>: where edges cross the threshold. Their spread in time is <strong>jitter</strong>; their mean is what the CDR locks to.</p></li>
+<li><p><strong>Optimal sampling point</strong>: the instant and threshold with the most margin both ways.</p></li>
+<li><p><strong>Slope</strong> near the crossing: it converts timing error into voltage error, <span class="math inline">\(\Delta v \approx (dV/dt)\,\Delta t\)</span>.</p></li>
+</ul>
+<div id="fig:eye-anatomy">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch02_eye_anatomy.svg' | relative_url }}{% raw %}" style="width:753px" alt="Anatomy of an eye diagram." loading="lazy" />
+<figcaption><span class="capnum">Figure 2.10.</span> <strong>Anatomy of an eye diagram.</strong> A PRBS7 stream through a smooth band-limited channel, with 6 ps rms edge jitter and 15 mV rms noise. Eye height and eye width are measured between the 0.1% tails of the traces. The right histogram shows the spread of the sampled levels (noise plus ISI) at <span class="math inline">\(t_\mathrm{s}\)</span>; the bottom histogram shows the spread of the crossing times (jitter). The orange line is the edge slope, here about 2.8 mV/ps.</figcaption>
+</figure>
+<p>With the slope of <a href="#fig:eye-anatomy">Figure 2.10</a>, sampling 4 ps off near an edge costs about <span class="math inline">\(2.8 \times 4 \approx 11\,\mathrm{mV}\)</span>. Noise eats the eye vertically and jitter horizontally; the next section asks how much is tolerable.</p>
+<div class="tbox tbox-pitfall">
+<div class="tbox-title">
+<p>An eye is only as deep as the number of bits behind it</p>
+</div>
+<p>A simulated eye of <span class="math inline">\(10^4\)</span> bits only shows events more frequent than about <span class="math inline">\(10^{-4}\)</span>; a <span class="math inline">\(7\sigma\)</span> noise peak will almost never appear. An open eye in a short simulation says nothing about <span class="math inline">\(10^{-12}\)</span>. <a href="{% endraw %}{{ '/chapters/04-link-budgets-and-statistical-analysis/' | relative_url }}{% raw %}#sec:stateye">Section 4.3</a> computes the eye at that probability directly.</p>
+</div>
+<div class="tbox tbox-tryit">
+<div class="tbox-title">
+<p>Lab 2: PRBS7 eye through the REF channel</p>
+</div>
+<p><code>lab2_prbs_eye.py</code> draws the PRBS7 eye before and after the REF channel. The output eye is closed (<span class="math inline">\(-78\,\mathrm{mV}\)</span>): the motivation for Part II (<a href="{% endraw %}{{ '/chapters/16-hands-on-labs-with-serdespy/' | relative_url }}{% raw %}#sec:lab2">Section 16.3</a>).</p>
+</div>
+<h2 id="sec:ber"><span class="secnum">2.7</span>Noise and the bit-error rate</h2>
+<p>The receiver compares each sample <span class="math inline">\(y_n\)</span> with a threshold at 0, and an error happens when noise pushes a sample across it. With a worst-case eye of height EH, a 1 arrives at least <span class="math inline">\(\mathrm{EH}/2\)</span> above the threshold and a 0 at least <span class="math inline">\(\mathrm{EH}/2\)</span> below it. Add Gaussian noise <span class="math inline">\(n \sim \mathcal{N}(0, \sigma_\mathrm{n}^2)\)</span> from the termination, the front end and the sampler (<a href="#fig:ch2-ber">Figure 2.11</a>a). A 1 is read as a 0 when <span class="math inline">\(n &lt; -\mathrm{EH}/2\)</span>: <span id="eq:ch2-qdef"></span><span class="math display">\[\begin{align}
+  P(\text{error}\mid 1) &amp;= \int_{-\infty}^{-\mathrm{EH}/2} \frac{1}{\sqrt{2\pi}\,\sigma_\mathrm{n}}\,e^{-v^2/(2\sigma_\mathrm{n}^2)}\,dv = Q\!\left(\frac{\mathrm{EH}}{2\sigma_\mathrm{n}}\right), \notag\\
+  Q(x) &amp;= \int_x^{\infty}\frac{e^{-u^2/2}}{\sqrt{2\pi}}\,du = \tfrac12\operatorname{erfc}\!\left(\frac{x}{\sqrt2}\right). \tag{2.8}
+\end{align}\]</span> By symmetry <span class="math inline">\(P(\text{error}\mid 0)\)</span> is the same. With 1s and 0s equally likely, the BER is the average of the two:</p>
+<div class="tbox tbox-keyeq">
+<div class="tbox-title">
+<p>Key equation · Bit-error rate with Gaussian noise</p>
+</div>
+<div id="eq:ber-q">
+
+</div>
+<p><span class="math display">\[\mathrm{BER}= Q\!\left(\frac{\mathrm{EH}}{2\,\sigma_\mathrm{n}}\right), \qquad \mathrm{SNR}\equiv \left(\frac{\mathrm{EH}}{2\,\sigma_\mathrm{n}}\right)^{2} \;\Rightarrow\; \mathrm{BER}= Q\bigl(\sqrt{\mathrm{SNR}}\bigr) \tag{2.9}\]</span></p>
+</div>
+<p>The argument of <span class="math inline">\(Q\)</span> is half the eye in units of rms noise. With the worst-case EH, <a href="#eq:ber-q">Equation (2.9)</a> is an upper bound, since most patterns leave more margin (<a href="{% endraw %}{{ '/chapters/04-link-budgets-and-statistical-analysis/' | relative_url }}{% raw %}#sec:stateye">Section 4.3</a> computes the average). <a href="#tab:ch2-qtable">Table 2.1</a> lists common values. Remember <span class="math inline">\(Q= 7.03\)</span> for <span class="math inline">\(10^{-12}\)</span>: the eye must be at least <span class="math inline">\(2Q= 14.07\)</span> times the rms noise.</p>
+<div id="fig:ch2-ber">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch02_ber.svg' | relative_url }}{% raw %}" style="width:753px" alt="BER is the area of a Gaussian tail beyond half the eye." loading="lazy" />
+<figcaption><span class="capnum">Figure 2.11.</span> <strong>BER is the area of a Gaussian tail beyond half the eye.</strong> (a) Received 1s and 0s spread by noise of rms <span class="math inline">\(\sigma_\mathrm{n}\)</span> around <span class="math inline">\(\pm\mathrm{EH}/2\)</span>; the shaded tails beyond the threshold are errors. (b) BER against <span class="math inline">\(\mathrm{SNR}= 20\log_{10}(\mathrm{EH}/2\sigma_\mathrm{n})\)</span>. The curve is a cliff: near <span class="math inline">\(10^{-12}\)</span> (Q = 7.03, 16.9 dB), one extra dB of SNR buys about three decades of BER.</figcaption>
+</figure>
+<div class="tbox tbox-example">
+<div class="tbox-title">
+<p>Worked Example 2.4 · How much noise can the eye tolerate?</p>
+</div>
+<p><span id="we:ch2-ber"></span> The target is <span class="math inline">\(\mathrm{BER}\le 10^{-12}\)</span>, so <span class="math inline">\(\mathrm{EH}/(2\sigma_\mathrm{n}) \ge 7.03\)</span> and <span class="math inline">\(\sigma_\mathrm{n}\le \mathrm{EH}/14.07\)</span>.</p>
+<ul>
+<li><p>A sampler with <span class="math inline">\(\sigma_\mathrm{n}= 2\,\mathrm{mV}\)</span> rms needs an eye of at least <span class="math inline">\(14.07\times2\,\mathrm{mV} = 28\,\mathrm{mV}\)</span>.</p></li>
+<li><p>Lab 5 opens the REF channel to <span class="math inline">\(\mathrm{EH} = 143\,\mathrm{mV}\)</span> with an 8 dB CTLE and a 3-tap DFE. The noise budget is then <span class="math inline">\(\sigma_\mathrm{n}\le 143/14.07 = 10.2\,\mathrm{mV}\)</span> rms, for all noise sources together.</p></li>
+<li><p>At <span class="math inline">\(\sigma_\mathrm{n}= 15\,\mathrm{mV}\)</span>, <span class="math inline">\(Q= 4.77\)</span> and <span class="math inline">\(\mathrm{BER}\approx 9\times10^{-7}\)</span>: 1.5<span class="math inline">\(\times\)</span> the noise costs six decades.</p></li>
+</ul>
+</div>
+<h5 id="a-first-look-at-the-bathtub">A first look at the bathtub</h5>
+<p>Jitter moves the crossings, so the BER also depends on <em>when</em> we sample. Sweeping the sampling instant across the UI gives a <strong>bathtub curve</strong> (<a href="#fig:ch2-bathtub">Figure 2.12</a>); its width at <span class="math inline">\(10^{-12}\)</span> is the usable eye width. With 4 ps rms random jitter (0.02 UI), 0.72 UI remains; doubling the jitter leaves 0.45 UI. <a href="{% endraw %}{{ '/chapters/11-jitter/' | relative_url }}{% raw %}">Chapter 11</a> covers this in full (<a href="{% endraw %}{{ '/chapters/11-jitter/' | relative_url }}{% raw %}#sec:dualdirac">Section 11.3</a>).</p>
+<div id="tab:ch2-qtable">
+
+</div>
+<div id="fig:ch2-bathtub">
+
+</div>
+<figure>
+<div class="mpcol" style="--w:45%">
+<div class="captionblock">
+<p><span class="capnum">Table 2.1.</span> <strong>Q values for common BER targets.</strong> <span class="math inline">\(\mathrm{BER}= Q(x)\)</span>; <span class="math inline">\(2Q\)</span> is the eye-to-noise ratio needed.</p>
+</div>
+<p><span></span></p>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: right;">BER</th>
+<th style="text-align: center;"><span class="math inline">\(Q\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(2Q\)</span></th>
+<th style="text-align: center;">SNR (dB)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;"><span class="math inline">\(10^{-3}\)</span></td>
+<td style="text-align: center;">3.09</td>
+<td style="text-align: center;">6.18</td>
+<td style="text-align: center;">9.8</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;"><span class="math inline">\(10^{-6}\)</span></td>
+<td style="text-align: center;">4.75</td>
+<td style="text-align: center;">9.51</td>
+<td style="text-align: center;">13.5</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;"><span class="math inline">\(10^{-9}\)</span></td>
+<td style="text-align: center;">6.00</td>
+<td style="text-align: center;">12.00</td>
+<td style="text-align: center;">15.6</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;"><span class="math inline">\(10^{-10}\)</span></td>
+<td style="text-align: center;">6.36</td>
+<td style="text-align: center;">12.72</td>
+<td style="text-align: center;">16.1</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;"><span class="math inline">\(10^{-12}\)</span></td>
+<td style="text-align: center;"><strong>7.03</strong></td>
+<td style="text-align: center;"><strong>14.07</strong></td>
+<td style="text-align: center;"><strong>16.9</strong></td>
+</tr>
+<tr class="even">
+<td style="text-align: right;"><span class="math inline">\(10^{-15}\)</span></td>
+<td style="text-align: center;">7.94</td>
+<td style="text-align: center;">15.88</td>
+<td style="text-align: center;">18.0</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="mpcol" style="--w:52%">
+<img src="{% endraw %}{{ '/assets/figs/ch02_bathtub.svg' | relative_url }}{% raw %}" style="width:363px" alt="Bathtub curves." loading="lazy" />
+</div>
+<figcaption><span class="capnum">Figure 2.12.</span> <strong>Bathtub curves.</strong> BER against sampling instant for Gaussian edge jitter of 0.02 and 0.04 UI rms (half the edges are transitions). The opening at <span class="math inline">\(10^{-12}\)</span> shrinks from 0.72 to 0.45 UI.</figcaption>
+</figure>
+<div class="tbox tbox-pitfall">
+<div class="tbox-title">
+<p>You cannot measure <span class="math inline">\(10^{-12}\)</span> in a coffee break</p>
+</div>
+<p>Showing <span class="math inline">\(\mathrm{BER}&lt; 10^{-12}\)</span> at 95% confidence takes <span class="math inline">\(3/\mathrm{BER}= 3\times10^{12}\)</span> error-free bits: ten minutes on the bench, far beyond any simulation. Design with statistical models; verify with PRBS checkers.</p>
+</div>
+<h2 id="sec:ch2-exercises"><span class="secnum">2.8</span>Exercises</h2>
+<ol>
+<li><p><strong>Rates.</strong> A 2.5GBASE-KX lane runs at 3.125 Gb/s with 8b/10b. Find <span class="math inline">\(T_\mathrm{b}\)</span>, <span class="math inline">\(f_\mathrm{N}\)</span>, the first PSD null and the payload rate.</p></li>
+<li><p><strong>PRBS9</strong> (<span class="math inline">\(x^9 + x^5 + 1\)</span>). Draw its LFSR; give its period, the counts of 1s and 0s, the longest runs and the line spacing at 5 Gb/s.</p></li>
+<li><p><strong>A CML stage as a pole.</strong> For <span class="math inline">\(R_\mathrm{L}= 200\,\Omega\)</span>, <span class="math inline">\(C_\mathrm{L}= 150\,\mathrm{fF}\)</span>, find <span class="math inline">\(f_\mathrm{3dB}\)</span>, <span class="math inline">\(t_r\)</span> and <span class="math inline">\(1 - 2e^{-T_\mathrm{b}/\tau}\)</span>. What <span class="math inline">\(C_\mathrm{L}\)</span> costs 10% of the eye?</p></li>
+<li><p><strong>Cursors by hand.</strong> With the cursors of <a href="#fig:ch2-pulse">Figure 2.6</a> (<span class="math inline">\(p_{-1}..p_{3}\)</span> = 0.0205, 0.5561, 0.1605, 0.0629, 0.0340) and <span class="math inline">\(A = 0.5\,\mathrm{V}\)</span>, find the sample of the bracketed 1 in <code>1 1 1 [1] 0</code> and in <code>0 0 0 [1] 1</code>. Compare the worst-case eye from these cursors with the 230 mV of the full tail.</p></li>
+<li><p><strong>BER.</strong> A receiver sees <span class="math inline">\(\mathrm{EH} = 60\,\mathrm{mV}\)</span> with <span class="math inline">\(\sigma_\mathrm{n}= 4\,\mathrm{mV}\)</span>. Find Q and the BER. What eye height or noise gives <span class="math inline">\(10^{-15}\)</span>, and how long must the link run error-free to show it?</p></li>
+</ol>
+<div class="tbox tbox-takeaways">
+<div class="tbox-title">
+<p>Key takeaways</p>
+</div>
+<ul>
+<li><p>At 5 Gb/s, <span class="math inline">\(1\,\mathrm{UI}= 200\,\mathrm{ps}\)</span> and <span class="math inline">\(f_\mathrm{N}= 2.5\,\mathrm{GHz}\)</span>; 77% of NRZ power lies below <span class="math inline">\(f_\mathrm{N}\)</span>.</p></li>
+<li><p>PRBS-<span class="math inline">\(n\)</span> (an <span class="math inline">\(n\)</span>-stage LFSR) repeats every <span class="math inline">\(2^n - 1\)</span> bits with runs up to <span class="math inline">\(n\)</span>; PRBS7 for bring-up, PRBS31 for compliance.</p></li>
+<li><p>A one-pole block has <span class="math inline">\(t_r \approx 0.35/f_\mathrm{3dB}\)</span> and a worst-case eye of <span class="math inline">\(2A(1 - 2e^{-T_\mathrm{b}/\tau})\)</span>; keeping ISI small needs <span class="math inline">\(f_\mathrm{3dB} \gtrsim f_\mathrm{N}\)</span>.</p></li>
+<li><p>The received signal is <span class="math inline">\(y(t) = A\sum_n a_n\,p(t - nT_\mathrm{b})\)</span>: main cursor plus ISI from the cursors <span class="math inline">\(p_{k}\)</span>, with worst-case eye <span class="math inline">\(2A(p_{0} - \sum_{k\ne0}\lvert p_{k}\rvert)\)</span>.</p></li>
+<li><p>With Gaussian noise, <span class="math inline">\(\mathrm{BER}= Q(\mathrm{EH}/2\sigma_\mathrm{n})\)</span>, so <span class="math inline">\(10^{-12}\)</span> needs <span class="math inline">\(\mathrm{EH} \ge 14.07\,\sigma_\mathrm{n}\)</span>.</p></li>
+</ul>
+</div>
+
+<nav class="prev-next" aria-label="Chapter navigation"><a class="pn-link prev" href="{% endraw %}{{ '/chapters/01-why-serial-links/' | relative_url }}{% raw %}"><small>← Previous</small>Why Serial Links?</a><a class="pn-link next" href="{% endraw %}{{ '/chapters/03-the-channel/' | relative_url }}{% raw %}"><small>Next →</small>The Channel</a></nav>
+<p class="page-source">Generated from <a href="https://github.com/bricd-org/serdes-tutorial/blob/main/book/tutorial/chapters/02_signals.tex">book/tutorial/chapters/02_signals.tex</a>. Figure, table and equation numbers match the <a href="{% endraw %}{{ '/assets/pdf/Open-SERDES_Tutorial.pdf' | relative_url }}{% raw %}">PDF edition</a>.</p>
+{% endraw %}

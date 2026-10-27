@@ -1,0 +1,70 @@
+---
+title: "C. Design-Review Checklists"
+parent: "Appendices"
+nav_order: 3
+permalink: "/appendices/c-design-review-checklists/"
+---
+{% raw %}
+<h1 id="app:checklists"><span class="chapnum">Appendix C</span>Design-Review Checklists</h1>
+<p>Use these lists in every design review. Each item points to the section that explains it; the numbers are the targets of <a href="{% endraw %}{{ '/chapters/14-the-open-serdes-architecture/' | relative_url }}{% raw %}#tab:specs">Table 14.1</a>.</p>
+<div class="mpcol" style="--w:48%">
+<p><strong>Transmitter</strong></p>
+<ul>
+<li><p>FO4 measured in the PDK; CMOS stages close timing at the slow corner (<a href="{% endraw %}{{ '/chapters/09-the-transmitter/' | relative_url }}{% raw %}#sec:serializer">Section 9.2</a>).</p></li>
+<li><p>Half-rate mux: glitch-free phases, duty cycle <span class="math inline">\(50\pm1\)</span> %.</p></li>
+<li><p>Driver <span class="math inline">\(I_T\)</span> for 0.8–1.0 Vppd; every <span class="math inline">\(V_\mathrm{CE}&lt;\mathrm{BV}_\mathrm{CEO}\)</span> at <span class="math inline">\(V_\mathrm{CC}+5\)</span> %, with the real far-end termination.</p></li>
+<li><p>FFE presets <span class="math inline">\(-3.5\)</span>/<span class="math inline">\(-6\)</span> dB exact within one LSB; tap paths matched to a few ps.</p></li>
+<li><p>Termination trimmed to <span class="math inline">\(\pm10\)</span> %; <span class="math inline">\(C_p\le0.85\)</span> pF; RL <span class="math inline">\(\ge10\)</span> dB at <span class="math inline">\(f_\mathrm{N}\)</span>.</p></li>
+<li><p>Post-layout eye through REF within 10 % of the model.</p></li>
+</ul>
+<p><strong>Channel and board</strong></p>
+<ul>
+<li><p>Loss at <span class="math inline">\(f_\mathrm{N}\)</span> (not <span class="math inline">\(f_\mathrm{b}\)</span>) known; REF replaced by measured S-parameters.</p></li>
+<li><p>Via stubs short or back-drilled; first resonance above 5 GHz.</p></li>
+<li><p>Pairs length-matched; TX and RX pairs separated (NEXT).</p></li>
+<li><p>SMA launches and bond wires modeled; reflections in the pulse tail checked.</p></li>
+</ul>
+<p><strong>Receiver</strong></p>
+<ul>
+<li><p>CTLE: 0–12 dB at every corner; <span class="math inline">\(f_{p2}\)</span> with the real sampler load.</p></li>
+<li><p>DFE tap-1 loop <span class="math inline">\(\le1\)</span> UI post-layout; unrolling ready if not.</p></li>
+<li><p>Sampler <span class="math inline">\(\sigma\le1\)</span> mV; offset DAC <span class="math inline">\(\ge\pm3\sigma\)</span>, 5 bits; <span class="math inline">\(\tau\le5\)</span> ps.</p></li>
+<li><p>Two extra latches behind the edge samplers (metastability).</p></li>
+<li><p>All four samplers simulated together (kick-back).</p></li>
+<li><p>Deserializer FIFO and recovered-clock domain crossing checked.</p></li>
+</ul>
+</div>
+<div class="mpcol" style="--w:48%">
+<p><strong>PLL and clocks</strong></p>
+<ul>
+<li><p>VCO tunes 2.5 GHz with <span class="math inline">\(V_\mathrm{ctrl}\)</span> mid-range at all corners; band code range covers PVT.</p></li>
+<li><p>Loop: 60<span class="math inline">\(^\circ\)</span> phase margin, <span class="math inline">\(f_u\approx3\)</span> MHz, <span class="math inline">\(f_\mathrm{ref}/f_u\ge10\)</span>.</p></li>
+<li><p>VCO phase noise simulated open-loop; RJ <span class="math inline">\(\le1\)</span> ps rms integrated.</p></li>
+<li><p>Loop-filter capacitors MIM, not leaky MOS.</p></li>
+<li><p>I/Q error <span class="math inline">\(\le2^{\circ}\)</span> (<span class="math inline">\(3\sigma\)</span>), duty cycle <span class="math inline">\(50\pm0.5\)</span> % after DCC.</p></li>
+<li><p>Clock buffers have 2–3<span class="math inline">\(\times f_\mathrm{clk}\)</span> bandwidth.</p></li>
+</ul>
+<p><strong>CDR</strong></p>
+<ul>
+<li><p>Phase-detector truth table verified for both half-rate phases.</p></li>
+<li><p><span class="math inline">\(K_P\)</span> from the JTOL slew requirement; <span class="math inline">\(K_P/K_I\ge16\)</span> (baseline 128).</p></li>
+<li><p>Latency counted in updates; wander <span class="math inline">\(\le20\)</span> ps pp in simulation.</p></li>
+<li><p>Integral register covers <span class="math inline">\(\pm300\)</span> ppm; lock <span class="math inline">\(&lt;1\)</span> s.</p></li>
+<li><p>PI INL <span class="math inline">\(\le1^{\circ}\)</span> at all 64 codes; code wrap glitch-free.</p></li>
+<li><p>Lab 7 model rerun with the real PI and latency.</p></li>
+</ul>
+<p><strong>Tape-out</strong></p>
+<ul>
+<li><p>DRC clean (KLayout decks), antenna and density after fill.</p></li>
+<li><p>LVS clean per macro and full chip without black boxes.</p></li>
+<li><p>Post-layout corners and Monte Carlo pass in <strong>CACE</strong>.</p></li>
+<li><p>Model back-annotated with extracted responses; margin <span class="math inline">\(&gt;0\)</span>.</p></li>
+<li><p>ESD on every pad; supply domains, decaps and guard rings reviewed.</p></li>
+<li><p>Test access: PRBS, checker, loopback, PI override, clock monitor.</p></li>
+<li><p>Bonding diagram, pinout and test-board plan signed off.</p></li>
+</ul>
+</div>
+
+<nav class="prev-next" aria-label="Chapter navigation"><a class="pn-link prev" href="{% endraw %}{{ '/appendices/b-tables-and-constants/' | relative_url }}{% raw %}"><small>← Previous</small>Tables and Constants</a><a class="pn-link next" href="{% endraw %}{{ '/appendices/d-glossary/' | relative_url }}{% raw %}"><small>Next →</small>Glossary</a></nav>
+<p class="page-source">Generated from <a href="https://github.com/bricd-org/serdes-tutorial/blob/main/book/tutorial/chapters/A_appendices.tex">book/tutorial/chapters/A_appendices.tex</a>. Figure, table and equation numbers match the <a href="{% endraw %}{{ '/assets/pdf/Open-SERDES_Tutorial.pdf' | relative_url }}{% raw %}">PDF edition</a>.</p>
+{% endraw %}

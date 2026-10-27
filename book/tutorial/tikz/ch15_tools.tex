@@ -1,0 +1,37 @@
+% ch15_tools.tex -- fig:ch15-tools : the open tool map of the Open-SERDES flow
+\providecommand{\chFifteenT}[1]{{\color{slate}\bfseries #1}}
+\begin{tikzpicture}[x=1cm,y=1cm,font=\sffamily\scriptsize,
+  st/.style={blk,minimum width=19mm,minimum height=15mm,font=\sffamily\scriptsize,inner sep=2pt,align=center,text width=18mm},
+  sa/.style={st,fill=btint},
+  sd/.style={st,fill=gtint,draw=golddk},
+  sn/.style={st,fill=navy,text=white},
+  hd/.style={font=\sffamily\scriptsize\bfseries},
+  fb/.style={-{Stealth[length=2mm]},draw=c4,line width=0.7pt,dashed}]
+\draw[region,fill=bgpale!70] (-1.2,-2.6) rectangle (14.95,3.62);
+\node[font=\sffamily\scriptsize\bfseries,text=slate,anchor=north west] at (-1.15,3.57) {IIC-OSIC-TOOLS container  +  JKU \texttt{ihp-sg13g2-ams-chip-template} (\texttt{make all})};
+% system model (spans both lanes)
+\node[sn,minimum height=46mm,minimum width=18mm,text width=16mm] (sys) at (-0.2,0) {\textbf{Specs and system model}\\[4pt]\textcolor{goldlt}{serdespy}\\\textcolor{goldlt}{PyBERT}\\\textcolor{goldlt}{scikit-rf}\\[4pt]\textcolor{pale}{eye, BER, budgets}};
+% analog lane
+\node[hd,text=bblue,anchor=south west] at (1.15,2.13) {ANALOG / CUSTOM: driver, CML, CTLE, samplers, PLL, PI};
+\node[sa] (a1) at (2.25,1.3) {\textbf{Schematic + sim}\\[2pt]\chFifteenT{Xschem}\\\chFifteenT{ngspice} \chFifteenT{Xyce}\\\chFifteenT{VACASK}};
+\node[sa] (a2) at (4.55,1.3) {\textbf{Characterize}\\[2pt]\chFifteenT{CACE}\\PVT corners,\\Monte Carlo};
+\node[sa] (a3) at (6.85,1.3) {\textbf{Layout}\\[2pt]\chFifteenT{KLayout}\\\chFifteenT{Magic}\\PCells};
+\node[sa] (a4) at (9.15,1.3) {\textbf{Extract + EM}\\[2pt]\chFifteenT{KLayout-PEX}\\\chFifteenT{Magic}\\\chFifteenT{openEMS} \chFifteenT{Palace}};
+% digital lane
+\node[hd,text=golddk,anchor=north west] at (1.15,-2.1) {DIGITAL / SEMI-CUSTOM: PRBS, CDR logic, CMOS 16:4 and 1:16, SPI};
+\node[sd] (d1) at (2.25,-1.3) {\textbf{RTL + verify}\\[2pt]\chFifteenT{Verilator}\\\chFifteenT{Icarus}\\\chFifteenT{cocotb}};
+\node[sd] (d2) at (4.55,-1.3) {\textbf{Synthesis}\\[2pt]\chFifteenT{Yosys}\\(\sgx{} std.\\cells)};
+\node[sd] (d3) at (6.85,-1.3) {\textbf{Place, route}\\[2pt]\chFifteenT{LibreLane}\\\chFifteenT{OpenROAD}};
+\node[sd] (d4) at (9.15,-1.3) {\textbf{Timing + RC}\\[2pt]\chFifteenT{OpenSTA}\\\chFifteenT{OpenRCX}\\(in LibreLane)};
+% merge: top level and sign-off
+\node[st,minimum height=46mm,text width=18mm] (top) at (11.65,0) {\textbf{Top-level}\\[2pt]digital-on-top\\assembly\\(\chFifteenT{LibreLane}),\\pad ring, seal,\\fill\\[3pt]full-chip\\simulation};
+\node[st,minimum height=46mm,minimum width=18mm,text width=16mm,fill=gtint!60] (so) at (13.95,0) {\textbf{Sign-off}\\[2pt]DRC: \chFifteenT{KLayout},\\\chFifteenT{Magic}\\LVS: \chFifteenT{KLayout},\\\chFifteenT{Netgen}\\[3pt]$\to$ GDS,\\bonding\\diagram};
+% arrows
+\foreach \u/\v in {a1/a2,a2/a3,a3/a4,d1/d2,d2/d3,d3/d4}{\draw[sig] (\u) -- (\v);}
+\draw[sig] (sys.east |- a1) -- (a1); \draw[sig] (sys.east |- d1) -- (d1);
+\draw[sig] (a4.east) -- (a4.east -| top.west); \draw[sig] (d4.east) -- (d4.east -| top.west);
+\draw[sig] (top) -- (so);
+% back-annotation loop
+\draw[fb] (a4.north) -- ++(0,0.95) -| node[pos=0.25,below=0pt,text=c4,font=\sffamily\scriptsize]{back-annotate: $H(f)$, TX FIR, $\sigma$, $V_\mathrm{os}$ (\cref{sec:model-loop})} (sys.north);
+\draw[fb] (a2.south) -- ++(0,-0.25) -| node[pos=0.25,below=0pt,text=c4,font=\sffamily\scriptsize]{iterate} (a1.south);
+\end{tikzpicture}

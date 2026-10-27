@@ -1,0 +1,230 @@
+---
+title: "1. Why Serial Links?"
+parent: "Part I · Foundations"
+nav_order: 1
+permalink: "/chapters/01-why-serial-links/"
+---
+{% raw %}
+<h1 id="ch:intro"><span class="chapnum">Chapter 1</span>Why Serial Links?</h1>
+<div class="chapterlead">
+<p>Chips have far more bandwidth inside than pins to move it out, so we send bits one after another, very fast, over a few carefully engineered wires.</p>
+</div>
+<div class="tbox tbox-objectives">
+<div class="tbox-title">
+<p>In this chapter you will learn</p>
+</div>
+<ul>
+<li><p>explain why high-speed I/O moved from wide parallel buses to serial links with an embedded clock;</p></li>
+<li><p>name every block of a SerDes link and the data rate at each point of the Open-SERDES design;</p></li>
+<li><p>place 5 Gb/s NRZ among real standards such as PCIe, USB and backplane Ethernet;</p></li>
+<li><p>state the Open-SERDES targets and why 5 Gb/s NRZ in SG13G2 is the right first chip;</p></li>
+<li><p>compare the speed of SG13G2 HBTs with 130 nm CMOS, and describe the back-end metal stack.</p></li>
+</ul>
+</div>
+<h2 id="sec:ch1-parallel"><span class="secnum">1.1</span>From parallel buses to serial links</h2>
+<p>The obvious way to move data between chips is a <strong>parallel bus</strong>: one wire per bit plus a clock wire. A 16-bit bus at 312.5 Mb/s per wire moves 5 Gb/s. As rates grew, four problems stopped it from scaling (<a href="#fig:ch1-parser">Figure 1.1</a>a).</p>
+<div id="fig:ch1-parser">
+
+</div>
+<figure>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/tikz/01_intro-0.svg' | relative_url }}{% raw %}" style="width:375px" alt="(a) Parallel bus, forwarded clock" loading="lazy" />
+<figcaption><span class="capnum">(a)</span> Parallel bus, forwarded clock</figcaption>
+</figure>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/tikz/01_intro-1.svg' | relative_url }}{% raw %}" style="width:338px" alt="(b) Serial link, embedded clock" loading="lazy" />
+<figcaption><span class="capnum">(b)</span> Serial link, embedded clock</figcaption>
+</figure>
+<figcaption><span class="capnum">Figure 1.1.</span> <strong>A parallel bus is limited by skew; a serial link carries its own clock.</strong> (a) Each lane of a bus arrives with a slightly different delay. The receiver can only sample inside the window where every lane is valid, and that window shrinks as the bit time shrinks. (b) A serial link sends one fast stream on one differential pair. The receiver extracts the clock from the data transitions (gold dots), so there is no clock wire to match.</figcaption>
+</figure>
+<ul>
+<li><p><strong>Skew.</strong> Lanes differ in length, load and driver strength, so bits launched together arrive at different times; the usable window is the bit time minus the worst skew.</p></li>
+<li><p><strong>Pin count.</strong> Pins and board area are expensive and grow far more slowly than on-chip bandwidth, and a wide bus needs many return pins.</p></li>
+<li><p><strong>Power and noise.</strong> Many single-ended drivers switching together cause supply bounce and crosstalk, and the energy per bit stays high.</p></li>
+<li><p><strong>The clock wire.</strong> The forwarded clock must be matched to every lane across process, voltage and temperature.</p></li>
+</ul>
+<p>A <strong>serial link</strong> <strong>serializes</strong> the word into one full-rate stream on a single <strong>differential pair</strong>, which carries its own return path and rejects common-mode noise. No clock is sent: a <strong>clock and data recovery</strong> (CDR) circuit in the receiver locks a local clock to the data transitions, so the clock is <strong>embedded</strong> in the data and lane-to-lane skew no longer matters.</p>
+<div class="tbox tbox-example">
+<div class="tbox-title">
+<p>Worked Example 1.1 · Skew budget: parallel bus versus serial link</p>
+</div>
+<p><span id="we:ch1-skew"></span> A signal on FR-4 (<span class="math inline">\(\varepsilon_r \approx 4\)</span>) travels at <span class="math inline">\(v = c/\sqrt{\varepsilon_r} \approx 0.15\,\mathrm{mm}/\mathrm{ps}\)</span>, or about 6.7 ps per millimeter. Suppose two lanes differ in length by 10 mm, a modest mismatch on a crowded board. The skew is <span class="math inline">\(10\,\mathrm{mm}\times6.7\,\mathrm{ps}/\mathrm{mm} \approx 67\,\mathrm{ps}\)</span>.</p>
+<ul>
+<li><p>16-bit bus at 312.5 Mb/s: the bit time is 3.2 ns, so the skew costs <span class="math inline">\(67/3200 \approx 2\%\)</span> of it.</p></li>
+<li><p>The same bus pushed to 5 Gb/s per lane: the bit time is 200 ps and the same skew eats <em>one third</em> of it, before any jitter or noise.</p></li>
+</ul>
+<p>The pins tell a similar story: 16 data wires plus a clock and their returns, against one differential pair (2 pins) for the serial link.</p>
+</div>
+<p>The price is speed: each bit lasts only <span class="math inline">\(T_\mathrm{b}= 1/f_\mathrm{b}\)</span>, and the wire that looked ideal at 312.5 Mb/s now smears each bit into its neighbors. Paying that price efficiently is measured by the energy per bit.</p>
+<div class="tbox tbox-keyeq">
+<div class="tbox-title">
+<p>Key equation · Energy efficiency of a link</p>
+</div>
+<div id="eq:ch1-energy">
+
+</div>
+<p><span class="math display">\[E_b = \frac{P_\mathrm{link}}{f_\mathrm{b}}, \qquad 1\,\mathrm{mW} \text{ per } \mathrm{Gb}/\mathrm{s} = 1\,\mathrm{pJ}/\mathrm{b} \tag{1.1}\]</span></p>
+</div>
+<p>A transceiver burning 50 mW at 5 Gb/s spends 10 pJ per bit.</p>
+<div class="tbox tbox-insight">
+<div class="tbox-title">
+<p>What this means for your design</p>
+</div>
+<p>Serial links win because they trade many slow, skew-limited wires for one fast, self-clocked wire. The cost moves into the transceiver: it must drive, equalize and re-time a 200 ps bit after a lossy channel. Every chapter that follows is about doing that within a power budget.</p>
+</div>
+<h2 id="sec:anatomy"><span class="secnum">1.2</span>Anatomy of a SerDes link</h2>
+<p><a href="#fig:link-anatomy">Figure 1.2</a> shows the complete Open-SERDES link. Follow a 16-bit word from left to right.</p>
+<div id="fig:link-anatomy">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/tikz/01_intro-2.svg' | relative_url }}{% raw %}" style="width:761px" alt="Anatomy of the Open-SERDES link, with the data rate at every point." loading="lazy" />
+<figcaption><span class="capnum">Figure 1.2.</span> <strong>Anatomy of the Open-SERDES link, with the data rate at every point.</strong> Sixteen bits at 312.5 Mb/s are serialized to one 5 Gb/s NRZ stream, driven through a 3-tap FFE driver, attenuated by the package, board and connector, then equalized (CTLE and DFE), sampled with a recovered clock and deserialized back to 16 bits. Gold dashed lines are clocks: the TX PLL multiplies a 50 MHz reference to 2.5 GHz, and the RX CDR steers four sampling phases using I/Q clocks from a local PLL. All high-speed paths are differential.</figcaption>
+</figure>
+<h5 id="transmitter-tx">Transmitter (TX)</h5>
+<p>The <strong>serializer</strong> works in stages: CMOS logic does 16:4, current-mode logic (CML) does 4:2, and a <strong>half-rate</strong> 2:1 CML multiplexer clocked at 2.5 GHz emits one bit per clock edge (<a href="{% endraw %}{{ '/chapters/09-the-transmitter/' | relative_url }}{% raw %}#sec:serializer">Section 9.2</a>). The <strong>driver</strong> launches a 1 V<sub>ppd</sub> signal into the 50 Ω-per-side channel through a 3-tap <strong>feed-forward equalizer</strong> (FFE) that pre-distorts it against the channel loss (<a href="{% endraw %}{{ '/chapters/06-transmit-ffe/' | relative_url }}{% raw %}">Chapter 6</a> and <a href="{% endraw %}{{ '/chapters/09-the-transmitter/' | relative_url }}{% raw %}#sec:cml-driver">Section 9.4</a>). A <strong>phase-locked loop</strong> (PLL) with an LC oscillator makes the 2.5 GHz clock (<a href="{% endraw %}{{ '/chapters/12-clock-generation-the-phase-locked-loop/' | relative_url }}{% raw %}#ch:pll">Chapter 12</a>).</p>
+<h5 id="channel">Channel</h5>
+<p>Packages, board (PCB) traces and vias and a connector together act as a low-pass filter with reflections; the Open-SERDES reference channel loses 17.4 dB at 2.5 GHz (<a href="{% endraw %}{{ '/chapters/03-the-channel/' | relative_url }}{% raw %}">Chapter 3</a>).</p>
+<h5 id="receiver-rx">Receiver (RX)</h5>
+<p>A 100 Ω <strong>termination</strong> with ESD protection absorbs the wave (<a href="{% endraw %}{{ '/chapters/09-the-transmitter/' | relative_url }}{% raw %}#sec:termination">Section 9.3</a>). A <strong>continuous-time linear equalizer</strong> (CTLE) restores the lost high frequencies (<a href="{% endraw %}{{ '/chapters/07-continuous-time-linear-equalizer/' | relative_url }}{% raw %}">Chapter 7</a>). Four <strong>samplers</strong> on the 0°/90°/180°/270° phases of a 2.5 GHz clock take data and edge samples, while a 2-tap <strong>decision-feedback equalizer</strong> (DFE) subtracts the echo of previous bits (<a href="{% endraw %}{{ '/chapters/08-decision-feedback-equalization-and-adaptation/' | relative_url }}{% raw %}#ch:dfe">Chapter 8</a> and <a href="{% endraw %}{{ '/chapters/10-receiver-front-end-and-samplers/' | relative_url }}{% raw %}#sec:sampler">Section 10.2</a>). The <strong>CDR</strong> steers a phase interpolator to keep the samples centered (<a href="{% endraw %}{{ '/chapters/13-clock-and-data-recovery/' | relative_url }}{% raw %}">Chapter 13</a>), and the <strong>deserializer</strong> rebuilds the 16-bit word (<a href="{% endraw %}{{ '/chapters/10-receiver-front-end-and-samplers/' | relative_url }}{% raw %}#sec:deserializer">Section 10.6</a>).</p>
+<div class="tbox tbox-example">
+<div class="tbox-title">
+<p>Worked Example 1.2 · Following the rates through the link</p>
+</div>
+<p><span id="we:ch1-rates"></span></p>
+<ul>
+<li><p>Parallel side: <span class="math inline">\(16 \times 312.5\,\mathrm{Mb}/\mathrm{s} = 5000\,\mathrm{Mb}/\mathrm{s} = 5\,\mathrm{Gb}/\mathrm{s}\)</span>.</p></li>
+<li><p>Serial side: <span class="math inline">\(T_\mathrm{b}= 1/5\,\mathrm{Gb}/\mathrm{s} = 200\,\mathrm{ps}\)</span>, the <strong>unit interval</strong> (UI).</p></li>
+<li><p>Half-rate clock: 2.5 GHz has a 400 ps = 2 UI period; both edges give one bit per 200 ps. The four CDR phases are 0.5 UI apart: two data centers and two edges.</p></li>
+<li><p>PLL: <span class="math inline">\(f_\mathrm{ref} \times N = 50\,\mathrm{MHz}\times 50 = 2.5\,\mathrm{GHz}\)</span>. The deserializer output clock is <span class="math inline">\(2.5\,\mathrm{GHz}/8 = 312.5\,\mathrm{MHz}\)</span>.</p></li>
+</ul>
+<p>The half-rate clock frequency equals the Nyquist frequency <span class="math inline">\(f_\mathrm{N}= f_\mathrm{b}/2\)</span> of the data (<a href="{% endraw %}{{ '/chapters/02-signals-systems-and-the-language-of-links/' | relative_url }}{% raw %}#sec:nrz">Section 2.1</a>).</p>
+</div>
+<p><a href="#fig:ch1-glance">Figure 1.3</a> summarizes the link with the four numbers you will meet on almost every page.</p>
+<div id="fig:ch1-glance">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/canva_glance.png' | relative_url }}{% raw %}" style="width:800px" alt="A SerDes link at a glance." loading="lazy" />
+<figcaption><span class="capnum">Figure 1.3.</span> <strong>A SerDes link at a glance.</strong> The transmitter (serializer, FFE driver), the channel (package, PCB, connector) and the receiver (CTLE, DFE, samplers, deserializer), held together by the PLL and the CDR. Keep the four key numbers in mind: 5 Gb/s, a 200 ps UI, a 2.5 GHz Nyquist frequency and a target BER of <span class="math inline">\(10^{-12}\)</span>.</figcaption>
+</figure>
+<h2 id="sec:ch1-standards"><span class="secnum">1.3</span>Where SerDes are used</h2>
+<p>Serial links connect a CPU to its graphics card (PCIe), a computer to its drives (USB, SATA) and the line cards of a network switch (Ethernet). <a href="#tab:ch1-standards">Table 1.1</a> lists common standards. <strong>GT/s</strong> counts symbols on the wire and Gb/s counts bits; they are equal for NRZ, while PAM4 carries two bits per symbol (<a href="{% endraw %}{{ '/chapters/04-link-budgets-and-statistical-analysis/' | relative_url }}{% raw %}#sec:pam4">Section 4.5</a>). Line rates include coding overhead: 8b/10b sends 10 line bits per 8 data bits, 64b/66b sends 66 per 64.</p>
+<div id="tab:ch1-standards">
+
+</div>
+<div class="tabularx">
+<p><span>@l l L r@</span> Standard (year) &amp; Rate per lane &amp; Modulation and coding &amp; <span class="math inline">\(f_\mathrm{N}\)</span> (GHz)<br />
+PCIe 1.0a / 2.0 (2003 / 2007) &amp; 2.5 / 5 GT/s &amp; NRZ, 8b/10b &amp; 1.25 / 2.5<br />
+PCIe 3.0 / 4.0 / 5.0 (2010–19) &amp; 8 / 16 / 32 GT/s &amp; NRZ, 128b/130b &amp; 4 / 8 / 16<br />
+PCIe 6.0 (2022) &amp; 64 GT/s &amp; PAM4, 32 GBd, FEC &amp; 16<br />
+USB 3.2 Gen 1 / Gen 2 (2008 / 2013) &amp; 5 / 10 Gb/s &amp; NRZ, 8b/10b / 128b/132b &amp; 2.5 / 5<br />
+USB4 v2 (2022) &amp; 40 Gb/s &amp; PAM3, 25.6 GBd &amp; 12.8<br />
+SATA I / II / III (2003–09) &amp; 1.5 / 3 / 6 Gb/s &amp; NRZ, 8b/10b &amp; 0.75 / 1.5 / 3<br />
+2.5GBASE-KX (802.3cb, 2018) &amp; 3.125 Gb/s &amp; NRZ, 8b/10b &amp; 1.56<br />
+5GBASE-KR (802.3cb, 2018) &amp; 5.156 Gb/s &amp; NRZ, 64b/66b &amp; 2.58<br />
+10GBASE-KR (802.3ap, 2007) &amp; 10.3125 Gb/s &amp; NRZ, 64b/66b &amp; 5.16<br />
+100GBASE-KR4 (802.3bj, 2014) &amp; 25.78 Gb/s &amp; NRZ, RS-FEC &amp; 12.9<br />
+400GBASE-KR4 (802.3ck, 2022) &amp; 106.25 Gb/s &amp; PAM4, 53.1 GBd, FEC &amp; 26.6<br />
+UCIe 1.0–3.0 (2022–25) &amp; 4–64 GT/s &amp; NRZ, single-ended, fwd. clock &amp; <span class="math inline">\(\le\)</span> 32<br />
+</p>
+</div>
+<p>The last row is a useful counterexample: UCIe links chiplets millimeters apart in one package, where thousands of short, matched wires are cheap, so the parallel bus with a forwarded clock wins again. Serial links win when the wire is long, lossy and expensive, which is the situation Open-SERDES targets.</p>
+<p><a href="#fig:ch1-rate-year">Figure 1.4</a> shows per-lane rates doubling roughly every three to four years. Around 50 Gb/s the industry moved to PAM4, because the loss at the NRZ Nyquist frequency became too high.</p>
+<div id="fig:ch1-rate-year">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch01_rate_vs_year.svg' | relative_url }}{% raw %}" style="width:753px" alt="Per-lane data rates double every three to four years." loading="lazy" />
+<figcaption><span class="capnum">Figure 1.4.</span> <strong>Per-lane data rates double every three to four years.</strong> PCIe generations, IEEE 802.3 backplane Ethernet lanes and USB, on a log axis. Squares mark multi-level signaling (PAM4, or PAM3 for USB4 v2); the open square is 802.3dj (200 Gb/s per lane), whose completion is planned for 2026. The gold band marks the Open-SERDES target, close to 5GBASE-KR (802.3cb) and PCIe 2.0. Sources: [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p1:pcie">8</a>–<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p1:usb4v2">10</a>].</figcaption>
+</figure>
+<h2 id="sec:os-targets"><span class="secnum">1.4</span>The Open-SERDES project</h2>
+<p>Open-SERDES is an open project to design a complete 5 Gb/s serial-link IP for Ethernet-class backplane links in IHP SG13G2, using only open-source PDKs and tools, with every schematic, layout, model and test bench public. The scope runs from specifications and architecture, through a Python link-simulation framework, to the circuits, custom analog layout, synthesized and routed digital blocks, and post-layout verification with DRC and LVS. The <strong>deliverables</strong> are a tape-out-ready GDSII, Verilog RTL with test benches, a demonstration of the modeling framework, a documented GitHub repository with a thesis, and a paper on the whole flow. The specnote collects the targets; <a href="{% endraw %}{{ '/chapters/14-the-open-serdes-architecture/' | relative_url }}{% raw %}">Chapter 14</a> expands them.</p>
+<div class="tbox tbox-specnote">
+<div class="tbox-title">
+<p>Open-SERDES target (reference design)</p>
+</div>
+<div class="tabularx">
+<p><span>@l L@</span> Data rate &amp; 5 Gb/s NRZ, <span class="math inline">\(T_\mathrm{b}= 1\,\mathrm{UI}= 200\,\mathrm{ps}\)</span>, <span class="math inline">\(f_\mathrm{N}= 2.5\,\mathrm{GHz}\)</span><br />
+Target BER &amp; <span class="math inline">\(\le 10^{-12}\)</span> (<span class="math inline">\(Q = 7.03\)</span>); PRBS7 for bring-up, PRBS31 for compliance<br />
+Channel &amp; REF: 1 m FR-4 stripline + 300 fF pads, −17.4 dB at 2.5 GHz<br />
+TX &amp; 16:1 serializer (half-rate 2:1 CML mux), HBT CML driver, 3-tap FFE, 1 V<span class="math inline">\(_\mathrm{ppd}\)</span>, 100 Ω diff.<br />
+RX &amp; 100 Ω termination + ESD, HBT CTLE (0–12 dB), half-rate 2-tap DFE, 4 samplers, 1:16 deserializer<br />
+Clocking &amp; integer-<span class="math inline">\(N\)</span> CP-PLL, LC VCO at 2.5 GHz (<span class="math inline">\(f_\mathrm{ref}\)</span> = 50 MHz, <span class="math inline">\(N\)</span> = 50); PI-based bang-bang CDR, 64 PI steps per 2 UI<br />
+Test &amp; on-chip PRBS7/31 generator and checker, near-end loopback<br />
+</p>
+</div>
+</div>
+<h5 id="why-5-gbs-nrz-is-the-right-first-target">Why 5 Gb/s NRZ is the right first target</h5>
+<ul>
+<li><p><strong>Fast enough to be real.</strong> It matches PCIe 2.0, USB 3.2 Gen 1 and 5GBASE-KR, and a 1 m board loses 17 dB at 2.5 GHz: the raw eye is closed, so every equalization idea in this book is needed.</p></li>
+<li><p><strong>Slow enough to be safe.</strong> A 200 ps UI is easy for SG13G2 HBTs but at the edge of 130 nm CMOS (<a href="#sec:sg13g2">Section 1.5</a>), which shows clearly why BiCMOS helps.</p></li>
+<li><p><strong>NRZ is simple and robust.</strong> PAM4 costs about 9.5 dB of eye, three times the samplers and better linearity, which pays off only on much lossier channels (<a href="{% endraw %}{{ '/chapters/04-link-budgets-and-statistical-analysis/' | relative_url }}{% raw %}#sec:pam4">Section 4.5</a>).</p></li>
+<li><p><strong>Proven blocks.</strong> The team’s 2.4 GHz LC-VCO PLL in 130 nm BiCMOS [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-smacd2026pll">11</a>] moves to 2.5 GHz with little change.</p></li>
+</ul>
+<h5 id="prior-art">Prior art</h5>
+<p>A previous undergraduate project modeled a 5 Gb/s SerDes in a commercial 28 nm library [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p1:serasinghe2016">12</a>]. The Purdue <strong>OpenSerDes</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-openserdes2021">13</a>] was the first open-source SerDes: an all-digital, synthesizable SkyWater 130 nm CMOS design with inverter-based drivers and an oversampling CDR. In post-layout simulation it ran at 2 Gb/s and drew about 438 mW, mostly in the serializer, deserializer and CDR logic; standard 130 nm CMOS cells capped its speed. Neither project produced a silicon-proven, open, analog 5 Gb/s SerDes. Open-SERDES keeps OpenSerDes’s open flow but moves the fastest circuits to SiGe HBTs, which breaks the CMOS speed limit at the same 130 nm node.</p>
+<h5 id="the-plan">The plan</h5>
+<p>We organize the scope into five phases (<a href="#fig:ch1-phases">Figure 1.5</a>): specifications, channel and supply plan (Phase 0); the serdespy system model that checks every later decision (Phase 1); circuits and digital RTL (Phase 2); layout, place-and-route, extraction and EM simulation (Phase 3); and sign-off, tape-out and lab test (Phase 4).</p>
+<div id="fig:ch1-phases">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/tikz/01_intro-3.svg' | relative_url }}{% raw %}" style="width:760px" alt="The Open-SERDES project in five phases." loading="lazy" />
+<figcaption><span class="capnum">Figure 1.5.</span> <strong>The Open-SERDES project in five phases.</strong> Each phase ends in a reviewable result: a specification, a system model, schematics, layouts and a signed-off GDSII. The italic line names the chapters that support each phase.</figcaption>
+</figure>
+<h2 id="sec:sg13g2"><span class="secnum">1.5</span>IHP SG13G2 at a glance</h2>
+<p>SG13G2 is IHP’s 130 nm SiGe:C BiCMOS process, and its PDK is open source [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-ihppdk">1</a>]. It offers two kinds of transistor on one die: standard 130 nm CMOS (1.2 V thin-oxide core devices and 3.3 V thick-oxide I/O devices), and the <strong>npn13G2</strong> SiGe heterojunction bipolar transistor (HBT), with <span class="math inline">\(f_T \approx 300\,\mathrm{GHz}\)</span> and <span class="math inline">\(f_{max} \approx\)</span> 450–500 GHz [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p1:heinemann2010">14</a>].</p>
+<h5 id="hbt-versus-cmos-speed">HBT versus CMOS speed</h5>
+<p>The transit frequency <span class="math inline">\(f_T\)</span>, where the current gain falls to one, sets the device’s intrinsic time scale <span class="math inline">\(1/(2\pi f_T)\)</span>: about 0.5 ps for the HBT. A 130 nm NMOS peaks on the order of 100 GHz, and only at its best bias, and logic gates never operate there. A better yardstick for logic is the <strong>FO4 delay</strong>, the delay of an inverter driving four copies of itself: about 45 ps in 130 nm CMOS. <a href="#fig:ch1-speed">Figure 1.6</a> puts these times next to the 200 ps UI.</p>
+<div id="fig:ch1-speed">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch01_speed_ladder.svg' | relative_url }}{% raw %}" style="width:753px" alt="A 200 ps UI is about four CMOS gate delays, but about a hundred HBT gate delays." loading="lazy" />
+<figcaption><span class="capnum">Figure 1.6.</span> <strong>A 200 ps UI is about four CMOS gate delays, but about a hundred HBT gate delays.</strong> Half-rate CMOS circuits need a bit time of roughly 3–4 FO4 delays, so 130 nm CMOS has almost no margin at 5 Gb/s. The SG13G2 CML ring-oscillator gate delay of about 2 ps [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p1:heinemann2010">14</a>] is a best case; a loaded CML gate is several times slower and still fits comfortably. FO4 is a typical value for the node.</figcaption>
+</figure>
+<h5 id="why-cml-with-hbts">Why CML with HBTs</h5>
+<p>The fast blocks (final mux, driver, CTLE, samplers, clock buffers) use <strong>current-mode logic</strong>: a differential pair steers a constant tail current into one of two load resistors. The swing is small (a few hundred millivolts), the supply current is constant, so little switching noise is injected, and an HBT pair switches fully with only about <span class="math inline">\(4V_T \approx 100\,\mathrm{mV}\)</span> of input, because <span class="math inline">\(g_\mathrm{m}= I_C/V_T\)</span> is several times a MOSFET’s per unit current (Sections <a href="{% endraw %}{{ '/chapters/09-the-transmitter/' | relative_url }}{% raw %}#sec:cml-driver">9.4</a> and <a href="{% endraw %}{{ '/chapters/07-continuous-time-linear-equalizer/' | relative_url }}{% raw %}#sec:ctle-hbt">7.4</a>).</p>
+<h5 id="the-back-end">The back end</h5>
+<p>SG13G2 has seven aluminum metal layers (<a href="#fig:ch1-beol">Figure 1.7</a>): thin Metal1–Metal5 for dense wiring, and thick <strong>TopMetal1</strong> (2 µm) and <strong>TopMetal2</strong> (3 µm), whose low resistance suits spiral inductors (LC VCO, inductive peaking), on-chip transmission lines and supply rails. A MIM capacitor of roughly 1.5 fF/µm² (check the PDK) sits below TopMetal1.</p>
+<div id="fig:ch1-beol">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/tikz/01_intro-4.svg' | relative_url }}{% raw %}" style="width:755px" alt="The SG13G2 stack: fast HBTs at the bottom, thick aluminum on top." loading="lazy" />
+<figcaption><span class="capnum">Figure 1.7.</span> <strong>The SG13G2 stack: fast HBTs at the bottom, thick aluminum on top.</strong> Stylized cross-section (not to scale) with an NMOS, a SiGe:C HBT, five thin metals, the MIM capacitor and the two thick top metals; right, the HBT symbol with its headline figures and a spiral inductor drawn in TopMetal2. Values are approximate; use the PDK documentation [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-ihppdk">1</a>] for design.</figcaption>
+</figure>
+<h5 id="supplies">Supplies</h5>
+<p>CMOS logic (slow SER/DES stages, PRBS, digital CDR loop) runs from 1.2 V. HBT CML stacks a load, a switching pair and a tail source, so it uses a separate analog supply, nominally 2.5 V, to be confirmed in Phase 0.</p>
+<div class="tbox tbox-pitfall">
+<div class="tbox-title">
+<p>Respect <span class="math inline">\(BV_{CEO}\)</span></p>
+</div>
+<p>The npn13G2 breakdown voltage <span class="math inline">\(BV_{CEO}\)</span> is only about 1.7 V. On a 2.5 V supply, an HBT that sees the whole supply (at power-up, or when a tail source saturates) can break down. Check every <span class="math inline">\(V_{CE}\)</span> in every corner and transient, not just at the operating point.</p>
+</div>
+<div class="tbox tbox-insight">
+<div class="tbox-title">
+<p>What this means for your design</p>
+</div>
+<p>Use HBTs where the UI is short (the last mux stage, the driver, the CTLE, the samplers, the VCO and the clock buffers), and CMOS where the rate is low and density matters (the slow serializer and deserializer stages, the PRBS logic and the CDR filter). Put inductors and long high-speed routes on the thick top metals.</p>
+</div>
+<h2 id="sec:ch1-roadmap"><span class="secnum">1.6</span>How to use the rest of the book</h2>
+<p><a href="{% endraw %}{{ '/chapters/02-signals-systems-and-the-language-of-links/' | relative_url }}{% raw %}">Chapter 2</a> builds the vocabulary of links (pulse response, eye, BER), <a href="{% endraw %}{{ '/chapters/03-the-channel/' | relative_url }}{% raw %}">Chapter 3</a> explains the 17.4 dB channel and <a href="{% endraw %}{{ '/chapters/04-link-budgets-and-statistical-analysis/' | relative_url }}{% raw %}">Chapter 4</a> turns pulse responses into link budgets. Part II (Chapters <a href="{% endraw %}{{ '/chapters/05-equalization-fundamentals/' | relative_url }}{% raw %}">5</a>, <a href="{% endraw %}{{ '/chapters/06-transmit-ffe/' | relative_url }}{% raw %}">6</a>, <a href="{% endraw %}{{ '/chapters/07-continuous-time-linear-equalizer/' | relative_url }}{% raw %}">7</a> and <a href="{% endraw %}{{ '/chapters/08-decision-feedback-equalization-and-adaptation/' | relative_url }}{% raw %}#ch:dfe">8</a>) opens the closed eye with equalization. Part III (Chapters <a href="{% endraw %}{{ '/chapters/09-the-transmitter/' | relative_url }}{% raw %}">9</a> and <a href="{% endraw %}{{ '/chapters/10-receiver-front-end-and-samplers/' | relative_url }}{% raw %}">10</a>) designs the transmitter and receiver circuits. Part IV (Chapters <a href="{% endraw %}{{ '/chapters/11-jitter/' | relative_url }}{% raw %}">11</a>, <a href="{% endraw %}{{ '/chapters/12-clock-generation-the-phase-locked-loop/' | relative_url }}{% raw %}#ch:pll">12</a> and <a href="{% endraw %}{{ '/chapters/13-clock-and-data-recovery/' | relative_url }}{% raw %}">13</a>) handles jitter and clocking. Part V (Chapters <a href="{% endraw %}{{ '/chapters/14-the-open-serdes-architecture/' | relative_url }}{% raw %}">14</a>, <a href="{% endraw %}{{ '/chapters/15-design-and-verification-flow-with-open-tools/' | relative_url }}{% raw %}">15</a> and <a href="{% endraw %}{{ '/chapters/16-hands-on-labs-with-serdespy/' | relative_url }}{% raw %}">16</a>) assembles the architecture, runs the open-source flow and provides the labs.</p>
+<div class="tbox tbox-takeaways">
+<div class="tbox-title">
+<p>Key takeaways</p>
+</div>
+<ul>
+<li><p>Parallel buses stop scaling because of skew, pin count and switching noise; a serial link sends one fast differential stream and recovers the clock from the data.</p></li>
+<li><p>A SerDes link is a serializer, an FFE driver, a lossy channel, a CTLE, samplers with a DFE, a deserializer, a PLL and a CDR.</p></li>
+<li><p>In Open-SERDES, 16 bits at 312.5 Mb/s become 5 Gb/s NRZ with a 200 ps UI and a 2.5 GHz Nyquist frequency, using a half-rate 2.5 GHz clock.</p></li>
+<li><p>5 Gb/s NRZ matches PCIe 2.0, USB 3.2 Gen 1 and 5GBASE-KR, and the 17.4 dB reference channel forces real equalization.</p></li>
+<li><p>The targets are BER <span class="math inline">\(\le 10^{-12}\)</span> over the REF channel with a 3-tap FFE, a 0–12 dB CTLE, a 2-tap DFE, an LC PLL and a PI-based CDR.</p></li>
+<li><p>SG13G2 HBTs (<span class="math inline">\(f_T \approx 300\,\mathrm{GHz}\)</span>) far outrun 130 nm CMOS (FO4 <span class="math inline">\(\approx\)</span> 45 ps), so the fast blocks use HBT CML; <span class="math inline">\(BV_{CEO} \approx 1.7\,\mathrm{V}\)</span> limits the stack, and the thick top metals carry inductors and lines.</p></li>
+</ul>
+</div>
+
+<nav class="prev-next" aria-label="Chapter navigation"><a class="pn-link prev" href="{% endraw %}{{ '/preface/' | relative_url }}{% raw %}"><small>← Previous</small>Preface</a><a class="pn-link next" href="{% endraw %}{{ '/chapters/02-signals-systems-and-the-language-of-links/' | relative_url }}{% raw %}"><small>Next →</small>Signals, Systems and the Language of Links</a></nav>
+<p class="page-source">Generated from <a href="https://github.com/bricd-org/serdes-tutorial/blob/main/book/tutorial/chapters/01_intro.tex">book/tutorial/chapters/01_intro.tex</a>. Figure, table and equation numbers match the <a href="{% endraw %}{{ '/assets/pdf/Open-SERDES_Tutorial.pdf' | relative_url }}{% raw %}">PDF edition</a>.</p>
+{% endraw %}

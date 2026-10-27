@@ -1,0 +1,46 @@
+% ch15_lab.tex -- fig:ch15-labsetup : the Open-SERDES bring-up bench
+\begin{tikzpicture}[x=1cm,y=1cm,font=\sffamily\scriptsize,
+  ins/.style={blk,minimum width=22mm,minimum height=10mm,font=\sffamily\scriptsize,align=center,inner sep=2pt,fill=white},
+  sma/.style={draw=golddk,fill=gold,circle,minimum size=2.6mm,inner sep=0pt},
+  cab/.style={line width=1.1pt,draw=navy},
+  alt/.style={line width=1.0pt,draw=c5,densely dashed,-{Stealth[length=2mm]}},
+  cabc/.style={line width=1.0pt,draw=gold,dashed},
+  lb/.style={font=\sffamily\scriptsize,text=muted,align=center}]
+% PCB
+\draw[draw=c3,line width=1pt,fill=c3!8,rounded corners=4pt] (0,0) rectangle (6.6,4.2);
+\node[font=\sffamily\scriptsize\bfseries,text=c3,anchor=south west] at (0.1,0.04) {test PCB: low-loss laminate, \qty{50}{\ohm} lines};
+\node[blk,fill=navy,text=white,minimum width=19mm,minimum height=19mm,font=\sffamily\scriptsize,align=center] (chip) at (3.4,2.2) {\textbf{\OS{}}\\QFN or\\chip-on-board\\[2pt]\textcolor{pale}{PRBS gen.,}\\\textcolor{pale}{checker, LB}};
+\node[blkb,minimum width=13mm,minimum height=8mm,font=\sffamily\scriptsize] (ldo) at (1.05,0.95) {LDOs\\+ decaps};
+\node[blkg,minimum width=13mm,minimum height=7mm,font=\sffamily\scriptsize] (hdr) at (1.05,3.45) {SPI\\header};
+\node[sma] (txp) at (6.6,3.35) {}; \node[sma] (txn) at (6.6,2.85) {};
+\node[sma] (rxp) at (6.6,1.55) {}; \node[sma] (rxn) at (6.6,1.05) {};
+\node[sma] (ref) at (0,2.2) {}; \node[sma] (mon) at (3.4,4.2) {};
+\foreach \s in {txp,txn,rxp,rxn}{\draw[navy,line width=0.8pt] (chip.east |- \s) -- (\s);}
+\draw[gold,line width=0.8pt] (ref) -- (chip.west);
+\draw[gold,line width=0.8pt] (mon) -- (chip.north);
+\draw[navy,line width=0.6pt] (ldo) -- (chip.south west);
+\draw[golddk,line width=0.6pt] (hdr) -- (chip.north west);
+\node[lb,anchor=south east] at (6.5,3.42) {TX$\pm$};
+\node[lb,anchor=north east] at (6.5,0.98) {RX$\pm$};
+\node[lb,anchor=west] at (3.5,3.75) {clock monitor};
+% channel board between TX and RX
+\node[blk,fill=white,minimum width=21mm,minimum height=11mm,font=\sffamily\scriptsize,align=center] (chb) at (8.7,2.2) {channel board\\REF-like 1\,m FR-4\\or matched cables};
+\draw[cab] (txp) -- (7.15,3.35) |- ([yshift=2.5mm]chb.west);
+\draw[cab,-{Stealth[length=2.2mm]}] ([yshift=-2.5mm]chb.west) -| (7.15,1.55) -- (rxp);
+% alternatives
+\node[ins] (scope) at (11.45,3.65) {sampling scope:\\TX eye, jitter};
+\node[ins] (bert) at (11.45,0.75) {BERT: stressed RX,\\SJ for JTOL};
+\draw[alt] (7.15,3.35) |- (scope.west);
+\draw[alt] (bert.west) -| (7.15,1.55);
+\node[lb,text=c5,anchor=south] at (9.0,3.67) {or: scope on TX};
+\node[lb,text=c5,anchor=north] at (9.0,0.73) {or: BERT into RX};
+% bench instruments
+\node[ins] (pna) at (3.4,5.55) {spectrum / phase-noise\\analyzer: PLL $\mathcal{L}(f)$};
+\draw[cabc] (mon) -- (pna);
+\node[ins] (pc) at (-2.05,3.65) {PC + USB--SPI:\\Python config,\\error counters};
+\draw[cab,draw=golddk] (pc) -- (pc -| hdr.west);
+\node[ins] (sg) at (-2.05,2.2) {50\,MHz reference\\(generator or\\crystal module)};
+\draw[cabc] (sg) -- (ref);
+\node[ins] (psu) at (-2.05,0.75) {supplies 1.2, 2.5,\\3.3\,V + current\\meters (power)};
+\draw[cab,draw=c4] (psu) -- (psu -| ldo.west);
+\end{tikzpicture}

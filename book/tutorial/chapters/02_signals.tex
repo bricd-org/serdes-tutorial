@@ -1,0 +1,332 @@
+\tikzsetfigurename{02_signals-}
+%% 02_signals.tex -- Chapter 2: Signals, Systems and the Language of Links. Author: p1
+\chapter{Signals, Systems and the Language of Links}\label{ch:signals}
+\chapterlead{Five ideas carry the whole book: the unit interval, the pulse response, the cursors, the eye diagram and the bit-error rate.}
+
+\begin{objectives}
+\begin{itemize}
+  \item describe an NRZ stream by its unit interval, bit rate and Nyquist frequency, and explain why most of its energy lies below $\fN$;
+  \item generate PRBS test patterns with an LFSR and know what PRBS7 and PRBS31 stress;
+  \item predict how a simple low-pass channel slows edges, using impulse, step and frequency responses;
+  \item build a received waveform from shifted pulse responses and read the main, pre- and post-cursors;
+  \item read an eye diagram (height, width, crossing, slope) and turn an eye opening and an rms noise into a BER.
+\end{itemize}
+\end{objectives}
+
+Here the channel is deliberately simple, a one-pole RC filter or a short line; the realistic REF channel waits for \cref{sec:refchannel}, and the tools carry over unchanged.
+
+\section{NRZ signaling: bits, symbols and the unit interval}\label{sec:nrz}
+A link carries \textbf{bits} $b_k \in \{0,1\}$. The simplest way to put them on a wire is \textbf{non-return-to-zero} (NRZ) signaling, also called PAM2: each bit becomes a \textbf{symbol} $a_k = 2b_k - 1 \in \{-1,+1\}$, and the transmitter holds the voltage $A\,a_k$ for one bit period (\cref{fig:ch2-nrz}). In \OS{}, $A = \qty{0.5}{\volt}$ (\qty{1}{\Vppd}). One symbol lasts one \textbf{unit interval} (UI). NRZ sends one bit per symbol, so the \textbf{bit rate} $\fb$ equals the \textbf{baud rate}; PAM4 sends two (\cref{sec:pam4}).
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{ch02_nrz_wave}
+  \caption{\textbf{An NRZ waveform is a sequence of $\pm A$ levels, one per UI.} Each bit $b_k$ maps to a symbol $a_k = \pm1$ held for $\Tb = \qty{200}{\pico\second}$. Gold dots mark the transitions that clock recovery feeds on; a run of identical bits carries no timing information.}
+  \label{fig:ch2-nrz}
+\end{figure}
+
+The fastest NRZ pattern, \code{1010\ldots}, is a square wave with a period of $2\Tb$. Its fundamental frequency is the \textbf{Nyquist frequency}, the single most important frequency in link design.
+
+\begin{keyeq}[Unit interval and Nyquist frequency]
+\begin{equation}
+  \Tb = 1\,\UI = \frac{1}{\fb}, \qquad \fN = \frac{1}{2\Tb} = \frac{\fb}{2}
+  \label{eq:ch2-nyquist}
+\end{equation}
+For \OS{}: $\fb = \qty{5}{\giga\bit\per\second}$, $\Tb = \qty{200}{\pico\second}$ and $\fN = \qty{2.5}{\giga\hertz}$.
+\end{keyeq}
+
+\paragraph{The spectrum of random NRZ} An NRZ waveform is a sum of rectangular pulses,
+\[ x(t) = A\sum_n a_n\, g(t - n\Tb), \]
+where $g(t)$ is a 1-UI rectangle with Fourier transform $G(f) = \Tb\,\mathrm{sinc}(f\Tb)\,e^{-j\pi f\Tb}$ and $\mathrm{sinc}(u) = \sin(\pi u)/(\pi u)$. If the symbols are independent and equally likely to be $\pm1$, then $\mathrm{E}[a_n a_m]$ is 1 for $n = m$ and 0 otherwise. The cross terms average away, and each pulse contributes its own energy spectrum $A^2\lvert G(f)\rvert^2$ once every $\Tb$ seconds. The power spectral density (PSD) is therefore $A^2\lvert G(f)\rvert^2/\Tb$:
+
+\begin{keyeq}[PSD of random NRZ]
+\begin{equation}
+  S_x(f) = A^2\,\Tb\,\mathrm{sinc}^2(f\Tb), \qquad \text{nulls at } f = \fb, 2\fb, \dots
+  \label{eq:ch2-psd}
+\end{equation}
+\end{keyeq}
+
+\Cref{fig:ch2-psd}a plots \cref{eq:ch2-psd}. The main lobe runs from DC to the first null at $\fb = \qty{5}{\giga\hertz}$, and at $\fN$ the PSD is $\mathrm{sinc}^2(0.5) = (2/\pi)^2$, or \qty{-3.9}{\deci\bel}. Integrating the PSD (\cref{fig:ch2-psd}b) shows that 77\% of the power lies below $\fN$ and 90\% below $\fb$.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{ch02_nrz_psd}
+  \caption{\textbf{Random NRZ puts most of its power below the Nyquist frequency.} (a)~The PSD follows $\mathrm{sinc}^2(f\Tb)$, with nulls at multiples of $\fb = \qty{5}{\giga\hertz}$ and only \qty{3.9}{\deci\bel} of roll-off at $\fN = \qty{2.5}{\giga\hertz}$. (b)~Cumulative power: 77\% lies below $\fN$ and 90\% below $\fb$. This is why channel loss is always quoted at $\fN$.}
+  \label{fig:ch2-psd}
+\end{figure}
+
+\begin{example}{Where the power of a \qty{5}{\giga\bit\per\second} stream sits}\label{we:ch2-nyquist}
+The fraction of power below $\fN$ is $2\int_0^{1/2}\mathrm{sinc}^2(u)\,du = 0.774$, so an ideal low-pass filter at \qty{2.5}{\giga\hertz} would still pass three quarters of the power. The REF channel's \qty{17.4}{\deci\bel} at \qty{2.5}{\giga\hertz}, a factor of 7.4 in amplitude, attacks exactly that band.
+\end{example}
+
+\begin{insight}
+Treat $\fN = \qty{2.5}{\giga\hertz}$ as the frequency your link lives at: quote channel loss there, and give every block enough bandwidth around it (\cref{sec:ch2-isi}). The energy above $\fb$ is under 10\% and mostly edge sharpness.
+\end{insight}
+
+\section{PRBS test patterns}\label{sec:prbs}
+Testing needs data that looks random but is reproducible, so the receiver can check every bit. A \textbf{pseudo-random bit sequence} (PRBS) does this. It comes from a \textbf{linear-feedback shift register} (LFSR): a chain of $n$ flip-flops whose input is the XOR of two of its outputs. \Cref{fig:ch2-lfsr} shows PRBS7, defined by the polynomial $x^7 + x^6 + 1$: the new bit is stage~6 XOR stage~7. With the right taps, the register steps through all $2^n - 1$ non-zero states before it repeats, producing a \textbf{maximal-length sequence}.
+
+\begin{figure}[htbp]
+\centering
+\input{tutorial/tikz/ch02_lfsr}
+\caption{\textbf{A 7-stage LFSR generates PRBS7.} Each clock edge shifts the bits right and feeds stage~6 XOR stage~7 into stage~1; from any non-zero state the output repeats after $2^7 - 1 = 127$ bits. A 31-stage register with taps 28 and 31 gives PRBS31.}
+\label{fig:ch2-lfsr}
+\end{figure}
+
+A PRBS-$n$ sequence has a few properties worth remembering (\cref{fig:ch2-prbs}):
+\begin{itemize}
+  \item \textbf{Period} $2^n - 1$ bits, during which every $n$-bit word except all zeros appears exactly once.
+  \item \textbf{Nearly balanced:} $2^{n-1}$ ones and $2^{n-1} - 1$ zeros (64 and 63 for PRBS7).
+  \item \textbf{Run lengths:} the longest run is $n$ ones and $n-1$ zeros. Half of all runs have length 1, a quarter length 2, and so on, like a fair coin.
+  \item \textbf{Line spectrum:} because the pattern repeats, its spectrum is a set of lines spaced $\fb/(2^n-1)$ apart under the same $\mathrm{sinc}^2$ envelope as random NRZ.
+\end{itemize}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{ch02_prbs7}
+  \caption{\textbf{PRBS7 behaves like random data with short memory.} (a)~One full period of 127 bits, with the longest runs (seven 1s, six 0s) shaded. (b)~Run-length histogram: 32 runs of length 1, 16 of length 2, halving at each step, as for coin flips. (c)~The line spectrum follows the $\mathrm{sinc}^2$ envelope of \cref{fig:ch2-psd}. (d)~Zoom near DC: lines every $\fb/127 = \qty{39.4}{\mega\hertz}$, with an almost empty DC line because the pattern is balanced.}
+  \label{fig:ch2-prbs}
+\end{figure}
+
+\paragraph{Choosing a PRBS} PRBS7 repeats every \qty{25.4}{\nano\second} and never holds a level longer than 7~UI: ideal for bring-up. PRBS31 ($x^{31}+x^{28}+1$) has runs of up to 31 bits and a period of \qty{0.43}{\second}; its low-frequency content stresses AC coupling (baseline wander), long ISI tails and the CDR's ability to hold phase without transitions, so it is the compliance pattern. Model work uses PRBS13 (8191 bits), far longer than the channel's ISI memory. Real protocols also \emph{encode} the data: \textbf{8b/10b} (PCIe~1/2, USB~3.2 Gen~1, SATA) maps each byte to 10 bits with at most five equal bits in a row and long-term DC balance, at 25\% overhead.
+
+\begin{pitfall}[A short pattern can hide a long problem]
+If the link remembers more bits than the pattern varies over, the eye looks too good: PRBS7 can pass where PRBS31 fails on baseline wander or a long reflection. Confirm designs with a pattern longer than every memory in the link.
+\end{pitfall}
+
+\section{Linear systems in one section}\label{sec:lti}
+Between the TX output and the RX sampler, the link is close to a \textbf{linear time-invariant} (LTI) system, fully described by its \textbf{impulse response} $h(t)$, the output for a very short unit-area pulse. For any input $x(t)$ the output is the \textbf{convolution}
+\begin{equation}
+  y(t) = (x * h)(t) = \int_{-\infty}^{\infty} x(\tau)\,h(t-\tau)\,d\tau ,
+  \qquad Y(f) = X(f)\,H(f),
+  \label{eq:ch2-conv}
+\end{equation}
+where the \textbf{frequency response} $H(f)$ is the Fourier transform of $h(t)$. Convolution becomes multiplication, so cascaded blocks multiply. Gains are quoted in decibels, $\lvert H\rvert_\mathrm{dB} = 20\log_{10}\lvert H(f)\rvert$: \qty{-3}{\deci\bel} is a factor 0.707, \qty{-6}{\deci\bel} one half, \qty{-20}{\deci\bel} one tenth, and in a cascade the dB values add. A \textbf{Bode plot} shows $\lvert H\rvert_\mathrm{dB}$ against log frequency.
+
+\paragraph{The one-pole system} A resistor driving a capacitor is the simplest low-pass filter and a good first model of a slow channel or a CML stage with load $\RL\CL$ (\cref{fig:ch2-onepole}):
+
+\begin{keyeq}[One-pole low-pass filter]
+\begin{equation}
+  H(f) = \frac{1}{1 + jf/f_\mathrm{3dB}},\quad
+  h(t) = \frac{1}{\tau}e^{-t/\tau},\quad
+  s(t) = 1 - e^{-t/\tau},\quad
+  t_r^{10\text{--}90} = \tau\ln 9 \approx \frac{0.35}{f_\mathrm{3dB}}
+  \label{eq:ch2-onepole}
+\end{equation}
+\end{keyeq}
+Here $\tau = RC = 1/(2\pi f_\mathrm{3dB})$, $s(t)$ is the unit step response (for $t \ge 0$) and $t_r$ is the 10--90\% rise time. Above $f_\mathrm{3dB}$ the gain falls by \qty{20}{\deci\bel} per decade.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{ch02_onepole}
+  \caption{\textbf{Bandwidth and rise time are two views of the same pole.} (a)~A one-pole response with $f_\mathrm{3dB} = \qty{2.5}{\giga\hertz}$: \qty{-3}{\deci\bel} at the corner, then \qty{-20}{\deci\bel} per decade. (b)~Its step response rises from 10\% to 90\% in \qty{140}{\pico\second} $= 0.35/f_\mathrm{3dB}$, which is 0.7~UI at \qty{5}{\giga\bit\per\second}.}
+  \label{fig:ch2-onepole}
+\end{figure}
+
+\begin{example}{What bandwidth keeps ISI small at \qty{5}{\giga\bit\per\second}?}\label{we:ch2-bw}
+For a bit to barely affect the next, the output must almost settle within one UI. One UI after a step, a one-pole system still has an error of $e^{-\Tb/\tau}$. Asking for at most 5\%:
+\begin{itemize}
+  \item $e^{-\Tb/\tau} \le 0.05 \;\Rightarrow\; \Tb/\tau \ge \ln 20 = 3.0 \;\Rightarrow\; \tau \le \qty{66.8}{\pico\second}$;
+  \item $f_\mathrm{3dB} = 1/(2\pi\tau) \ge 3.0/(2\pi\times\qty{200}{\pico\second}) = \qty{2.38}{\giga\hertz}$;
+  \item the rise time is then $0.35/\qty{2.38}{\giga\hertz} = \qty{147}{\pico\second} \approx 0.73\,\UI$.
+\end{itemize}
+A one-pole bandwidth close to the Nyquist frequency, $f_\mathrm{3dB} \approx \fN = \qty{2.5}{\giga\hertz}$, keeps the ISI to a few percent. \Cref{sec:ch2-isi} turns this into an exact eye opening.
+\end{example}
+
+\section{The pulse response}\label{sec:pulse-response}
+A link never sends impulses; it sends 1-UI rectangles. The response to one isolated rectangle of \qty{1}{\volt} and width $\Tb$ is the \textbf{pulse response} $p(t)$, the most useful single picture of a link:
+\begin{equation}
+  p(t) = h(t) * \Pi_{\Tb}(t) = \int_{t-\Tb}^{t} h(\tau)\,d\tau = s(t) - s(t - \Tb),
+  \label{eq:ch2-pulse}
+\end{equation}
+where $\Pi_{\Tb}(t)$ is 1 for $0 \le t < \Tb$: a step up, then a step down one UI later. An NRZ waveform is a sum of shifted, signed rectangles and the channel is linear, so the received signal is a sum of shifted, signed pulse responses (\cref{fig:ch2-superposition}). Sample it once per UI at $\ts + n\Tb$, with $\ts$ usually at the peak of $p(t)$. The samples of the pulse response at integer UI offsets are the \textbf{cursors} $\pk{k} = p(\ts + k\Tb)$ (\cref{fig:ch2-pulse}). The \textbf{main cursor} $\pk{0}$ carries the wanted bit. \textbf{Post-cursors} $\pk{k}$, $k > 0$, are the tail of a pulse sent $k$ bits \emph{earlier}. \textbf{Pre-cursors} $\pk{k}$, $k < 0$, are the leading edge of a pulse sent $\lvert k\rvert$ bits \emph{later}.
+
+\begin{keyeq}[Superposition of pulse responses]
+\begin{equation}
+  y(t) = A\sum_n a_n\, p(t - n\Tb)
+  \qquad\Longrightarrow\qquad
+  y_n = y(\ts + n\Tb) = \underbrace{A\,a_n\,\pk{0}}_{\text{wanted}} \;+\; \underbrace{A\sum_{k\neq0} a_{n-k}\,\pk{k}}_{\text{intersymbol interference (ISI)}}
+  \label{eq:ch2-isi}
+\end{equation}
+\end{keyeq}
+
+The channel acts like an FIR filter whose taps are the cursors; everything except the main cursor is \textbf{intersymbol interference} (ISI), the echo of neighboring bits at the sampling instant.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{ch02_pulse_cursors}
+  \caption{\textbf{The pulse response and its cursors.} (a)~A \qty{1}{\volt}, 1-UI pulse through a mild \qty{10}{\deci\bel}-at-Nyquist line ($0.57$\,m of the loss family) comes out lower, wider and with a long tail. Sampling it once per UI around the peak gives the cursors. (b)~The main cursor $\pk{0} = 0.556$ is the useful signal; $\pk{-1} = 0.020$ is a pre-cursor and $\pk{1} = 0.160$, $\pk{2} = 0.063$, \ldots{} are post-cursors.}
+  \label{fig:ch2-pulse}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{ch02_superposition}
+  \caption{\textbf{A received waveform is a sum of shifted pulse responses.} (a)~Each bit launches its own pulse $A\,a_n\,p(t-n\Tb)$ (blue for $+1$, amber for $-1$). (b)~Their sum is the received signal; gold dots are the samples at $\ts + n\Tb$. A 1 that follows another 1 gets help from its neighbor's tail (\qty{334}{\milli\volt}), while a lone 1 after three 0s is pulled down to \qty{156}{\milli\volt}. The line is idle before bit~0.}
+  \label{fig:ch2-superposition}
+\end{figure}
+
+\begin{example}{Reading a sample from the cursors}\label{we:ch2-cursors}
+Bit~7 in \cref{fig:ch2-superposition} is a lone 1 after three 0s, followed by a 0. With $A = \qty{0.5}{\volt}$ and the cursors of \cref{fig:ch2-pulse}:
+\begin{itemize}
+  \item wanted signal: $A\pk{0} = 0.5\times0.5561 = \qty{278}{\milli\volt}$;
+  \item the three previous 0s and the next 0 subtract: $-A(\pk{1}+\pk{2}+\pk{3}+\pk{-1}) = -0.5\,(0.1605+0.0629+0.0340+0.0205) = \qty{-139}{\milli\volt}$;
+  \item the older bits ($a_3 = a_2 = a_0 = +1$, $a_1 = -1$) add $0.5\,(0.0216+0.0151-0.0112+0.0087) = \qty{+17}{\milli\volt}$.
+\end{itemize}
+The sample is $278 - 139 + 17 = \qty{156}{\milli\volt}$, as simulated: ISI took 44\% of the wanted signal.
+\end{example}
+
+\begin{insight}
+The cursors are the channel's fingerprint, and every equalizer in Part~II acts on them: the TX FFE reshapes the pulse (\cref{ch:txffe}), the CTLE sharpens it (\cref{ch:ctle}) and the DFE subtracts post-cursors (\cref{ch:dfe}). Faced with a new channel, plot its pulse response first.
+\end{insight}
+
+\begin{tryit}[Lab 1: pulse response and cursors]
+\code{lab1\_channel.py} turns the REF channel's $S_{21}$ into a pulse response and its cursors. Lengthen the line and watch $\pk{1}/\pk{0}$ grow (\cref{sec:lab1}).
+\end{tryit}
+
+\section{ISI: how pulse spreading closes the eye}\label{sec:ch2-isi}
+The one-pole channel shows in closed form how bandwidth turns into ISI. Its pulse response peaks at the end of the bit, $t = \Tb$. Sampling there and writing $r = e^{-\Tb/\tau}$ gives $\pk{0} = 1 - r$ and $\pk{k} = (1-r)\,r^{k}$ for $k \ge 1$, with no pre-cursors. The post-cursors form a geometric series that sums to $r$. The worst case for a 1 is that every earlier bit is a 0, so each tail pulls it down. The smallest 1 is then $A(\pk{0} - \sum_{k\ge1}\pk{k})$, and by symmetry the eye opening at the sampling instant is
+
+\begin{keyeq}[Worst-case eye of a one-pole channel]
+\begin{equation}
+  \mathrm{EH} = 2A\Bigl(\pk{0} - \sum_{k\ge1}\pk{k}\Bigr) = 2A\,\bigl(1 - 2e^{-\Tb/\tau}\bigr), \qquad \frac{\Tb}{\tau} = 2\pi f_\mathrm{3dB}\Tb = \pi\,\frac{f_\mathrm{3dB}}{\fN}
+  \label{eq:ch2-onepole-eye}
+\end{equation}
+\end{keyeq}
+
+\Cref{fig:ch2-isi-tau} shows the pulse and the eye for three time constants. With $\tau = 0.2\,\UI$ ($f_\mathrm{3dB} = \qty{4.0}{\giga\hertz}$) the eye is 98.7\% open. At $\tau = 0.5\,\UI$ (\qty{1.6}{\giga\hertz}) it is 73\% open, and at $\tau = 1\,\UI$ (\qty{0.8}{\giga\hertz}) only 26\%. The eye closes completely when $r = 1/2$, that is $\tau = \Tb/\ln 2 = 1.44\,\UI$, or $f_\mathrm{3dB} = \qty{552}{\mega\hertz}$. For the bandwidth of \cref{we:ch2-bw}, $f_\mathrm{3dB} = \fN$, the exponent is $\pi$ and $\mathrm{EH} = 2A(1 - 2e^{-\pi}) = 0.91 \times 2A$.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{ch02_isi_tau}
+  \caption{\textbf{Slower channels spread each pulse over more UIs and close the eye.} Top: one-pole pulse responses for $\tau = 0.2$, 0.5 and 1~UI; filled dots are the main cursor, open dots the post-cursors. Bottom: PRBS7 eyes through the same channels ($2A = \qty{1}{\volt}$). The measured openings, 987, 729 and \qty{265}{\milli\volt}, match $2A(1-2e^{-\Tb/\tau})$ from \cref{eq:ch2-onepole-eye}. The arrow sits at the best sampling instant, which for a one-pole channel is the pulse peak at the end of the bit, not the visual center of the eye.}
+  \label{fig:ch2-isi-tau}
+\end{figure}
+
+Subtracting the magnitudes of all other cursors from the main cursor works for any channel; this is \textbf{peak-distortion analysis} (\cref{sec:pda}). For the \qty{10}{\deci\bel} line of \cref{fig:ch2-pulse} it gives \qty{230}{\milli\volt} out of \qty{1}{\volt}; for the REF channel it is negative: the eye is closed.
+
+\begin{insight}[Design rule of thumb]
+Each one-pole block in the data path needs $f_\mathrm{3dB} \gtrsim \fN = \qty{2.5}{\giga\hertz}$ to cost less than about 10\% of eye height. A cascade of several poles has less bandwidth than any single one, so in practice each CML stage of \OS{} should reach 0.7--1\,$\fb$ (3.5--\qty{5}{\giga\hertz}).
+\end{insight}
+
+\section{Eye diagrams}\label{sec:eye}
+An \textbf{eye diagram} cuts the received waveform into 2-UI windows aligned to the bit clock and overlays them (\cref{fig:ch2-eye-fold}). Every bit pattern draws its own trace, so the overlay shows at a glance how much the patterns differ at each instant.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{ch02_eye_fold}
+  \caption{\textbf{An eye diagram folds the waveform every 2~UI.} (a)~Twelve UI of PRBS7 after a one-pole channel ($\tau = 0.45\,\UI$), cut into six 2-UI windows. (b)~The same segments, same colors, overlaid on 600 others (grey).}
+  \label{fig:ch2-eye-fold}
+\end{figure}
+
+\Cref{fig:eye-anatomy} names the parts you will measure throughout this book.
+\begin{itemize}
+  \item \textbf{Eye height} (EH): the vertical opening at the sampling instant, between the lowest 1 and the highest 0. It must beat noise, offset and sampler sensitivity.
+  \item \textbf{Eye width} (EW): the horizontal opening at the threshold, between adjacent crossings. It must beat clock jitter and the sampler aperture.
+  \item \textbf{Crossing points}: where edges cross the threshold. Their spread in time is \textbf{jitter}; their mean is what the CDR locks to.
+  \item \textbf{Optimal sampling point}: the instant and threshold with the most margin both ways.
+  \item \textbf{Slope} near the crossing: it converts timing error into voltage error, $\Delta v \approx (dV/dt)\,\Delta t$.
+\end{itemize}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{ch02_eye_anatomy}
+  \caption{\textbf{Anatomy of an eye diagram.} A PRBS7 stream through a smooth band-limited channel, with \qty{6}{\pico\second} rms edge jitter and \qty{15}{\milli\volt} rms noise. Eye height and eye width are measured between the 0.1\% tails of the traces. The right histogram shows the spread of the sampled levels (noise plus ISI) at $\ts$; the bottom histogram shows the spread of the crossing times (jitter). The orange line is the edge slope, here about \qty{2.8}{\milli\volt\per\pico\second}.}
+  \label{fig:eye-anatomy}
+\end{figure}
+
+With the slope of \cref{fig:eye-anatomy}, sampling \qty{4}{\pico\second} off near an edge costs about $2.8 \times 4 \approx \qty{11}{\milli\volt}$. Noise eats the eye vertically and jitter horizontally; the next section asks how much is tolerable.
+
+\begin{pitfall}[An eye is only as deep as the number of bits behind it]
+A simulated eye of $10^4$ bits only shows events more frequent than about $10^{-4}$; a $7\sigma$ noise peak will almost never appear. An open eye in a short simulation says nothing about $10^{-12}$. \Cref{sec:stateye} computes the eye at that probability directly.
+\end{pitfall}
+
+\begin{tryit}[Lab 2: PRBS7 eye through the REF channel]
+\code{lab2\_prbs\_eye.py} draws the PRBS7 eye before and after the REF channel. The output eye is closed ($\qty{-78}{\milli\volt}$): the motivation for Part~II (\cref{sec:lab2}).
+\end{tryit}
+
+\section{Noise and the bit-error rate}\label{sec:ber}
+The receiver compares each sample $y_n$ with a threshold at 0, and an error happens when noise pushes a sample across it. With a worst-case eye of height EH, a 1 arrives at least $\mathrm{EH}/2$ above the threshold and a 0 at least $\mathrm{EH}/2$ below it. Add Gaussian noise $n \sim \mathcal{N}(0, \sign^2)$ from the termination, the front end and the sampler (\cref{fig:ch2-ber}a). A 1 is read as a 0 when $n < -\mathrm{EH}/2$:
+\begin{align}
+  P(\text{error}\mid 1) &= \int_{-\infty}^{-\mathrm{EH}/2} \frac{1}{\sqrt{2\pi}\,\sign}\,e^{-v^2/(2\sign^2)}\,dv = \Qf\!\left(\frac{\mathrm{EH}}{2\sign}\right), \notag\\
+  \Qf(x) &= \int_x^{\infty}\frac{e^{-u^2/2}}{\sqrt{2\pi}}\,du = \tfrac12\erfc\!\left(\frac{x}{\sqrt2}\right). \label{eq:ch2-qdef}
+\end{align}
+By symmetry $P(\text{error}\mid 0)$ is the same. With 1s and 0s equally likely, the BER is the average of the two:
+
+\begin{keyeq}[Bit-error rate with Gaussian noise]
+\begin{equation}
+  \BER = \Qf\!\left(\frac{\mathrm{EH}}{2\,\sign}\right), \qquad \SNR \equiv \left(\frac{\mathrm{EH}}{2\,\sign}\right)^{2} \;\Rightarrow\; \BER = \Qf\bigl(\sqrt{\SNR}\bigr)
+  \label{eq:ber-q}
+\end{equation}
+\end{keyeq}
+
+The argument of $\Qf$ is half the eye in units of rms noise. With the worst-case EH, \cref{eq:ber-q} is an upper bound, since most patterns leave more margin (\cref{sec:stateye} computes the average). \Cref{tab:ch2-qtable} lists common values. Remember $\Qf = 7.03$ for $10^{-12}$: the eye must be at least $2\Qf = 14.07$ times the rms noise.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{ch02_ber}
+  \caption{\textbf{BER is the area of a Gaussian tail beyond half the eye.} (a)~Received 1s and 0s spread by noise of rms $\sign$ around $\pm\mathrm{EH}/2$; the shaded tails beyond the threshold are errors. (b)~BER against $\SNR = 20\log_{10}(\mathrm{EH}/2\sign)$. The curve is a cliff: near $10^{-12}$ (Q = 7.03, \qty{16.9}{\deci\bel}), one extra dB of SNR buys about three decades of BER.}
+  \label{fig:ch2-ber}
+\end{figure}
+
+\begin{example}{How much noise can the eye tolerate?}\label{we:ch2-ber}
+The target is $\BER \le 10^{-12}$, so $\mathrm{EH}/(2\sign) \ge 7.03$ and $\sign \le \mathrm{EH}/14.07$.
+\begin{itemize}
+  \item A sampler with $\sign = \qty{2}{\milli\volt}$ rms needs an eye of at least $14.07\times\qty{2}{\milli\volt} = \qty{28}{\milli\volt}$.
+  \item Lab~5 opens the REF channel to $\mathrm{EH} = \qty{143}{\milli\volt}$ with an \qty{8}{\deci\bel} CTLE and a 3-tap DFE. The noise budget is then $\sign \le 143/14.07 = \qty{10.2}{\milli\volt}$ rms, for all noise sources together.
+  \item At $\sign = \qty{15}{\milli\volt}$, $\Qf = 4.77$ and $\BER \approx 9\times10^{-7}$: 1.5$\times$ the noise costs six decades.
+\end{itemize}
+\end{example}
+
+\paragraph{A first look at the bathtub} Jitter moves the crossings, so the BER also depends on \emph{when} we sample. Sweeping the sampling instant across the UI gives a \textbf{bathtub curve} (\cref{fig:ch2-bathtub}); its width at $10^{-12}$ is the usable eye width. With \qty{4}{\pico\second} rms random jitter (0.02~UI), 0.72~UI remains; doubling the jitter leaves 0.45~UI. \Cref{ch:jitter} covers this in full (\cref{sec:dualdirac}).
+
+\begin{figure}[htbp]
+\centering
+\begin{minipage}[b]{0.45\linewidth}
+  \centering\small
+  \captionof{table}{\textbf{Q values for common BER targets.} $\BER = \Qf(x)$; $2\Qf$ is the eye-to-noise ratio needed.}
+  \label{tab:ch2-qtable}
+  \begin{tabular}{@{}rccc@{}}
+  \toprule
+  BER & $\Qf$ & $2\Qf$ & SNR (dB) \\
+  \midrule
+  $10^{-3}$  & 3.09 & 6.18  & 9.8 \\
+  $10^{-6}$  & 4.75 & 9.51  & 13.5 \\
+  $10^{-9}$  & 6.00 & 12.00 & 15.6 \\
+  $10^{-10}$ & 6.36 & 12.72 & 16.1 \\
+  \rowcolor{gtint} $10^{-12}$ & \textbf{7.03} & \textbf{14.07} & \textbf{16.9} \\
+  $10^{-15}$ & 7.94 & 15.88 & 18.0 \\
+  \bottomrule
+  \end{tabular}
+  \vspace{4mm}
+\end{minipage}\hfill
+\begin{minipage}[b]{0.52\linewidth}
+  \centering
+  \includegraphics{ch02_bathtub}
+  \caption{\textbf{Bathtub curves.} BER against sampling instant for Gaussian edge jitter of 0.02 and 0.04~UI rms (half the edges are transitions). The opening at $10^{-12}$ shrinks from 0.72 to 0.45~UI.}
+  \label{fig:ch2-bathtub}
+\end{minipage}
+\end{figure}
+
+\begin{pitfall}[You cannot measure $10^{-12}$ in a coffee break]
+Showing $\BER < 10^{-12}$ at 95\% confidence takes $3/\BER = 3\times10^{12}$ error-free bits: ten minutes on the bench, far beyond any simulation. Design with statistical models; verify with PRBS checkers.
+\end{pitfall}
+
+\section{Exercises}\label{sec:ch2-exercises}
+\begin{enumerate}[label=\textbf{2.\arabic*},leftmargin=2.2em]
+  \item \textbf{Rates.} A 2.5GBASE-KX lane runs at \qty{3.125}{\giga\bit\per\second} with 8b/10b. Find $\Tb$, $\fN$, the first PSD null and the payload rate.
+  \item \textbf{PRBS9} ($x^9 + x^5 + 1$). Draw its LFSR; give its period, the counts of 1s and 0s, the longest runs and the line spacing at \qty{5}{\giga\bit\per\second}.
+  \item \textbf{A CML stage as a pole.} For $\RL = \qty{200}{\ohm}$, $\CL = \qty{150}{\femto\farad}$, find $f_\mathrm{3dB}$, $t_r$ and $1 - 2e^{-\Tb/\tau}$. What $\CL$ costs 10\% of the eye?
+  \item \textbf{Cursors by hand.} With the cursors of \cref{fig:ch2-pulse} ($\pk{-1}..\pk{3}$ = 0.0205, 0.5561, 0.1605, 0.0629, 0.0340) and $A = \qty{0.5}{\volt}$, find the sample of the bracketed 1 in \code{1 1 1 [1] 0} and in \code{0 0 0 [1] 1}. Compare the worst-case eye from these cursors with the \qty{230}{\milli\volt} of the full tail.
+  \item \textbf{BER.} A receiver sees $\mathrm{EH} = \qty{60}{\milli\volt}$ with $\sign = \qty{4}{\milli\volt}$. Find Q and the BER. What eye height or noise gives $10^{-15}$, and how long must the link run error-free to show it?
+\end{enumerate}
+
+\begin{takeaways}
+\begin{itemize}
+  \item At \qty{5}{\giga\bit\per\second}, $1\,\UI = \qty{200}{\pico\second}$ and $\fN = \qty{2.5}{\giga\hertz}$; 77\% of NRZ power lies below $\fN$.
+  \item PRBS-$n$ (an $n$-stage LFSR) repeats every $2^n - 1$ bits with runs up to $n$; PRBS7 for bring-up, PRBS31 for compliance.
+  \item A one-pole block has $t_r \approx 0.35/f_\mathrm{3dB}$ and a worst-case eye of $2A(1 - 2e^{-\Tb/\tau})$; keeping ISI small needs $f_\mathrm{3dB} \gtrsim \fN$.
+  \item The received signal is $y(t) = A\sum_n a_n\,p(t - n\Tb)$: main cursor plus ISI from the cursors $\pk{k}$, with worst-case eye $2A(\pk{0} - \sum_{k\ne0}\lvert\pk{k}\rvert)$.
+  \item With Gaussian noise, $\BER = \Qf(\mathrm{EH}/2\sign)$, so $10^{-12}$ needs $\mathrm{EH} \ge 14.07\,\sign$.
+\end{itemize}
+\end{takeaways}

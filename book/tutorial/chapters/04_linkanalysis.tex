@@ -1,0 +1,276 @@
+\tikzsetfigurename{04_linkanalysis-}
+\chapter{Link Budgets and Statistical Analysis}\label{ch:linkanalysis}
+\chapterlead{The pulse response is enough to predict the eye: its worst case, its probability at $10^{-12}$, and how much margin is left after noise, jitter and the sampler take their share.}
+% Omega for sans-serif contexts (captions, TikZ): the sans text font has no Omega glyph.
+\providecommand{\chFourOhm}{\ensuremath{\Omega}}
+
+\begin{objectives}
+\begin{itemize}
+  \item Explain why superposition lets us predict every received sample from the cursors $p_k$.
+  \item Derive the peak-distortion (worst-case) eye and the worst-case bit pattern, and apply them to REF.
+  \item Build a statistical eye by convolving ISI, noise and jitter distributions, and read eye height at $10^{-12}$.
+  \item Write a top-down margin budget for the \OS{} receiver and decide what to spend margin on.
+  \item Decide between NRZ and PAM4 with the 9.54\,dB rule.
+\end{itemize}
+\end{objectives}
+
+%% =====================================================================
+\section{Pulse-response link analysis}\label{sec:ch4-pulse}
+
+The channel, the TX FFE and the CTLE are linear and time-invariant, so the received waveform is a sum of shifted, scaled copies of one pulse response (\cref{sec:lti,sec:pulse-response}): $y(t) = A\sum_n a_n\,p(t-n\Tb)$. Sampling at $\ts + n\Tb$ and writing $p_k = p(\ts + k\Tb)$ gives
+\begin{equation}
+  y_n = \underbrace{A\,a_n\,p_0}_{\text{signal}} \;+\; \underbrace{A\sum_{k\neq0} a_{n-k}\,p_k}_{\text{ISI}} \;+\; \text{noise}.
+  \label{eq:ch4-yn}
+\end{equation}
+At the sampler, the channel is a finite-impulse-response (FIR) filter whose taps are the cursors (\cref{fig:ch4-fir}). Positive $k$ are \textbf{post-cursors}, which come from \emph{earlier} bits; negative $k$ are \textbf{pre-cursors}, from later bits. Every question in this chapter (how bad the eye can get, how often, and how much margin is left) is answered from the list of $p_k$, without simulating long bit streams.
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[font=\sffamily\small,scale=0.95,transform shape,
+  dl/.style={blk,minimum width=10mm,minimum height=7mm,inner sep=1pt},
+  mul/.style={circle,draw=navy,line width=0.7pt,minimum size=8.5mm,inner sep=0pt,font=\sffamily\scriptsize}]
+  \node[navy] (in) at (-0.3,0) {$A\,a_{n+1}$};
+  \foreach \i/\x in {1/2.35,2/4.75,3/7.15}{\node[dl] (d\i) at (\x,0) {$z^{-1}$};}
+  \node (dots) at (9.15,0) {$\cdots$};
+  \foreach \j/\x/\l in {0/1.15/a_{n+1},1/3.55/a_n,2/5.95/a_{n-1},3/8.35/a_{n-2},4/10.2/a_{n-K}}{
+    \coordinate (t\j) at (\x,0); \node[dot] at (t\j) {}; \node[lbl,above=1pt] at (\x,0.12) {$\l$};}
+  \draw[sig] (in) -- (d1); \draw[sig] (d1) -- (d2); \draw[sig] (d2) -- (d3); \draw[navy,line width=0.75pt] (d3) -- (dots); \draw[navy,line width=0.75pt] (dots) -- (t4);
+  \node[mul,fill=c4!15,draw=c4] (m0) at (1.15,-1.15) {$p_{-1}$};
+  \node[mul,fill=gtint,draw=golddk,line width=1pt] (m1) at (3.55,-1.15) {$p_0$};
+  \node[mul,fill=btint] (m2) at (5.95,-1.15) {$p_1$};
+  \node[mul,fill=btint] (m3) at (8.35,-1.15) {$p_2$};
+  \node[mul,fill=btint] (m4) at (10.2,-1.15) {$p_K$};
+  \foreach \j in {0,...,4}{\draw[sig] (t\j) -- (m\j); \draw[navy,line width=0.75pt] (m\j) -- ++(0,-0.85);}
+  \draw[navy,line width=0.75pt] (1.15,-2.0) -- (11.3,-2.0);
+  \node[sumnode] (s) at (11.6,-2.0) {$+$};
+  \draw[sig] (11.3,-2.0) -- (s);
+  \node[lbl,align=center] (nz) at (11.6,-0.85) {noise};
+  \draw[sig] (nz) -- (s);
+  \node[blkg,minimum width=14mm,minimum height=8mm] (sl) at (13.6,-2.0) {sampler};
+  \draw[sig] (s) -- node[above,font=\sffamily\scriptsize,text=navy]{$y_n$} (sl);
+  \draw[sig] (sl) -- ++(1.25,0) node[right,text=navy]{$\hat a_n$};
+  \node[lbl,text=c4] at (1.15,-2.35) {pre-cursor ISI};
+  \node[lbl,text=golddk] at (3.55,-2.35) {signal};
+  \node[lbl,text=bblue] at (7.3,-2.35) {post-cursor ISI from earlier bits};
+\end{tikzpicture}
+\caption{\textbf{Sampled once per UI, the channel is an FIR filter whose taps are the pulse-response cursors.} Each received sample is the current symbol times $p_0$ plus every other symbol times its cursor. REF has one significant pre-cursor ($p_{-1} = 0.049$) and a long post-cursor tail.}
+\label{fig:ch4-fir}
+\end{figure}
+
+%% =====================================================================
+\section{Peak distortion analysis}\label{sec:pda}
+
+\paragraph{The worst case}
+Take a transmitted ``1'' ($a_n = +1$). By \cref{eq:ch4-yn}, its sample is smallest when every ISI term pulls down, $a_{n-k}\,p_k = -\lvert p_k\rvert$ for all $k \ne 0$. The lowest ``1'' is then $A(p_0 - \sum_{k\neq0}\lvert p_k\rvert)$, and by symmetry the highest ``0'' is its negative. The gap between them is the worst-case inner eye height.
+
+\begin{keyeq}[Peak-distortion eye and worst-case pattern]
+\begin{equation}
+  \mathrm{EH}(\ts) = 2A\Big(p_0 - \sum_{k\neq0}\lvert p_k\rvert\Big),
+  \qquad
+  a_{n-k} = -\sgn(p_k)\,a_n .
+  \label{eq:pda}
+\end{equation}
+\end{keyeq}
+This is \textbf{peak distortion analysis} (PDA)~\citep{p2:casper2002,palermo720ch}. It needs only the cursors, it bounds the eye for \emph{any} bit stream, and the second half of \cref{eq:pda} gives the \textbf{worst-case bit pattern}. Because all cursors depend on the sampling instant, $\mathrm{EH}$ is a function of $\ts$. Sweeping $\ts$ across the UI and keeping the range where $\mathrm{EH}(\ts) > 0$ gives the worst-case \textbf{eye width}.
+
+\begin{example}{PDA of the REF channel}\label{we:ch4-pda}
+\textbf{Given:} the REF cursors of \cref{tab:ref-cursors}, $2A = 1$\,V, $\ts$ at the pulse peak.
+
+\textbf{Thirteen cursors:} $\sum_{k\neq0}\lvert p_k\rvert = 0.0486 + 0.1817 + 0.0909 + \cdots + 0.0084 = 0.501$\,V, so $\mathrm{EH} = 1\,\mathrm{V}\times(0.340 - 0.501) = \mathbf{-0.161\,V}$: closed. \Cref{fig:ch4-pda}(a) shows that the ISI already exceeds $p_0$ after three post-cursors.
+
+\textbf{Full tail:} the cursors beyond $k = 10$ are small but many, and they add another 0.093\,V. Summing out to 300\,UI gives $\mathrm{EH} = -0.255$\,V. A check: all REF cursors are positive, so $\sum_k p_k = \Hch(0) = 0.935$ (the DC gain) and $\mathrm{EH} = 2A(2p_0 - \Hch(0)) = -0.255$\,V.
+
+\textbf{Worst-case pattern:} every $p_k$ with $k \neq 0$ is positive, so for $a_n = +1$ all other bits are $-1$: a lone ``1'' after a long run of ``0''s, followed by a ``0''. \Cref{fig:ch4-pda}(b) simulates it: the ``1'' arrives at $-126$\,mV, below the threshold.
+\end{example}
+
+\begin{figure}[tbp]
+\centering
+\includegraphics[width=\linewidth]{ch04_pda}
+\caption{\textbf{Peak distortion on REF: the ISI outweighs the main cursor.} (a) Cursor magnitudes and the cumulative ISI (navy). It passes $p_0$ at $k = 3$ and reaches 0.501\,V by $k = 10$; the full tail adds 0.093\,V more. (b) The worst-case pattern, a lone ``1'' after a long run of ``0''s. The sample at the main cursor (red dot) is $-126$\,mV, so this ``1'' is read as a ``0''.}
+\label{fig:ch4-pda}
+\end{figure}
+
+\paragraph{PDA versus a PRBS simulation}
+PDA is a bound, not a probability. The worst-case pattern for REF needs dozens of identical bits before the ``1''; PRBS7 never has more than six ``0''s in a row, so a PRBS7 simulation cannot find it. \Cref{fig:ch4-pda-prbs} compares eye height versus sampling phase from PDA, from PRBS simulations and from the statistical eye of \cref{sec:stateye}. On REF alone, PRBS7 reports $-78$\,mV (\cref{sec:lab2}), PRBS13 $-181$\,mV and full-tail PDA $-252$\,mV: closed in every view. After a 2-tap TX de-emphasis, the ranking is the same: PRBS7 163\,mV, PRBS13 148\,mV, PDA 126\,mV. A short PRBS is optimistic because it never visits the rare patterns that set the eye at $10^{-12}$.
+
+\begin{figure}[tbp]
+\centering
+\includegraphics[width=\linewidth]{ch04_pda_prbs}
+\caption{\textbf{PDA is the most pessimistic estimate; short PRBS runs are the most optimistic.} Inner eye height versus sampling phase. (a) REF is closed by every measure; truncating PDA at 13 cursors (dotted) hides 90\,mV of tail ISI. (b) REF with the 2-tap TX de-emphasis $c_0 = 0.652$, $c_1 = -0.348$ (Lab~3). The statistical eye at $10^{-12}$ sits only 5\,mV above PDA, while PRBS7 overestimates it by 32\,mV.}
+\label{fig:ch4-pda-prbs}
+\end{figure}
+
+\begin{pitfall}[Truncating the tail]
+PDA sums $\lvert p_k\rvert$ over \emph{all} $k$. Many small cursors add up: for REF, the cursors beyond $k = 10$ are each below 0.008\,V yet add 0.093\,V. Always extend the cursor list until the tail is negligible, and simulate with a PRBS whose period is longer than the channel memory (PRBS13 or longer for REF), or the eye will look better than it is.
+\end{pitfall}
+
+%% =====================================================================
+\section{The statistical eye}\label{sec:stateye}
+
+PDA tells us the worst case but not how often it happens. A BER target is a statement about probability, so we want the \emph{distribution} of $y_n$. In \cref{eq:ch4-yn} each ISI term $A\,a_{n-k}p_k$ is an independent random variable that takes $+A p_k$ or $-A p_k$ with probability $\tfrac12$. The PDF of a sum of independent variables is the convolution of their PDFs, so the ISI PDF is built one cursor at a time (\cref{fig:ch4-isipdf}a): one cursor gives two spikes, two give four, $m$ give up to $2^m$, and the shape fills in~\citep{p2:casper2002,p2:sanders2004}.
+
+\begin{keyeq}[Statistical eye]
+\begin{gather}
+  f_\mathrm{ISI}(v) = \mathop{\scalebox{1.4}{$\ast$}}_{k\neq0}\Big[\tfrac12\delta(v - A p_k) + \tfrac12\delta(v + A p_k)\Big],
+  \qquad
+  f_X = f_\mathrm{ISI} \ast \mathcal N(0,\sign^2),
+  \label{eq:ch4-isipdf}\\
+  \BER(\ts, v) = \tfrac12 P(A p_0 + X < v) + \tfrac12 P(-A p_0 + X > v),
+  \label{eq:ch4-ber}\\
+  \BER_J(\ts, v) = \int \BER(\ts - \tau, v)\, f_J(\tau)\,d\tau .
+  \label{eq:ch4-berj}
+\end{gather}
+\end{keyeq}
+Gaussian noise of rms $\sign$ is one more convolution in voltage. Sampling-clock jitter moves $\ts$, so it is a convolution in \emph{time} with the jitter PDF $f_J$. Here we use the dual-Dirac model (a Gaussian of rms $\sigma_\mathrm{RJ}$ at $\pm\mathrm{DJ}/2$); \cref{sec:dualdirac} explains where it comes from. Evaluating \cref{eq:ch4-ber} over a grid of $(\ts, v)$ gives the \textbf{statistical eye}: contours of constant BER. The \textbf{vertical bathtub} is one column of it, BER versus threshold at a fixed phase. The eye height at a BER target is the width of the bathtub at that BER.
+
+\begin{figure}[tbp]
+\centering
+\includegraphics[width=\linewidth]{ch04_isipdf}
+\caption{\textbf{The ISI distribution is a convolution of two-point distributions.} (a) REF cursors convolved one at a time: each new cursor splits every spike in two. (b) Distribution of the received sample for a ``1'', with all 153 cursors and 1.5\,mV rms noise, on a log scale. Without equalization (red), 6\% of all ``1''s fall below the threshold. With the 2-tap TX FFE (teal), the distribution ends at 61\,mV at $10^{-12}$, just inside the PDA worst case (dashed).}
+\label{fig:ch4-isipdf}
+\end{figure}
+
+The statistical eye needs a channel that is open, so from here on we use \textbf{REF with the 2-tap TX de-emphasis} of Lab~3, $c_0 = 0.652$ and $c_1 = -0.348$ (\cref{sec:ffe-taps,sec:lab3}). It is the simplest equalizer that opens REF, not the final \OS{} design. \Cref{fig:ch4-stateye} shows its statistical eye with noise and jitter. The code is \code{stat\_eye()} in \code{figsrc/ch04\_stateye.py}: a few dozen lines of NumPy that shift and add the two-point PDFs on a 0.05\,mV grid.
+
+\begin{figure}[tbp]
+\centering
+\includegraphics[width=\linewidth]{ch04_stateye}
+\caption{\textbf{The statistical eye gives BER contours instead of one worst case.} REF with 2-tap TX de-emphasis, $\sign = 1.5$\,mV rms, sampling jitter of 2\,ps RJ and 20\,ps DJ (dual-Dirac). (a) Signal density (shading) and contours at BER $10^{-3}$ to $10^{-12}$; the $10^{-12}$ eye is 119\,mV high and 0.59\,UI wide. (b) Vertical bathtubs at the best phase. Noise and jitter each shave a few millivolts off the 131\,mV ISI-only eye.}
+\label{fig:ch4-stateye}
+\end{figure}
+
+\begin{example}{PDA versus statistical eye height}\label{we:ch4-stat}
+\textbf{Given:} REF with 2-tap de-emphasis. The equalized pulse peaks at $q_0 = 0.209$\,V, 22\,ps earlier than REF. Its residual cursors are $q_{-1} = 0.0155$, $q_1 = 0.0125$, $q_2 = -0.0056$, then a slowly decaying tail of 0.002--0.0045\,V per UI. $\sum_{k\neq0}\lvert q_k\rvert = 0.084$\,V.
+
+\textbf{PDA:} $\mathrm{EH} = 1\,\mathrm{V}\times(0.209 - 0.084) = \mathbf{126}$\,mV, open over 0.75\,UI.
+
+\textbf{Statistical eye, ISI only:} 139\,mV at $10^{-6}$ and \textbf{131}\,mV at $10^{-12}$, open over 0.77\,UI.
+
+\textbf{With noise and jitter:} $\sign = 1.5$\,mV gives 123\,mV; adding 2\,ps RJ and 20\,ps DJ gives \textbf{119}\,mV and cuts the width to 0.59\,UI.
+
+\textbf{Interpretation:} at $10^{-12}$ the statistical eye is only 4\% larger than PDA. A probability of $10^{-12} \approx 2^{-40}$ means roughly 40 cursors line up in their worst direction, and here the cursors beyond the first 40 add only 0.006\,V. PDA is far too pessimistic only when the ISI is spread over many comparable cursors. A large gap between PDA and the statistical eye should make you check your tail, not celebrate.
+\end{example}
+
+\begin{insight}
+Use the three tools for different jobs. PDA is instant and gives the worst-case pattern, which is the best stimulus for a transistor-level simulation. The statistical eye answers the actual specification, eye height and width at $10^{-12}$, and is where noise and jitter enter. A PRBS7 eye from a short transient is a sanity check, never a sign-off. For REF-like channels, PDA is within a few percent of the $10^{-12}$ eye, so design to PDA early and confirm with the statistical eye.
+\end{insight}
+
+\begin{tryit}[Statistical eye in serdespy]
+Import \code{stat\_eye} and \code{eye\_metrics} from \code{ch04\_stateye.py}, and feed them the pulse response from any lab (\cref{sec:lab2,sec:lab3}). Change \code{sigma\_n}, \code{rj} and \code{dj} and watch which one moves the height and which the width.
+\end{tryit}
+
+%% =====================================================================
+\section{The system noise and margin budget}\label{sec:noisebudget}
+
+A \textbf{margin budget} starts from the transmitted swing and subtracts, step by step, everything that eats the eye before the sampler decides. Whatever is left is the \textbf{margin} that covers what the model does not know: process corners, crosstalk, adaptation error. The terms are:
+\begin{enumerate}[label=(\roman*)]
+  \item \textbf{TX swing} $2A$ = 1\,Vppd.
+  \item \textbf{Channel loss}, which shrinks the main cursor to $2A p_0$.
+  \item \textbf{Equalization}: a TX FFE costs main cursor (\cref{ch:txffe}); a CTLE and DFE do not, to first order.
+  \item \textbf{Residual ISI} at the BER target, from the statistical eye.
+  \item \textbf{RX noise}: for Gaussian noise of rms $\sign$, a BER of $10^{-12}$ needs $\mathrm{EH} \ge 2Q\sign = 14.07\,\sign$ (\cref{eq:ber-q}).
+  \item \textbf{Jitter}: sampling away from the best phase lowers the eye.
+  \item \textbf{Sampler offset} $V_\mathrm{os}$ and \textbf{sensitivity} $V_\mathrm{sens}$ (\cref{sec:offset,sec:sampler}).
+\end{enumerate}
+
+\begin{keyeq}[Linear margin budget at the sampler]
+\begin{equation}
+  M = \mathrm{EH}_\mathrm{ISI}(10^{-12}) - 2Q\,\sign - \Delta V_\mathrm{jitter} - 2V_\mathrm{os} - V_\mathrm{sens} \;>\; 0 .
+  \label{eq:ch4-margin}
+\end{equation}
+\end{keyeq}
+An offset moves the threshold toward one rail, so the worse half-eye shrinks by $V_\mathrm{os}$; that costs $2V_\mathrm{os}$ of symmetric eye height. The sensitivity is the minimum peak-to-peak input the sampler resolves in time. All terms are referred to the RX input.
+
+\begin{example}{Margin budget for REF with 2-tap de-emphasis}\label{we:ch4-budget}
+\textbf{Assumptions:} $\sign = 1.5$\,mV rms input-referred (CTLE plus samplers); sampling jitter of 2\,ps RJ and 20\,ps DJ, the latter from PI quantization dither (6.25\,ps steps) and CDR wander (\cref{sec:jitter-budget}); offset after calibration $V_\mathrm{os} = 5$\,mV; sampler sensitivity $V_\mathrm{sens} = 20$\,mV.
+
+\textbf{Stack-up} (\cref{fig:ch4-waterfall}): 1000\,mV $\to$ channel $\to$ 340\,mV main cursor $\to$ de-emphasis $\to$ 209\,mV $\to$ residual ISI at $10^{-12}$ $\to$ 131\,mV. Then noise $2Q\sign = 14.07\times1.5 = 21$\,mV, jitter 3.5\,mV, offset $2\times5 = 10$\,mV and sensitivity 20\,mV leave \textbf{$M \approx 76$\,mV}.
+
+\textbf{Statistical check:} the statistical eye with noise and jitter included is 119\,mV, which leaves $119 - 10 - 20 = 89$\,mV. Noise really costs only 8\,mV here, not 21\,mV, because the $7\sigma$ noise peak rarely coincides with a worst-case ISI pattern. The linear budget is conservative by 13\,mV.
+\end{example}
+
+\begin{figure}[tbp]
+\centering
+\includegraphics[width=\linewidth]{ch04_waterfall}
+\caption{\textbf{A top-down margin budget for REF with 2-tap de-emphasis.} (a) The channel and the de-emphasis take 79\% of the transmitted swing before any circuit impairment. (b) Zoom on the 209\,mV main cursor: residual ISI is the largest single term. Adding the rest linearly leaves 76\,mV; combining noise and jitter statistically (dashed) leaves 89\,mV.}
+\label{fig:ch4-waterfall}
+\end{figure}
+
+\begin{insight}[What to spend margin on]
+The largest term is residual ISI (79\,mV), not noise (8--21\,mV). The best use of design effort is therefore equalization: the CTLE and 2-tap DFE of \cref{ch:ctle,ch:dfe} remove most of the residual ISI without the main-cursor cost of a TX FFE (\cref{sec:eq-partition}). Keep the margin for things the model leaves out: the 20--25\,dB end of \code{LOSS\_FAMILY} (each extra dB of Nyquist loss shrinks the main cursor by about 6\%), crosstalk (25\,mVpp of NEXT would take a third of it), termination and CTLE drift over corners, and DFE tap error. Do not spend power to push $\sign$ below 1\,mV: halving it buys only a few millivolts.
+\end{insight}
+
+%% =====================================================================
+\section{Modulation choice: NRZ or PAM4?}\label{sec:pam4}
+
+\textbf{PAM4} sends two bits per symbol on four levels, $\{-A, -A/3, +A/3, +A\}$. At the same bit rate the symbol rate halves (2.5\,GBd for 5\,Gb/s), so the Nyquist frequency halves to 1.25\,GHz and the channel loss there is smaller. The price is that the three stacked eyes are each $2A/3$ high instead of $2A$ (\cref{fig:ch4-pam4}a,b).
+
+\begin{keyeq}[The PAM4 rule]
+\begin{equation}
+  20\log_{10}3 = 9.54\,\mathrm{dB}
+  \qquad\Longrightarrow\qquad
+  \text{PAM4 wins only if}\quad \Delta = \mathrm{IL}(\fN) - \mathrm{IL}(\fN/2) > 9.54\,\mathrm{dB}.
+  \label{eq:ch4-pam4}
+\end{equation}
+\end{keyeq}
+PAM4 recovers its 9.54\,dB eye penalty only if the channel loses more than that between the two Nyquist frequencies, which are an octave apart. If the loss were proportional to $f$ (pure dielectric), $\Delta$ would be half the NRZ Nyquist loss; if it were proportional to $\sqrt f$ (pure skin effect), $\Delta = 0.29\,\mathrm{IL}(\fN)$. Real FR-4 sits in between.
+
+\begin{example}{NRZ or PAM4 for Open-SERDES?}\label{we:ch4-pam4}
+\textbf{Given:} \code{channel()} from \code{link.py} for REF and the \code{LOSS\_FAMILY} lengths.
+
+\textbf{Solution:} \cref{tab:ch4-pam4} lists the losses at both Nyquist frequencies. For our model $\Delta \approx 0.40\,\mathrm{IL}(\fN)$. REF has $\Delta = 17.4 - 10.4 = 7.0$\,dB, so NRZ wins by $9.54 - 7.0 = 2.6$\,dB. $\Delta$ reaches 9.54\,dB at 1.37\,m, where the NRZ Nyquist loss is 23.8\,dB (\cref{fig:ch4-pam4}c). Only the 25 and 30\,dB channels pass the rule, and only by 0.5 and 2.5\,dB.
+\end{example}
+
+\begin{table}[tbp]
+\centering
+\caption{\textbf{Loss at the NRZ and PAM4 Nyquist frequencies} for REF and the \code{LOSS\_FAMILY} channels, from \code{link.py}.}
+\label{tab:ch4-pam4}
+\small\sffamily
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+Channel & Length (m) & IL at 2.5\,GHz (dB) & IL at 1.25\,GHz (dB) & $\Delta$ (dB) & Rule favors\\
+\midrule
+5\,dB  & 0.285 & 5.0  & 3.0  & 2.0  & NRZ\\
+10\,dB & 0.572 & 10.0 & 6.0  & 4.0  & NRZ\\
+15\,dB & 0.862 & 15.0 & 9.0  & 6.0  & NRZ\\
+\textbf{REF} & \textbf{1.000} & \textbf{17.4} & \textbf{10.4} & \textbf{7.0} & \textbf{NRZ}\\
+20\,dB & 1.152 & 20.0 & 12.0 & 8.0  & NRZ\\
+25\,dB & 1.441 & 25.0 & 15.0 & 10.0 & PAM4 (barely)\\
+30\,dB & 1.731 & 30.0 & 18.0 & 12.0 & PAM4\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[tbp]
+\centering
+\includegraphics[width=\linewidth]{ch04_pam4}
+\caption{\textbf{PAM4 pays 9.54\,dB of eye height to halve the Nyquist frequency.} (a, b) Ideal NRZ and PAM4 eyes at the same peak swing: each PAM4 eye is one third as tall. (c) REF-model loss at 2.5 and 1.25\,GHz versus length, and their difference $\Delta$. PAM4 is favored only where $\Delta$ exceeds 9.54\,dB, beyond 1.37\,m (23.8\,dB at 2.5\,GHz). REF (gold) is 2.6\,dB short of that.}
+\label{fig:ch4-pam4}
+\end{figure}
+
+The rule is a first-order comparison, and it flatters PAM4. A DFE cancels post-cursors for either format, but whatever ISI is left (pre-cursors, tap errors) weighs three times more against a PAM4 eye. PAM4 also needs three comparators per sampling phase (up to twelve samplers instead of the two data and two edge samplers of our half-rate receiver), reference levels that track the signal amplitude, a linear TX driver and CTLE, and a CDR that copes with several zero-crossing times per transition. It is also three times more sensitive to residual ISI, crosstalk and sampler offset.
+
+\begin{specnote}[Open-SERDES decision]
+\OS{} uses \textbf{NRZ}. Over REF and every channel up to 20\,dB, NRZ wins by the 9.54\,dB rule, and it costs a third of the slicers. PAM4 is kept as a Phase-4 option, worth revisiting only for channels beyond about 24\,dB at 2.5\,GHz or for a 10\,Gb/s follow-on (\cref{tab:decisions}).
+\end{specnote}
+
+%% =====================================================================
+\section{Exercises}\label{sec:ch4-exercises}
+\begin{enumerate}[label=\textbf{4.\arabic*},leftmargin=2.2em]
+  \item \textbf{PDA by hand.} A channel has $p_{-1} = 0.05$, $p_0 = 0.50$, $p_1 = 0.20$, $p_2 = -0.04$, $p_3 = 0.02$. Find the PDA eye for $2A = 0.8$\,V and the worst-case bit pattern in time order.
+  \item \textbf{The tail matters.} Using \code{link.cursors} with \code{n\_post} = 10, 30, 100 and 300, plot the REF PDA eye against \code{n\_post}. How many cursors do you need before the answer changes by less than 5\,mV?
+  \item \textbf{Two cursors, exactly.} For ISI from only $p_1$ and $p_2$, write the ISI PDF and the BER versus threshold in closed form, with Gaussian noise $\sign$. Compare with \code{stat\_eye()}.
+  \item \textbf{Budget.} Redo \cref{we:ch4-budget} with $\sign = 3$\,mV and an uncalibrated offset of 15\,mV. Is the margin still positive? Which single improvement restores the most margin?
+  \item \textbf{PAM4 at 10\,Gb/s.} For a 10\,Gb/s follow-on over REF, compare NRZ ($\fN = 5$\,GHz) with PAM4 ($\fN = 2.5$\,GHz) using \code{loss\_db}. Which wins by the rule?
+\end{enumerate}
+
+\begin{takeaways}
+\begin{itemize}
+  \item At the sampler, the channel is an FIR filter with taps $p_k$, so the cursors alone predict every received sample.
+  \item PDA gives the worst-case eye $2A(p_0 - \sum_{k\neq0}\lvert p_k\rvert)$ and the worst-case pattern $a_{n-k} = -\sgn(p_k)\,a_n$. REF is closed: $-0.161$\,V with 13 cursors, $-0.255$\,V with the full tail.
+  \item The statistical eye convolves two-point ISI distributions with noise (in voltage) and jitter (in time) to give BER contours. For REF with 2-tap de-emphasis: PDA 126\,mV, statistical 131\,mV at $10^{-12}$, 119\,mV with noise and jitter.
+  \item Short PRBS simulations are optimistic (PRBS7: 163\,mV) because they never meet the rare worst-case patterns.
+  \item A linear margin budget for that link leaves about 76\,mV (89\,mV statistically). Residual ISI, not noise, is the largest term, so spend design effort on equalization.
+  \item PAM4 pays 9.54\,dB of eye height and wins only if the loss between 1.25 and 2.5\,GHz exceeds that. REF has 7.0\,dB, so \OS{} uses NRZ.
+\end{itemize}
+\end{takeaways}

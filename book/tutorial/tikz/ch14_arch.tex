@@ -1,0 +1,114 @@
+% ch14_arch.tex -- fig:arch : the complete Open-SERDES transceiver (Chapter 14)
+\begin{tikzpicture}[x=1cm,y=1cm,font=\sffamily\scriptsize,
+  a/.style={blkb,minimum height=9mm,minimum width=13mm,font=\sffamily\scriptsize,inner sep=1.5pt},
+  d/.style={blkg,minimum height=9mm,minimum width=13mm,font=\sffamily\scriptsize,inner sep=1.5pt},
+  rt/.style={font=\sffamily\scriptsize,text=muted,align=center},
+  rate/.style={font=\sffamily\scriptsize\bfseries,text=slate,align=center},
+  ck/.style={font=\sffamily\scriptsize,text=golddk,align=center},
+  cfg/.style={-{Stealth[length=1.6mm]},draw=muted,line width=0.6pt,dotted},
+  lb/.style={-{Stealth[length=2.2mm]},draw=c5,line width=0.9pt},
+  pad/.style={draw=navy,fill=navy,minimum size=2.2mm,inner sep=0pt},
+  bandlbl/.style={font=\sffamily\scriptsize\bfseries,text=slate,anchor=north west}]
+% ------------------------------------------------------------ die and bands
+\draw[navy,line width=1.1pt,rounded corners=5pt,fill=offwhite] (0,0.05) rectangle (13.0,9.1);
+\fill[gtint!35] (0.08,7.22) rectangle (12.92,9.02);
+\fill[bgpale]   (0.08,2.82) rectangle (12.92,7.14);
+\fill[btint!40] (0.08,0.13) rectangle (12.92,2.74);
+\node[bandlbl] at (0.12,9.0) {TRANSMITTER};
+\node[bandlbl,anchor=south west] at (0.12,2.9) {CLOCKING AND CDR};
+\node[bandlbl] at (0.12,2.72) {RECEIVER};
+\node[font=\sffamily\scriptsize\bfseries,text=navy,anchor=south east] at (13.0,9.12) {\OS{} die, IHP \sgx{}};
+% ------------------------------------------------------------ TX row (y = 8.0)
+\node[d,minimum width=18mm] (prbs) at (1.45,8.0) {PRBS7/31 gen.\\+ data mux};
+\node[d,minimum width=13mm] (s164) at (3.95,8.0) {16:4\\CMOS};
+\node[a,minimum width=12mm] (s42)  at (5.95,8.0) {4:2\\CML};
+\node[a,minimum width=16mm] (s21)  at (8.0,8.0) {2:1 CML $\times$3\\half-rate};
+\node[a,minimum width=19mm,line width=1pt] (drv) at (10.55,8.0) {\textbf{3-tap FFE}\\CML driver};
+\node[pad] (txpad) at (13.0,8.0) {};
+\draw[sig,line width=1.1pt] (-0.8,8.0) -- (prbs.west);
+\node[rt,anchor=south] at (-0.4,8.05) {16\,b\\in};
+\draw[sig] (prbs) -- node[rt,above=0pt]{16} (s164);
+\draw[sig] (s164) -- node[rt,above=0pt]{4} (s42);
+\draw[sig] (s42) -- node[rt,above=0pt]{2} (s21);
+\draw[sig] (s21) -- node[rt,above=0pt]{3} (drv);
+\foreach \x/\r in {2.82/{312.5\,Mb/s}, 4.97/{1.25\,Gb/s}, 6.95/{2.5\,Gb/s}, 9.2/{5\,Gb/s}}{\node[rate] at (\x,8.72) {\r};}
+\draw[navy,line width=1.1pt] (drv.east) -- (txpad.west); \coordinate (lbtap) at (12.25,8.0);
+\node[rt,anchor=south] at (12.6,8.05) {TX$\pm$};
+% ------------------------------------------------------------ channel (off-chip)
+\node[blk,minimum width=16mm,minimum height=46mm,fill=white,font=\sffamily\scriptsize,align=center] (chan) at (14.15,4.8)
+  {\textbf{Channel}\\[3pt]REF: 1\,m FR-4\\+ 300\,fF pads\\[3pt]$-17.4$\,dB\\at 2.5\,GHz\\[3pt]\textcolor{muted}{off-chip:}\\\textcolor{muted}{SMA, PCB}\\\textcolor{muted}{or cable}};
+\draw[sig,line width=1.1pt] (txpad.east) -| (chan.north);
+\draw[sig,line width=1.1pt] (chan.south) |- (13.0,1.6);
+% ------------------------------------------------------------ RX row (y = 1.6), signal flows right to left
+\node[pad] (rxpad) at (13.0,1.6) {};
+\node[a,minimum width=14mm] (term) at (11.8,1.6) {\qty{100}{\ohm} term.\\+ ESD};
+\node[a,minimum width=8mm,minimum height=7mm] (lbm) at (10.5,1.6) {LB\\mux};
+\node[a,minimum width=13mm] (ctle) at (9.3,1.6) {CTLE\\0--12\,dB};
+\node[sumnode,minimum size=6.5mm] (sum) at (8.05,1.6) {$\Sigma$};
+\node[a,minimum width=16.5mm] (samp) at (6.55,1.6) {4 samplers\\D0 E0 D1 E1};
+\node[d,minimum width=13mm] (des) at (4.45,1.6) {1:16\\deser.};
+\node[d,minimum width=14mm] (chk) at (2.3,1.6) {PRBS\\checker};
+\node[rt,anchor=south] at (12.76,1.63) {RX$\pm$};
+\draw[navy,line width=1.1pt] (rxpad.west) -- (term.east);
+\draw[sig] (term) -- (lbm);
+\draw[sig] (lbm) -- (ctle);
+\draw[sig] (ctle) -- (sum);
+\draw[sig] (sum) -- (samp);
+\node[rt,anchor=south,text=bblue] at (8.05,1.95) {DFE};
+\draw[sig] (samp) -- node[rt,above=0pt]{4} (des);
+\node[rate,anchor=north] at (5.42,1.1) {2.5\,Gb/s};
+\draw[sig] (des) -- node[rt,above=0pt]{32} (chk);
+\node[rate,anchor=north] at (3.37,1.1) {312.5\,M};
+\draw[sig,line width=1.1pt] (chk.west) -- (-0.8,1.6);
+\node[rt,anchor=south] at (-0.4,1.65) {16\,b\\out};
+% DFE feedback: decisions -> taps w1, w2 -> summer
+\draw[sigb] ([xshift=4mm]samp.south) -- ++(0,-0.52) -| (sum.south);
+\node[font=\sffamily\scriptsize,text=bblue,anchor=north] at (7.6,0.6) {taps $w_1$, $w_2$};
+% ------------------------------------------------------------ clocking row (y = 5.1)
+\node[a,minimum width=19mm] (pll) at (1.6,5.1) {\textbf{PLL}, $N=50$\\LC VCO 2.5\,GHz};
+\node[a,minimum width=17mm] (ppf) at (4.25,5.1) {I/Q polyphase\\+ CML buffers};
+\node[a,minimum width=21mm] (pi)  at (6.7,5.1) {2 phase interp.\\64 steps (6.25\,ps)};
+\node[a,minimum width=55mm,minimum height=5.5mm] (txck) at (5.9,6.55) {TX clock buffers and $\div2$, $\div4$, $\div8$ dividers};
+\node[d,minimum width=18mm,minimum height=7.5mm] (lf) at (4.45,3.6) {CDR loop filter\\P + I, 625\,MHz};
+\node[d,minimum width=19mm] (spi) at (10.4,5.1) {SPI +\\config registers};
+% refclk
+\draw[clk] (-0.8,5.1) -- (pll.west);
+\node[pad] at (0,5.1) {};
+\node[ck,anchor=south] at (-0.4,5.15) {REF\\50\,M};
+% PLL -> TX clock tree -> serializer
+\draw[clk] (pll.north) |- node[ck,pos=0.3,left=0pt]{2.5\,GHz} (txck.west);
+\draw[clk] (3.35,6.55 |- txck.north) -- (3.35,7.05) -| (prbs.south);
+\node[ck,anchor=east] at (1.4,7.3) {312.5\,MHz};
+\draw[clk] (txck.north -| s164.south) -- node[ck,right=0pt,pos=0.45]{625\,M} (s164.south);
+\draw[clk] (txck.north -| s42.south) -- node[ck,right=0pt,pos=0.45]{1.25\,G} (s42.south);
+\draw[clk] (txck.north -| s21.south) -- node[ck,right=0pt,pos=0.45]{2.5\,G} (s21.south);
+% PLL -> PPF -> PI -> samplers
+\draw[clk] (pll.east) -- (ppf.west);
+\draw[clk] (ppf.east) -- node[ck,above=0pt]{I, Q} (pi.west);
+\draw[clk] (7.15,5.1 |- pi.south) -- coordinate[pos=0.78] (rck) node[ck,pos=0.3,right=0pt]{\ang{0}/\ang{90}/\ang{180}/\ang{270}} (7.15,1.6 |- samp.north);
+% recovered clock to the deserializer
+\fill[gold] (rck) circle (1.3pt);
+\draw[clk] (rck) -| node[ck,pos=0.25,above=0pt]{recovered $\div2^n$} (4.85,1.6 |- des.north);
+% CDR: deserializer -> loop filter -> PI code
+\draw[sigg] (4.05,1.6 |- des.north) -- node[rt,left=0pt]{edge + data} (4.05,3.6 |- lf.south);
+\draw[sigg] (lf.east) -| node[rt,pos=0.25,above=0pt]{code $k$} (6.2,5.1 |- pi.south);
+% configuration (dotted)
+\draw[cfg] (spi.north) -- node[rt,right=0pt,pos=0.5]{FFE taps} (spi.north |- drv.south);
+\draw[cfg] (9.7,5.1 |- spi.south) -- node[rt,left=0pt,pos=0.55]{peaking} (9.7,1.6 |- ctle.north);
+\draw[cfg] (spi.west) -- node[rt,above=0pt]{override} (pi.east);
+\node[rt,anchor=north west,align=left,text width=19mm] at (10.0,4.45) {also DFE and offset DACs, PLL band, PRBS mode, loopback};
+% near-end loopback
+\fill[c5] (lbtap) circle (1.5pt);
+\draw[lb] (lbtap) -- (12.25,2.4) -| (lbm.north);
+\node[font=\sffamily\scriptsize,text=c5,rotate=90,anchor=south] at (12.25,6.1) {near-end loopback};
+% ------------------------------------------------------------ legend
+\begin{scope}[shift={(0.3,-0.45)}]
+  \node[blkb,minimum width=6mm,minimum height=3.2mm,inner sep=0pt] at (0,0) {};
+  \node[rt,anchor=west,text=navy] at (0.4,0) {analog / HBT CML (2.5\,V)};
+  \node[blkg,minimum width=6mm,minimum height=3.2mm,inner sep=0pt] at (3.85,0) {};
+  \node[rt,anchor=west,text=navy] at (4.25,0) {digital CMOS (1.2\,V)};
+  \draw[clk] (7.25,0) -- (8.05,0); \node[rt,anchor=west,text=navy] at (8.1,0) {clock};
+  \draw[lb] (9.05,0) -- (9.85,0); \node[rt,anchor=west,text=navy] at (9.9,0) {loopback};
+  \draw[cfg] (11.25,0) -- (12.05,0); \node[rt,anchor=west,text=navy] at (12.1,0) {configuration};
+\end{scope}
+\end{tikzpicture}

@@ -1,0 +1,270 @@
+\tikzsetfigurename{15_flow-}
+\chapter{Design and Verification Flow with Open Tools}\label{ch:flow}
+
+\chapterlead{From a Python model to a GDS file and a test bench, with nothing but open-source tools: which tool does what, how the model and the circuits keep each other honest, and how to prove the chip works.}
+
+\begin{objectives}
+\begin{itemize}
+  \item Name the open tool used at each stage of the \OS{} flow and say what it checks.
+  \item Close the loop between the serdespy model and the transistor-level circuits by back-annotating simulated responses.
+  \item Choose a testbench, a measurement and a pass/fail criterion for every block, including corners and Monte Carlo.
+  \item Apply the layout rules that matter at 5\,Gb/s: symmetry, current density, metal width, inductors, extraction and decoupling.
+  \item Plan the lab bring-up: test board, loopback, on-chip PRBS checking and the measurements that compare silicon with the model.
+\end{itemize}
+\end{objectives}
+
+The flow in \cref{fig:ch15-flow} runs left to right, but it is not a pipeline. Every stage feeds numbers back to the system model, and the chip is ready for tape-out only when the model, rerun with those numbers, still shows margin at every corner.
+
+\begin{figure}[!tbp]
+\centering
+\includegraphics[width=\linewidth]{ch15_flow_infographic}
+\caption{\textbf{The \OS{} design flow, end to end.} Specifications and the serdespy system model come first; schematics in \tool{Xschem} with \tool{ngspice}, layout in \tool{KLayout}, extraction and EM simulation, and sign-off (DRC, LVS, \tool{CACE} datasheets) follow; then tape-out and lab test. The arrows back to the model are the important ones: each stage returns measured numbers that replace assumptions.}
+\label{fig:ch15-flow}
+\end{figure}
+
+%% =====================================================================
+\section{The open toolchain}\label{sec:toolchain}
+
+Every tool in this chapter ships in one Docker image, \textbf{IIC-OSIC-TOOLS}~\cite{iicosic}, together with the IHP \sgx{} PDK~\cite{ihppdk}; pinning one image tag gives the whole team identical tools. The \OS{} repository builds on the JKU \textbf{analog mixed-signal chip template}~\cite{jkutemplate} (it needs image 2026.06 or later). Its recursive Makefiles make one \code{make all} harden the digital macros, run every testbench including PVT and Monte Carlo, run DRC, LVS and extraction on the analog macros, assemble the chip digital-on-top with seal ring, pad frame and fill, run a full-chip LVS without black boxes, and draw the bonding diagram. GitHub Actions rerun it on every commit, so a broken block is noticed the day it breaks.
+
+\Cref{fig:ch15-tools} maps the tools onto the flow, and \cref{tab:ch15-tools} says what each one is for.
+
+\begin{figure}[!tbp]
+\centering
+\input{tutorial/tikz/ch15_tools}
+\caption{\textbf{Two lanes, one container.} The analog lane (HBT CML driver, CTLE, samplers, PLL, PIs) is hand-designed and verified block by block; the digital lane (PRBS, CDR loop filter, CMOS serializer and deserializer stages, SPI) is synthesized by \tool{LibreLane}. Both merge in a digital-on-top assembly and one sign-off. The red dashed arrows are the feedback paths: corners and Monte Carlo send the designer back to the schematic, and extracted responses go back to the system model.}
+\label{fig:ch15-tools}
+\end{figure}
+
+\begin{table}[!tbp]
+\centering
+\caption{\textbf{Open tools in the \OS{} flow.} All are in the IIC-OSIC-TOOLS image except serdespy, PyBERT and scikit-rf, which install with \code{pip}.}
+\label{tab:ch15-tools}
+\footnotesize
+\renewcommand{\arraystretch}{1.08}
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{40mm} L l@{}}
+\toprule
+\textbf{Tool} & \textbf{Purpose in \OS{}} & \textbf{Stage}\\
+\midrule
+\tool{serdespy}~\cite{serdespy}, \tool{PyBERT}~\cite{pybert} & link models, eyes, BER (\cref{ch:labs}); PyBERT adds a GUI and IBIS-AMI & system model\\
+\tool{scikit-rf}~\cite{p2:skrf2022} & Touchstone files, mixed-mode S-parameters, de-embedding & model, EM, lab\\
+\tool{Xschem} & schematics, symbols, testbench netlists for every simulator & schematic\\
+\tool{ngspice} & \code{.op}, \code{.ac}, \code{.noise}, \code{.tran}, transient noise, Verilog-A via OSDI & simulation\\
+\tool{Xyce}, \tool{VACASK} & parallel SPICE for large post-layout runs; Verilog-A simulator with PSS and HB & simulation\\
+\tool{CACE} & YAML datasheet: runs testbenches over corners, checks min/typ/max limits & characterization\\
+\tool{KLayout}, \tool{Magic} & layout editing; IHP DRC and LVS decks; RC extraction (\tool{Magic}) & layout, sign-off\\
+\tool{Netgen}, \tool{KLayout-PEX} & LVS comparison; parasitic extraction for \sgx{} & sign-off, extraction\\
+\tool{openEMS}, \tool{Palace} & FDTD and FEM field solvers for inductors, pads and package & EM\\
+\tool{Verilator}, \tool{Icarus}, \tool{cocotb} & Verilog simulation and lint; Python testbenches for PRBS, CDR, SPI & RTL\\
+\tool{Yosys}, \tool{LibreLane} & synthesis to \sgx{} cells; RTL-to-GDS flow (successor of OpenLane 2) & digital\\
+\tool{OpenROAD}, \tool{OpenSTA} & placement, clock tree, routing; static timing (inside \tool{LibreLane}) & digital\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+%% =====================================================================
+\section{The model--circuit loop}\label{sec:model-loop}
+
+The labs of \cref{ch:labs} describe each block by an ideal transfer function. The circuits will not match those ideals, and the only way to know whether the difference matters is to put the circuit's real response back into the model (\cref{fig:ch15-loop}). Because the link is linear up to the sampler, each simulated block becomes one more factor in the cascade:
+
+\begin{keyeq}[Back-annotating the link model]
+\begin{equation}
+  H_\mathrm{link}(f) = H_\mathrm{TX}(f)\,\Hch(f)\,H_\mathrm{CTLE,ckt}(f),\qquad
+  p_\mathrm{TX}(t) = s(t) - s(t-\Tb),\qquad
+  \sign^2 = \sum_i \sigma_{n,i}^2 .
+  \label{eq:ch15-annot}
+\end{equation}
+\end{keyeq}
+
+Here $s(t)$ is the simulated step response of the driver into its load, so $p_\mathrm{TX}(t)$ is its real 1-UI pulse, with finite edges and any ringing; sampling it at $\Tb$ spacing gives the effective FIR taps. The CTLE enters through its \code{.ac} response, and each noise source through its rms value from \code{.noise} or Monte Carlo.
+
+\begin{figure}[!tbp]
+\centering
+\input{tutorial/tikz/ch15_loop}
+\caption{\textbf{The model sets the specs; the circuits return their real responses; the model decides.} Each pass replaces one ideal block with a simulated one. The loop ends when the margin is positive at every corner with every block back-annotated.}
+\label{fig:ch15-loop}
+\end{figure}
+
+\Cref{lst:ch15-ac} loads an \tool{ngspice} AC sweep into the Lab~4 model. In \tool{ngspice}, \code{wrdata ctle\_ac.txt v(outp,outn)} after an \code{ac dec 100 1meg 100g} writes frequency, real and imaginary parts in three columns. The sweep is resampled onto the model's 10\,MHz grid, the end values are held outside it, and the DC point is forced real, as \code{sdp.freq2impulse} requires.
+
+\begin{lstlisting}[caption={Back-annotating a circuit CTLE (tested with a synthetic \code{wrdata} file).},label={lst:ch15-ac},captionpos=b]
+from common import *                        # F grid, channel(), impulse(), ...
+f_sp, re, im = np.loadtxt("ctle_ac.txt", usecols=(0, 1, 2), unpack=True)
+H_sp = re + 1j * im                         # wrdata ctle_ac.txt v(outp,outn)
+mag = np.interp(F, f_sp, np.abs(H_sp))      # resample onto the model grid;
+phs = np.interp(F, f_sp, np.unwrap(np.angle(H_sp)))  # holds end values
+H_ckt = mag * np.exp(1j * phs)
+H_ckt[0] = mag[0]                           # DC must be real
+h_link, t = impulse(channel() * H_ckt)      # REF x circuit CTLE
+bits = np.tile(sdp.prbs7(1), 40)
+y = through(tx_wave(bits), h_link)
+report_eye("REF + ngspice CTLE", y, bits)
+\end{lstlisting}
+
+\begin{example}{What a slow second pole costs}\label{we:ch15-pole}
+\textbf{Check:} feed \cref{lst:ch15-ac} the ideal \code{ctle(8)} response sampled from 1\,MHz to 100\,GHz. It returns 60.0\,mV and 0.56\,UI, exactly the Lab~5 pre-DFE eye, so the resampling loses nothing.
+
+\textbf{A realistic circuit:} suppose the extracted CTLE has its output pole at $f_{p2}=6$\,GHz instead of the 10\,GHz of the model, because the four samplers load it more than planned. The 12\,dB eye drops from 104.0 to 98.0\,mV and the 14\,dB eye from 113.3 to 107.4\,mV, about 6\,\%. At 5\,GHz the loss is 9\,\%. That is affordable against 76\,mV of margin, but it is exactly the kind of number that only the loop reveals.
+\end{example}
+
+%% =====================================================================
+\section{Testbenches}\label{sec:testbenches}
+
+Every specification in \cref{tab:specs} needs a testbench that measures it and a pass/fail limit. \Cref{tab:ch15-tb} lists the key ones and \cref{fig:ch15-tb} sketches two of them.
+
+\begin{table}[!tbp]
+\centering
+\caption{\textbf{Key \OS{} testbenches.} Limits from \cref{tab:specs}; every analog row runs at all PVT corners, and the mismatch-sensitive rows also run Monte Carlo.}
+\label{tab:ch15-tb}
+\footnotesize
+\renewcommand{\arraystretch}{1.1}
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{19mm} >{\raggedright\arraybackslash}p{36mm} L >{\raggedright\arraybackslash}p{30mm}@{}}
+\toprule
+\textbf{Block} & \textbf{Testbench} & \textbf{Measure} & \textbf{Pass}\\
+\midrule
+TX serializer + driver & \code{.tran}, PRBS7 into \qty{100}{\ohm} + $C_p$; then through the channel model & swing, edges, DCD, eye, every $V_\mathrm{CE}$ & 0.8--1.0\,Vppd; DCD + DDJ $\le8$\,ps; $V_\mathrm{CE}<\mathrm{BV}_\mathrm{CEO}$\\
+Termination, pad & \code{.ac} or \code{.sp} with ESD and pad parasitics & $S_{11}$, $C_p$ & RL $\ge10$\,dB at 2.5\,GHz\\
+CTLE & \code{.ac} at every code; \code{.noise}; large-signal \code{.tran} & peaking, $f_z$, $f_{p2}$, noise, linearity & 0--12\,dB; $f_{p2}\ge7.5$\,GHz; $\le0.25$\,mV\\
+DFE summer & \code{.tran} with tap 1 toggling every UI & settling inside the tap-1 loop & $t_\mathrm{CK\to Q}+t_\mathrm{settle}+t_\mathrm{setup}\le$ 1\,UI\\
+Sampler & DC-step sweep counting $P(1)$, Monte Carlo; tiny-input sweep; transient noise & $V_\mathrm{os}$, $\sigma$, $\tau$ & $\sigma\le1$\,mV, $\tau\le5$\,ps, trim range $\ge\pm3\sigma$\\
+PLL & lock transient; VCO phase noise (transient noise, or PSS/pnoise in \tool{VACASK}); Python loop model & lock time, $\mathcal{L}(f)$, RJ & RJ $\le1$\,ps rms\\
+PPF + PI & \code{.tran} at all 64 codes & phase vs.\ code, amplitude & I/Q $\le\ang{2}$, INL $\le\ang{1}$\\
+CDR logic & \tool{cocotb} with a Python phase model driving the early/late inputs & lock, ppm range, dither & $\pm300$\,ppm; $\le20$\,ps pp\\
+PRBS, SPI & \tool{cocotb} on \tool{Verilator} or \tool{Icarus}; error injection & error count, resync & exact counts\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{figure}[!tbp]
+\centering
+\input{tutorial/tikz/ch15_tb}
+\caption{\textbf{Two testbenches that decide whether the link works.} (a) The TX eye: PRBS bits drive the extracted serializer and driver into the pad and a channel model; the waveform goes back to Python for the eye measurement. (b) The sampler: a slow input step sweep under Monte Carlo gives $P(1)$ curves whose center is the offset and whose width is the noise, and a sweep of tiny inputs gives the regeneration time constant $\tau$ from the slope of $t_\mathrm{CK\to Q}$ against $\ln V_\mathrm{in}$ (\cref{sec:metastability}).}
+\label{fig:ch15-tb}
+\end{figure}
+
+\paragraph{The channel in SPICE} The REF channel has skin-effect loss that grows as $\sqrt f$ and dielectric loss that grows as $f$ (\cref{sec:loss}). Neither open simulator models that directly in a transient. \tool{ngspice} offers the lossless line (\code{T}), the SPICE3 lossy line LTRA (\code{O}), and the single and coupled lossy lines TXL and CPL; all of them take constant per-unit-length $R$, $L$, $G$, $C$. It has no HSPICE-style W-element with frequency-dependent tables and no element that reads a Touchstone file; its \code{.sp} analysis \emph{computes} S-parameters of a circuit, it does not import them. \tool{Xyce} has TRA, LTRA and a lumped line (YTRANSLINE), and a linear YLIN device that reads Touchstone data, documented mainly for harmonic-balance and other frequency-domain analyses. So there are three practical options: (i) a long ladder of RLGC sections, (ii) a behavioral source that convolves with $h(t)$, or (iii) splitting the problem at the channel.
+
+\begin{keyeq}[Sections needed for a lumped line model]
+\begin{equation}
+  \Delta\ell\le\frac{\lambda_\mathrm{min}}{10}=\frac{v}{10\,f_\mathrm{max}}
+  \quad\Rightarrow\quad N\ge\frac{10\,\ell\,f_\mathrm{max}}{v}
+  \label{eq:ch15-seg}
+\end{equation}
+\end{keyeq}
+
+For REF, $\ell=1$\,m, $v=c/\sqrt{4}=1.5\times10^8$\,m/s and $f_\mathrm{max}=10$\,GHz give $N\ge667$ sections, each needing extra R--L branches to mimic the skin effect. That is slow and hard to fit. Option (iii) is exact for a matched link and is what \OS{} uses: simulate the TX into a \qty{50}{\ohm}-per-side load in SPICE, export the differential waveform, apply the channel in Python with \code{through(x, h)}, and feed the result back into the RX testbench as a PWL source behind \qty{50}{\ohm} per side.
+
+\paragraph{Corners, Monte Carlo and CACE} The \sgx{} model libraries have typical, best-case and worst-case sections for MOS devices, HBTs and resistors; combine them with supply $\pm5$\,\% and 0--85\,$^\circ$C. Mismatch-sensitive specs (sampler offset, I/Q phase, mirror ratios) need Monte Carlo, and the number of runs sets how well you know the answer.
+
+\begin{keyeq}[How many Monte Carlo runs]
+\begin{equation}
+  \frac{\Delta\hat\sigma}{\sigma}\approx\frac{1}{\sqrt{2N}}
+  \label{eq:ch15-mc}
+\end{equation}
+\end{keyeq}
+
+Fifty runs know $\sigma$ to about 10\,\%, 200 runs to 5\,\% (for the sampler, $4.9\pm0.25$\,mV). \tool{CACE} turns all of this into a datasheet: a YAML file per block lists each parameter with its minimum, typical and maximum limits, the testbench that measures it and the conditions to sweep; \tool{CACE} runs every combination and reports pass or fail, so \cref{tab:specs} becomes an executable checklist.
+
+%% =====================================================================
+\section{Layout for high speed}\label{sec:layout-hs}
+
+At 5\,Gb/s a layout can lose the margin that the schematic won. Six habits keep it.
+
+\paragraph{Symmetry} Draw every differential circuit as two mirror-image halves and route each pair as a pair. Place HBT pairs and mirror devices common-centroid (ABBA) with dummies at the ends. A 10\,ps skew between FFE tap paths moves the de-emphasis edge by 0.05\,UI (\cref{sec:ffe-impl}); 1\,\% of clock duty-cycle error costs 4\,ps (\cref{sec:quadrature}).
+
+\paragraph{Current density} An HBT reaches its peak $f_T$ at one collector current density. Size each emitter so that the switching transistors sit near that point at their tail current, from the npn13G2 $f_T$-versus-$J_C$ curves of the PDK; past the peak, $f_T$ collapses.
+
+\paragraph{Metal width} Every DC path needs $w\ge I/J_\mathrm{max}$, with the electromigration limit $J_\mathrm{max}$ of that layer and temperature from the \sgx{} rules. Route the 20\,mA driver tail, its loads and the 2.5\,V straps on TopMetal1 and TopMetal2; a few ohms of strap under 77\,mA of CML current shift every common-mode level in the chip.
+
+\paragraph{Inductors and EM} Put the 4\,nH VCO inductor (and any T-coil) on TopMetal2, away from other metal. IHP's \code{gds2openEMS} and \code{gds2palace} scripts take the GDS and a stackup file, run \tool{openEMS} (FDTD) or \tool{Palace} (FEM), and return S-parameters for a $\pi$-model or a wideband fit~\cite{ihppdk}. Match $L$ and $Q$ to the team's measured inductor before trusting the flow.
+
+\paragraph{Extraction and isolation} Extract every analog block with \tool{KLayout-PEX} or \tool{Magic} and resimulate; clock-to-data coupling and the wiring capacitance on the CTLE output are the usual surprises. Surround the CML blocks, the VCO and the samplers with substrate guard rings, away from the switching CMOS logic.
+
+\paragraph{Decoupling} CML draws constant current; CMOS draws its charge in spikes at the clock edges, and that charge must come from on-chip capacitors.
+
+\begin{example}{Decoupling the deserializer}\label{we:ch15-decap}
+\textbf{Switched capacitance:} the 1:16 deserializer burns 5\,mW at 1.2\,V and 312.5\,MHz, so $\alpha C_\mathrm{sw}=P/(V_\mathrm{DD}^2f)=5\,\mathrm{mW}/(1.44\times312.5\,\mathrm{MHz})=\qty{11}{\pico\farad}$ is switched every cycle.
+
+\textbf{Worst case:} if all of it switches on one edge, before the package can refill the rail, the droop is $\Delta V/V\approx C_\mathrm{sw}/(C_\mathrm{sw}+C_\mathrm{dec})$. For 5\,\% droop, $C_\mathrm{dec}\ge19\,C_\mathrm{sw}=\qty{210}{\pico\farad}$: about 0.14\,mm$^2$ of MIM capacitor at roughly 1.5\,fF/\textmu{}m$^2$ (check the PDK value). Inside the synthesized digital macros, \tool{LibreLane} adds decap cells~\cite{jkutemplate}; budget the rest as MIM next to the macro, and count it in the die area.
+\end{example}
+
+\paragraph{The digital flow} The PRBS logic, the CDR loop filter, the SPI registers and the slow CMOS serializer and deserializer stages are Verilog, verified with \tool{cocotb} and hardened by \tool{LibreLane}. Synthesize what runs at 625\,MHz or slower; place the 1.25\,GHz deserializer stage and the CMOS-to-CML converters by hand from standard cells.
+
+\paragraph{Sign-off} DRC with the IHP \tool{KLayout} decks (\tool{Magic} as a second opinion), LVS with \tool{KLayout} or \tool{Netgen}, then antenna and density checks after fill, and the template's full-chip LVS without black boxes~\cite{jkutemplate}: run it whenever a macro changes.
+
+\subsection{Repository structure}\label{sec:ch15-repo}
+
+The \OS{} repository follows the recursive layout of the JKU template: every macro has the same folders as the top level and its own Makefile, so a block can be built, simulated and verified alone.
+
+\begin{lstlisting}[style=shell,language={},basicstyle=\ttfamily\scriptsize]
+open-serdes/                  # from ihp-sg13g2-ams-chip-template
+|-- Makefile                  # make all: build, simulate, DRC, LVS, bond plan
+|-- model/                    # serdespy model, labs (Ch. 16), GUI demo
+|-- macros/
+|   |-- tx_driver/            # analog macro: one per block
+|   |   |-- schematic/  testbenches/  layout/  netlist/
+|   |   |-- verification/  scripts/  cace/  Makefile
+|   |-- tx_serializer/  rx_frontend/  rx_sampler/  pll/  phase_interp/
+|   `-- serdes_digital/       # PRBS, CDR loop filter, SPI
+|       |-- rtl/  testbenches/          # cocotb + Verilator/Icarus
+|       `-- flow/librelane/             # hardening config
+|-- flow/librelane/           # digital-on-top chip assembly
+|-- layout/  netlist/  verification/  release/
+`-- docs/                     # this tutorial, CACE datasheets
+\end{lstlisting}
+
+%% =====================================================================
+\section{Testing the chip in the lab}\label{sec:labtest}
+
+\Cref{fig:ch15-labsetup} shows the bring-up bench. The test board carries the chip, SMA connectors for TX$\pm$, RX$\pm$, the reference clock and a divided clock-monitor output, local regulators and decoupling, and an SPI header. Keep the \qty{50}{\ohm} traces from the pads to the SMAs short and identical within each pair, and de-embed them with \tool{scikit-rf} from a measured test structure.
+
+\begin{figure}[!tbp]
+\centering
+\input{tutorial/tikz/ch15_lab}
+\caption{\textbf{The chip tests itself; the instruments check that it tells the truth.} The baseline loop needs only a reference generator, supplies, a PC and a channel board: the on-chip PRBS generator drives TX, the channel board brings the signal back to RX, and the on-chip checker counts errors. A sampling scope on TX (eye and jitter), a BERT into RX (stressed eye, sinusoidal jitter for JTOL) and a phase-noise analyzer on the clock monitor are added when available.}
+\label{fig:ch15-labsetup}
+\end{figure}
+
+\paragraph{Bring-up order} (1) Supplies and currents against \cref{tab:ch14-power}. (2) SPI read-back of every register. (3) PLL lock, seen on the clock monitor. (4) TX eye with PRBS7 on a scope. (5) Near-end loopback with the on-chip checker: this tests the chip without the board. (6) The external loop through the channel board, sweeping FFE presets and CTLE codes. (7) Freeze the CDR, step the PI code through the override register and count errors at each step: an on-chip bathtub, with the offset DACs giving the vertical scan.
+
+\begin{keyeq}[Bits needed to claim a BER]
+\begin{equation}
+  N_\mathrm{bits}\ge\frac{-\ln(1-\mathrm{CL})}{\BER}\approx\frac{3}{\BER}\quad\text{(zero errors, CL = 95\,\%)}
+  \label{eq:ch15-bits}
+\end{equation}
+\end{keyeq}
+
+Claiming $10^{-12}$ at 95\,\% confidence takes $3\times10^{12}$ error-free bits, or 600\,s at 5\,Gb/s: ten minutes per setting, which is why the checker is on chip.
+
+\begin{table}[!tbp]
+\centering
+\caption{\textbf{Measurement plan: each silicon measurement and the model result it is compared with.}}
+\label{tab:ch15-meas}
+\footnotesize
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{24mm} L >{\raggedright\arraybackslash}p{40mm}@{}}
+\toprule
+\textbf{Measurement} & \textbf{Setup} & \textbf{Target or comparison}\\
+\midrule
+TX eye and jitter & PRBS7, sampling scope at the TX SMAs & 0.8--1.0\,Vppd; edges, DCD vs.\ simulation\\
+BER and bathtub & loopback or channel board; on-chip checker; PI-code sweep & BER $\le10^{-12}$ (10\,min); bathtub vs.\ Lab~6\\
+Equalizer sweep & FFE presets $\times$ CTLE codes $\times$ DFE on/off & best setting vs.\ \cref{sec:eq-partition}\\
+Jitter tolerance & BERT with sinusoidal jitter into RX & above the mask of \cref{sec:jtol}\\
+PLL phase noise & clock monitor into a phase-noise analyzer & $\mathcal{L}(1\,\mathrm{MHz})$; RJ $\le1$\,ps rms\\
+Return loss & VNA at the RX SMAs, de-embedded & RL $\ge10$\,dB at 2.5\,GHz\\
+Power & current per supply rail in each mode & vs.\ \cref{tab:ch14-power}\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\Cref{tab:ch15-meas} is the measurement plan. Each row ends in a comparison with a model number, which closes the last loop of the flow: when silicon and model disagree, the model is updated first, and the next design starts from it.
+
+\begin{takeaways}
+\begin{itemize}
+  \item One container, IIC-OSIC-TOOLS, holds every tool and the \sgx{} PDK; the JKU template turns the whole flow into \code{make all} with regression on every commit.
+  \item The system model is not finished when the circuits start: back-annotate the CTLE \code{.ac} response, the driver step and the noise and offset of every block, and rerun the eye at each corner.
+  \item Open SPICE engines have only constant-RLGC lossy lines; for REF, simulate the TX into a matched load and apply the channel in Python.
+  \item Run every analog testbench at PVT corners; $N$ Monte Carlo runs know $\sigma$ to $1/\sqrt{2N}$; let \tool{CACE} check every limit of the specification table.
+  \item Layout for 5\,Gb/s means mirror symmetry, HBTs at their peak-$f_T$ current density, metal sized for the DC current, EM-simulated inductors on TopMetal2, extraction, guard rings and real decoupling area.
+  \item The chip tests itself: PRBS generator, checker and loopback verify $10^{-12}$ in ten minutes; instruments confirm the eye, jitter tolerance, phase noise and power against the model.
+\end{itemize}
+\end{takeaways}

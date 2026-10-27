@@ -1,0 +1,151 @@
+---
+title: "5. Equalization Fundamentals"
+parent: "Part II · Equalization"
+nav_order: 5
+permalink: "/chapters/05-equalization-fundamentals/"
+---
+{% raw %}
+<h1 id="ch:eqfund"><span class="chapnum">Chapter 5</span>Equalization Fundamentals</h1>
+<div class="chapterlead">
+<p>The channel is a low-pass filter. An equalizer is the filter we add so that channel and equalizer together look flat out to the Nyquist frequency.</p>
+</div>
+<div class="tbox tbox-objectives">
+<div class="tbox-title">
+<p>In this chapter you will learn</p>
+</div>
+<ul>
+<li><p>Explain how loss at <span class="math inline">\(f_\mathrm{N}\)</span> turns into inter-symbol interference and closes the REF eye.</p></li>
+<li><p>State the zero-forcing idea and quantify why an ideal channel inverse amplifies noise.</p></li>
+<li><p>Use Liu’s cable model to connect a loss in dB to the size of the main cursor.</p></li>
+<li><p>Name the four places an equalizer can sit in a link, and what each one can and cannot fix.</p></li>
+<li><p>Frame the partition question that <a href="{% endraw %}{{ '/chapters/08-decision-feedback-equalization-and-adaptation/' | relative_url }}{% raw %}#sec:eq-partition">Section 8.5</a> answers for Open-SERDES.</p></li>
+</ul>
+</div>
+<h2 id="sec:ch5-why"><span class="secnum">5.1</span>Why equalize?</h2>
+<p><a href="{% endraw %}{{ '/chapters/03-the-channel/' | relative_url }}{% raw %}#sec:refchannel">Section 3.7</a> showed that the REF channel loses 17.4 dB at <span class="math inline">\(f_\mathrm{N}=2.5\,\mathrm{GHz}\)</span> but only 0.6 dB at DC. A single 1-UI pulse therefore comes out smeared. Its main cursor is only <span class="math inline">\(p_{0}=0.340\,\mathrm{V}\)</span> instead of 1 V, and its energy leaks into the neighbouring bits: <span class="math inline">\(p_{1}=0.182\)</span>, <span class="math inline">\(p_{2}=0.091\)</span> and a long tail after it, plus a small pre-cursor <span class="math inline">\(p_{-1}=0.049\)</span> (<a href="{% endraw %}{{ '/chapters/03-the-channel/' | relative_url }}{% raw %}#tab:ref-cursors">Table 3.2</a>). Summed over all bits, this <strong>inter-symbol interference</strong> (ISI) exceeds the main cursor, so the peak-distortion eye of <a href="{% endraw %}{{ '/chapters/04-link-budgets-and-statistical-analysis/' | relative_url }}{% raw %}#eq:pda">Equation (4.2)</a> is <span class="math inline">\(-0.161\)</span> V. The eye is closed.</p>
+<p>An <strong>equalizer</strong> is a filter <span class="math inline">\(H_\mathrm{eq}(f)\)</span> placed somewhere in the link so that the cascade <span class="math inline">\(H_\mathrm{ch}(f)\,H_\mathrm{eq}(f)\)</span> is flat, at least up to <span class="math inline">\(f_\mathrm{N}\)</span> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-liuEq">5</a>, <a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-palermo720eq">22</a>]. Flat to <span class="math inline">\(f_\mathrm{N}\)</span> is enough. A pulse sampled once per UI is free of ISI when its spectrum, folded around multiples of <span class="math inline">\(1/T_\mathrm{b}\)</span>, adds up to a constant. A response that is flat to <span class="math inline">\(f_\mathrm{N}\)</span> and rolls off smoothly above it comes close to meeting that condition. In the time domain, the same goal reads: <em>make every cursor except <span class="math inline">\(p_{0}\)</span> zero</em>. <a href="#fig:ch5-inverse">Figure 5.1</a>(a) shows the most direct way to do it, which is to build the exact inverse of the channel.</p>
+<div id="fig:ch5-inverse">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch05_inverse.svg' | relative_url }}{% raw %}" style="width:753px" alt="Inverting the channel removes ISI but amplifies noise." loading="lazy" />
+<figcaption><span class="capnum">Figure 5.1.</span> <strong>Inverting the channel removes ISI but amplifies noise.</strong> (a) REF <span class="math inline">\(|H_\mathrm{ch}|\)</span>, its ideal inverse and their flat product. The inverse needs <span class="math inline">\(+17.4\)</span> dB at <span class="math inline">\(f_\mathrm{N}\)</span> and keeps rising beyond it. (b) For white noise at the equalizer input, the noise power spectrum is multiplied by <span class="math inline">\(|H_\mathrm{eq}|^2\)</span>. The rms noise gain is 12.1 dB if equalization stops at <span class="math inline">\(f_\mathrm{N}\)</span> and 22.5 dB if it extends to <span class="math inline">\(2f_\mathrm{N}\)</span>.</figcaption>
+</figure>
+<h2 id="sec:zf"><span class="secnum">5.2</span>The zero-forcing idea</h2>
+<p>A <strong>zero-forcing</strong> (ZF) equalizer chooses <span class="math inline">\(H_\mathrm{eq}=1/H_\mathrm{ch}\)</span> over the band of interest, which forces all ISI to zero. It ignores noise, and that is its weakness. Thermal noise from the termination and from the first amplifier enters <em>before</em> the equalizer and is filtered by it. By the Wiener–Khinchin theorem, a noise process with power spectral density <span class="math inline">\(S_n(f)\)</span> passing through <span class="math inline">\(H_\mathrm{eq}\)</span> comes out with variance:</p>
+<div class="tbox tbox-keyeq">
+<div class="tbox-title">
+<p>Key equation · Noise at the equalizer output</p>
+</div>
+<div id="eq:ch5-noise">
+
+</div>
+<p><span class="math display">\[\sigma_\mathrm{out}^2=\int_0^{B}\lvert H_\mathrm{eq}(f)\rvert^2\,S_n(f)\,\mathrm{d}f
+  \quad\xrightarrow{\;H_\mathrm{eq}=1/H_\mathrm{ch},\ S_n=N_0\;}\quad
+  \sigma_\mathrm{out}^2=N_0B\cdot\underbrace{\frac{1}{B}\int_0^{B}\frac{\mathrm{d}f}{\lvert H_\mathrm{ch}(f)\rvert^2}}_{\text{noise enhancement}} \tag{5.1}\]</span></p>
+</div>
+<p>For REF the enhancement factor is 12.1 dB for <span class="math inline">\(B=f_\mathrm{N}\)</span> (<a href="#fig:ch5-inverse">Figure 5.1</a>b). The signal is not boosted by that much on average. The main cursor recovers, but the noise integrated over the whole band grows faster than the signal does. Extending the inverse to <span class="math inline">\(2f_\mathrm{N}\)</span> costs another 10 dB of noise for almost no gain in eye opening. Practical equalizers are therefore <em>partial</em> inverses. They stop near <span class="math inline">\(f_\mathrm{N}\)</span> and limit their peak boost, or, like the DFE of <a href="{% endraw %}{{ '/chapters/08-decision-feedback-equalization-and-adaptation/' | relative_url }}{% raw %}#ch:dfe">Chapter 8</a>, they avoid linear filtering of the noise altogether.</p>
+<h5 id="lius-cable-model">Liu’s cable model</h5>
+<p>A model with a closed-form pulse helps build intuition [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-liuEq">5</a>]. In a cable, dielectric loss dominates, and the transfer function is close to <span class="math inline">\(C(f)=\exp(-k_d\,l\,\lvert f\rvert)\)</span>, with <span class="math inline">\(l\)</span> the length and <span class="math inline">\(k_d\)</span> a loss coefficient. Write <span class="math inline">\(a=k_dl\)</span>. The inverse Fourier transform is a Lorentzian, <span id="eq:ch5-lorentz"></span><span class="math display">\[c(t)=\int_{-\infty}^{\infty}e^{-a\lvert f\rvert}e^{j2\pi ft}\,\mathrm{d}f=2\int_0^\infty e^{-af}\cos(2\pi ft)\,\mathrm{d}f=\frac{2a}{a^2+4\pi^2t^2}. \tag{5.2}\]</span> Convolving with a pulse of height <span class="math inline">\(V_0\)</span> on <span class="math inline">\(0\le t\le T_\mathrm{b}\)</span>, and using the antiderivative <span class="math inline">\(\int c(u)\,\mathrm{d}u=\tfrac1\pi\arctan(2\pi u/a)\)</span>, gives <span id="eq:ch5-cablepulse"></span><span class="math display">\[y(t)=\frac{V_0}{\pi}\left[\arctan\frac{2\pi t}{a}-\arctan\frac{2\pi(t-T_\mathrm{b})}{a}\right]. \tag{5.3}\]</span> The pulse is symmetric about <span class="math inline">\(t=T_\mathrm{b}/2\)</span>, so setting <span class="math inline">\(\mathrm{d}y/\mathrm{d}t=0\)</span> puts the peak there:</p>
+<div class="tbox tbox-keyeq">
+<div class="tbox-title">
+<p>Key equation · Main cursor of a dielectric-loss cable</p>
+</div>
+<div id="eq:ch5-ymax">
+
+</div>
+<p><span class="math display">\[y_{\max}=\frac{2V_0}{\pi}\arctan\frac{\pi T_\mathrm{b}}{k_d\,l},\qquad
+  \text{loss at }f_\mathrm{N}\ (\mathrm{dB})=20\log_{10}(e)\,k_dl\,f_\mathrm{N}=8.686\,k_dl\,f_\mathrm{N}. \tag{5.4}\]</span></p>
+</div>
+<div class="tbox tbox-example">
+<div class="tbox-title">
+<p>Worked Example 5.1 · How much does 15 dB of cable loss cost?</p>
+</div>
+<p><span id="we:ch5-cable"></span> Take a cable with 15 dB of loss at <span class="math inline">\(f_\mathrm{N}=2.5\,\mathrm{GHz}\)</span>. Then <span class="math inline">\(k_dl=15/(8.686\times2.5\,\mathrm{GHz})=691\,\mathrm{ps}\)</span>, and <span class="math inline">\(\pi T_\mathrm{b}/(k_dl)=\pi\cdot200/691=0.909\)</span>. <a href="#eq:ch5-ymax">Equation (5.4)</a> gives <span class="math inline">\(y_{\max}=(2/\pi)\arctan(0.909)=(2/\pi)(0.738)=0.470\,V_0\)</span>, so the main cursor has fallen to less than half.</p>
+<p>The neighbours follow from <a href="#eq:ch5-cablepulse">Equation (5.3)</a> at <span class="math inline">\(t=T_\mathrm{b}/2+kT_\mathrm{b}\)</span>: <span class="math inline">\(y_{\pm1}=0.153\)</span>, <span class="math inline">\(y_{\pm2}=0.043\)</span> and <span class="math inline">\(y_{\pm3}=0.019\)</span>, in units of <span class="math inline">\(V_0\)</span>. Summing all cursors out to <span class="math inline">\(\pm100\)</span> UI gives <span class="math inline">\(\sum\lvert y_k\rvert=0.527&gt;0.470\)</span>, so the PDA eye is closed. <a href="#fig:ch5-cable">Figure 5.2</a>(b) shows that the eye of this model closes at about 14 dB.</p>
+<p>A zero-forcing inverse needs <span class="math inline">\(+15\)</span> dB at <span class="math inline">\(f_\mathrm{N}\)</span>. By <a href="#eq:ch5-noise">Equation (5.1)</a> with <span class="math inline">\(\lvert C\rvert^{-2}=e^{2af}\)</span>, its noise enhancement is <span class="math inline">\((e^{2af_\mathrm{N}}-1)/(2af_\mathrm{N})=\)</span> 9.5 dB up to <span class="math inline">\(f_\mathrm{N}\)</span>. Up to <span class="math inline">\(2f_\mathrm{N}\)</span> it would be 21.6 dB.</p>
+</div>
+<div id="fig:ch5-cable">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch05_cable.svg' | relative_url }}{% raw %}" style="width:753px" alt="Liu’s cable model ties loss in dB to the pulse." loading="lazy" />
+<figcaption><span class="capnum">Figure 5.2.</span> <strong>Liu’s cable model ties loss in dB to the pulse.</strong> (a) Pulse responses from <a href="#eq:ch5-cablepulse">Equation (5.3)</a> for 5–20 dB of loss at <span class="math inline">\(f_\mathrm{N}\)</span>. The dots mark the cursors of the 15 dB case. The model has zero phase, so the pre-cursors equal the post-cursors. (b) Main cursor from <a href="#eq:ch5-ymax">Equation (5.4)</a> and PDA half-eye against loss. The tails close the eye at about 14 dB, while the main cursor is still about half its lossless value.</figcaption>
+</figure>
+<div class="tbox tbox-pitfall">
+<div class="tbox-title">
+<p>A zero-phase model is not a real channel</p>
+</div>
+<p><span class="math inline">\(C(f)=e^{-k_dl\lvert f\rvert}\)</span> is real and even, so its impulse response starts before <span class="math inline">\(t=0\)</span> and is not causal. That is why its pre- and post-cursors are equal in <a href="#fig:ch5-cable">Figure 5.2</a>. A real channel such as REF is causal, and its post-cursors dominate (<span class="math inline">\(p_{1}=0.182\)</span> against <span class="math inline">\(p_{-1}=0.049\)</span>). Use the cable model for intuition about loss and the main cursor, and use REF (<a href="{% endraw %}{{ '/chapters/03-the-channel/' | relative_url }}{% raw %}#sec:refchannel">Section 3.7</a>) for design numbers.</p>
+</div>
+<div class="tbox tbox-insight">
+<div class="tbox-title">
+<p>What this means for your design</p>
+</div>
+<ul>
+<li><p>Every 5 dB of loss at <span class="math inline">\(f_\mathrm{N}\)</span> costs a large share of the main cursor and adds tail ISI. Near 15 dB the tails, not the main cursor, are what close the eye.</p></li>
+<li><p>Equalize to about <span class="math inline">\(f_\mathrm{N}\)</span> and no further. A full inverse to <span class="math inline">\(2f_\mathrm{N}\)</span> roughly doubles the noise penalty in dB (12.1 dB becomes 22.5 dB on REF) and buys almost no eye.</p></li>
+<li><p>Zero forcing ignores noise and swing. Every practical equalizer in this part of the book is a constrained version of it.</p></li>
+</ul>
+</div>
+<h2 id="sec:eq-taxonomy"><span class="secnum">5.3</span>Where equalizers live</h2>
+<p>An equalizer can be placed at the transmitter, at the receiver input, or after the receiver’s decision. <a href="#fig:ch5-eqmap">Figure 5.3</a> places the options in the Open-SERDES link, and <a href="#tab:ch5-eqcompare">Table 5.1</a> compares them.</p>
+<div id="fig:ch5-eqmap">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/tikz/05_eqfund-0.svg' | relative_url }}{% raw %}" style="width:698px" alt="Equalization can sit at the TX, at the RX input, or after the decision." loading="lazy" />
+<figcaption><span class="capnum">Figure 5.3.</span> <strong>Equalization can sit at the TX, at the RX input, or after the decision.</strong> The Open-SERDES link uses a TX FFE in the driver, a CTLE as the first receiver stage and a DFE that feeds back from the half-rate slicers. A receiver FIR (RX FFE) is the fourth option. We do not use it.</figcaption>
+</figure>
+<h5 id="tx-ffe">TX FFE</h5>
+<p>A FIR filter in the driver pre-distorts the waveform (<a href="{% endraw %}{{ '/chapters/06-transmit-ffe/' | relative_url }}{% raw %}">Chapter 6</a>). It handles pre- and post-cursors and cannot amplify receiver noise, but with a fixed peak swing it can only <em>lower</em> the low-frequency level, so the eye arrives smaller.</p>
+<h5 id="rx-ctle">RX CTLE</h5>
+<p>An analog high-pass stage at the receiver input (<a href="{% endraw %}{{ '/chapters/07-continuous-time-linear-equalizer/' | relative_url }}{% raw %}">Chapter 7</a>). It is cheap, fast and adaptable, and reshapes the long tail and part of the pre-cursor, but it boosts high-frequency noise and crosstalk with the signal.</p>
+<h5 id="rx-ffe">RX FFE</h5>
+<p>A receiver FIR, from analog delay cells or after an ADC. It amplifies noise like a CTLE, and needs accurate 200 ps analog delays or a power-hungry ADC. Open-SERDES does not use it.</p>
+<h5 id="dfe">DFE</h5>
+<p>Subtracts the ISI that already-decided bits will cause (<a href="{% endraw %}{{ '/chapters/08-decision-feedback-equalization-and-adaptation/' | relative_url }}{% raw %}#ch:dfe">Chapter 8</a>). Its feedback is a clean <span class="math inline">\(\pm1\)</span> decision, so it adds no noise, but it cancels only <em>post</em>-cursors and its first tap must close a loop within one UI.</p>
+<p><a href="#fig:ch5-anatomy">Figure 5.4</a> reads the REF pulse in these terms. Each zone of cursors has a natural owner.</p>
+<div id="fig:ch5-anatomy">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch05_anatomy.svg' | relative_url }}{% raw %}" style="width:753px" alt="Each part of the pulse response has a natural owner." loading="lazy" />
+<figcaption><span class="capnum">Figure 5.4.</span> <strong>Each part of the pulse response has a natural owner.</strong> The pre-cursor (red) can only be removed by linear equalization, either the TX pre-tap or the CTLE. The first post-cursors (blue) are the DFE’s job, which it does without noise. The long tail (teal) is best flattened by the CTLE or the TX post-tap, because removing it with DFE taps would take many taps. Shown is the unequalized REF pulse with <span class="math inline">\(p_{-1}..p_{10}\)</span>.</figcaption>
+</figure>
+<div id="tab:ch5-eqcompare">
+
+</div>
+<div class="tabularx">
+<p><span>@l L L L l L@</span> &amp; <strong>Cursors it fixes</strong> &amp; <strong>Frequency view</strong> &amp; <strong>Noise, crosstalk</strong> &amp; <strong>Power</strong> &amp; <strong>Main limit</strong><br />
+TX FFE &amp; pre + post (as many as taps) &amp; lowers LF, Nyquist kept &amp; no RX noise gain; launch swing lost &amp; low &amp; peak swing; not adaptive without a back-channel<br />
+RX CTLE &amp; long tail, some pre-cursor &amp; boosts HF over LF &amp; amplifies HF noise and crosstalk &amp; low &amp; peaking range and linearity<br />
+RX FFE &amp; pre + post &amp; like a CTLE, discrete taps &amp; amplifies noise &amp; high &amp; analog delays or ADC power<br />
+DFE &amp; post only (one per tap) &amp; nonlinear (no <span class="math inline">\(H(f)\)</span>) &amp; no noise gain &amp; medium &amp; tap-1 timing, error propagation<br />
+</p>
+</div>
+<h2 id="sec:ch5-preview"><span class="secnum">5.4</span>Preview: who does how much?</h2>
+<p>None of the four is free: the TX FFE costs swing, the CTLE noise and linearity, the DFE timing margin and loop power. The design question is how to <em>split</em> the work of undoing 17.4 dB between them. Chapters <a href="{% endraw %}{{ '/chapters/06-transmit-ffe/' | relative_url }}{% raw %}">6</a>–<a href="{% endraw %}{{ '/chapters/08-decision-feedback-equalization-and-adaptation/' | relative_url }}{% raw %}#ch:dfe">8</a> build each equalizer, and <a href="{% endraw %}{{ '/chapters/08-decision-feedback-equalization-and-adaptation/' | relative_url }}{% raw %}#sec:eq-partition">Section 8.5</a> answers the split with numbers for REF and for 5–30 dB channels.</p>
+<div class="tbox tbox-insight">
+<div class="tbox-title">
+<p>Design rule of thumb</p>
+</div>
+<p>Give each equalizer the job it does most cheaply. The TX pre-tap takes the pre-cursor, the DFE takes the first one or two post-cursors without adding noise, and a linear equalizer (CTLE or TX post-tap) flattens the long tail. Any equalizer pushed far beyond its natural job costs more than it returns.</p>
+</div>
+<div class="tbox tbox-takeaways">
+<div class="tbox-title">
+<p>Key takeaways</p>
+</div>
+<ul>
+<li><p>Loss at <span class="math inline">\(f_\mathrm{N}\)</span> spreads each bit into its neighbours. On REF the ISI sum exceeds the main cursor, so the PDA eye is <span class="math inline">\(-0.161\)</span> V.</p></li>
+<li><p>Equalization aims for a cascade that is flat up to <span class="math inline">\(f_\mathrm{N}\)</span>. In the time domain that means zero ISI cursors.</p></li>
+<li><p>A zero-forcing inverse multiplies the noise by <span class="math inline">\(\int\lvert H_\mathrm{eq}\rvert^2\)</span>. That is 12.1 dB on REF up to <span class="math inline">\(f_\mathrm{N}\)</span> and 22.5 dB up to <span class="math inline">\(2f_\mathrm{N}\)</span>.</p></li>
+<li><p>In Liu’s cable model, <span class="math inline">\(y_{\max}=(2V_0/\pi)\arctan(\pi T_\mathrm{b}/k_dl)\)</span>. At 15 dB of loss the main cursor is 0.47 and the eye is already closed.</p></li>
+<li><p>The TX FFE, CTLE, RX FFE and DFE differ in which cursors they fix, whether they amplify noise, and what limits them.</p></li>
+<li><p>The partition between them is a design decision. <a href="{% endraw %}{{ '/chapters/08-decision-feedback-equalization-and-adaptation/' | relative_url }}{% raw %}#sec:eq-partition">Section 8.5</a> makes it for Open-SERDES.</p></li>
+</ul>
+</div>
+
+<nav class="prev-next" aria-label="Chapter navigation"><a class="pn-link prev" href="{% endraw %}{{ '/chapters/04-link-budgets-and-statistical-analysis/' | relative_url }}{% raw %}"><small>← Previous</small>Link Budgets and Statistical Analysis</a><a class="pn-link next" href="{% endraw %}{{ '/chapters/06-transmit-ffe/' | relative_url }}{% raw %}"><small>Next →</small>Transmit FFE</a></nav>
+<p class="page-source">Generated from <a href="https://github.com/bricd-org/serdes-tutorial/blob/main/book/tutorial/chapters/05_eqfund.tex">book/tutorial/chapters/05_eqfund.tex</a>. Figure, table and equation numbers match the <a href="{% endraw %}{{ '/assets/pdf/Open-SERDES_Tutorial.pdf' | relative_url }}{% raw %}">PDF edition</a>.</p>
+{% endraw %}
