@@ -173,19 +173,20 @@ ol.references li::before { color: $navy; font-weight: 700; }
   span { font-size: 0.8rem; color: #cfd8ea; } }
 
 // ---------------------------------------------------------------- dark mode button (header_custom.html)
-// In the header row it sits just left of the aux links. On narrow screens the header stacks
-// (search, then the links), so the button floats into the empty right end of the links row.
+// On wide screens it sits in the top bar just left of the aux links. On narrow screens that bar
+// is folded into the menu, so a copy sits in the site header next to the menu button instead.
 .theme-toggle {
-  display: flex; align-items: center; justify-content: center;
-  float: right; width: 2.1rem; height: 2.1rem; margin: 0.25rem 1rem 0 0.5rem; padding: 0;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0; align-self: center;
+  width: 2.1rem; height: 2.1rem; padding: 0;
   border: 1px solid $border-color; border-radius: 50%; background: transparent; color: $body-text-color;
   cursor: pointer;
-  @include mq(md) { flex-shrink: 0; align-self: center; margin: 0 0.5rem 0 0; }
   svg { width: 1.1rem; height: 1.1rem; }
   &:hover { color: $link-color; border-color: $link-color; }
   &:focus-visible { outline: 2px solid $link-color; outline-offset: 2px; }
   &[aria-pressed="true"] .icon-moon, &:not([aria-pressed="true"]) .icon-sun { display: none; }
 }
+.main-header .theme-toggle { display: none; margin-right: 0.5rem; @include mq(md) { display: flex; } }
+.site-header .theme-toggle { @include mq(md) { display: none; } }
 
 // ---------------------------------------------------------------- dark mode
 // Only compiled into the dark stylesheet (color_schemes/bricd-dark.scss). The rules above

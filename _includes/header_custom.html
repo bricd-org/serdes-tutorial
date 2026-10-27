@@ -5,19 +5,30 @@
 </button>
 <script>
   (function () {
-    var btn = document.getElementById('theme-toggle');
-    function show(theme) {
-      btn.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false');
-      btn.title = theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
+    var buttons = [document.getElementById('theme-toggle')];
+    // on narrow screens this header is folded into the menu, so put a copy next to the menu button
+    var menu = document.getElementById('menu-button');
+    if (menu) {
+      var copy = buttons[0].cloneNode(true);
+      copy.removeAttribute('id');
+      menu.parentNode.insertBefore(copy, menu);
+      buttons.push(copy);
     }
-    show(document.documentElement.getAttribute('data-theme'));
-    btn.addEventListener('click', function () {
+    function show(theme) {
+      buttons.forEach(function (btn) {
+        btn.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false');
+        btn.title = theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
+      });
+    }
+    function toggle() {
       var theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
       // "default" is just-the-docs-default.css, the light BRICD scheme set in _config.yml
       jtd.setTheme(theme === 'dark' ? 'bricd-dark' : 'default');
       document.documentElement.setAttribute('data-theme', theme);
       try { localStorage.setItem('bricd-theme', theme); } catch (e) {}
       show(theme);
-    });
+    }
+    show(document.documentElement.getAttribute('data-theme'));
+    buttons.forEach(function (btn) { btn.addEventListener('click', toggle); });
   })();
 </script>
