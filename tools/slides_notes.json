@@ -28,6 +28,16 @@
   },
   {
    "n": 4,
+   "id": "fs_n01",
+   "title": "Lane rates double every 3–4 years",
+   "notes": "Per-lane rates have doubled every three to four years: PCIe, backplane Ethernet and USB all climb the same line, and commercial lanes now reach 100 to 200 Gb/s. We start low on that curve on purpose. 5 Gb/s NRZ is the PCIe 2.0 and 5GBASE-KR class: hard enough to need equalization and clock recovery, modest enough for a first tapeout on an open PDK. Figure 1.4 of the tutorial.",
+   "related": {
+    "url": "/chapters/01-why-serial-links/#fig:ch1-rate-year",
+    "label": "Ch 1, Figure 1.4"
+   }
+  },
+  {
+   "n": 5,
    "id": "h78e4bdb3a0fc8be2_2_53",
    "title": "What exists in the open today",
    "notes": "Be fair to prior work. Purdue’s OpenSerDes (Kumar, Chatterjee, Sen, DATE 2021) is the closest: a fully synthesizable all-digital link in SKY130 at 2 Gb/s in post-layout simulation, about 438 mW including SER/DES/CDR, with no equalization. The Python and Julia link simulators are excellent but live at the system level. JKU’s template gives us the flow. Nobody has yet put these together into a mixed-signal, equalized, multi-Gb/s link on an open PDK. That is the gap Open-SERDES targets.",
@@ -37,14 +47,14 @@
    }
   },
   {
-   "n": 5,
+   "n": 6,
    "id": "h78e4bdb3a0fc8be2_2_64",
    "title": "Part 1 · Why IHP SG13G2?",
    "notes": "Part 1: the process. Why we chose IHP’s open SiGe BiCMOS PDK, and the SG13G2 work we already have.",
    "related": null
   },
   {
-   "n": 6,
+   "n": 7,
    "id": "h78e4bdb3a0fc8be2_2_74",
    "title": "SG13G2: a BiCMOS process built for speed",
    "notes": "SG13G2 is IHP’s high-performance 130 nm SiGe:C BiCMOS. The PDK documentation lists HBTs with about 300 GHz fT and 500 GHz fmax (IHP’s MOS-AK 2025 talk quotes 350 / 450 GHz, with BVceo of 1.6 V). For a 5 Gb/s NRZ link the Nyquist frequency is only 2.5 GHz, so HBT current-mode logic has enormous headroom; that is exactly what the 130 nm SKY130 CMOS designs lacked. Seven aluminium layers, the top two 2 µm and 3 µm thick, give us decent inductors and lines. And, crucially, there is an open MPW path, including Tiny Tapeout on IHP.",
@@ -54,7 +64,17 @@
    }
   },
   {
-   "n": 7,
+   "n": 8,
+   "id": "fs_n02",
+   "title": "Why HBTs: a bit lasts four CMOS gates",
+   "notes": "This is the case for SG13G2 in one picture. Half-rate CMOS needs roughly three to four FO4 delays per bit, and 130 nm CMOS fits about four into a 200 ps UI, so it has almost no margin at 5 Gb/s. An SG13G2 CML gate is about 2 ps in a ring oscillator; even loaded, it fits many times over. So the design rule is HBT CML wherever a signal runs at 1.25 GHz or faster, and CMOS everywhere else. Figure 1.6 of the tutorial.",
+   "related": {
+    "url": "/chapters/01-why-serial-links/#fig:ch1-speed",
+    "label": "Ch 1, Figure 1.6"
+   }
+  },
+  {
+   "n": 9,
    "id": "h78e4bdb3a0fc8be2_2_115",
    "title": "We don’t start from zero",
    "notes": "Three threads come together. First, our own open SG13G2 PLL, accepted at SMACD 2026: a 2.4 GHz type-II fractional-N PLL with a cross-coupled LC-VCO and a custom 4 nH spiral (Q of 16.8, modelled in openEMS), −100.8 dBc/Hz at 1 MHz, 12.73 mW, 0.347 mm². A half-rate 5 Gb/s link needs a 2.5 GHz clock, right next door. Second, an earlier University of Moratuwa project modelled a 5 Gb/s SerDes in a commercial 28 nm library, with a fast-locking ring-VCO PLL under 10 ps peak-to-peak jitter. Third, Purdue showed that open RTL-to-GDS automation can produce a working link. Open-SERDES combines all three on a faster, open BiCMOS node.",
@@ -64,14 +84,14 @@
    }
   },
   {
-   "n": 8,
+   "n": 10,
    "id": "h78e4bdb3a0fc8be2_2_136",
    "title": "Part 2 · Anatomy of a serial link",
    "notes": "Part 2: the link itself. What blocks a serial link needs, what 5 Gb/s means in numbers, and which architectural choices are still open.",
    "related": null
   },
   {
-   "n": 9,
+   "n": 11,
    "id": "h78e4bdb3a0fc8be2_2_146",
    "title": "Anatomy of a serial link",
    "notes": "Walk the link left to right. TX: a 16:1 serializer (a mux tree whose last stage runs at the full rate), a 2–3 tap feed-forward equalizer to pre-distort against channel loss, and a driver, current-mode (CML) or voltage-mode (SST), into a 100 Ω differential line. The channel is package, PCB traces and connectors, characterized by S-parameters. RX: a CTLE boosts high frequencies, a sampler (optionally with a DFE) decides bits, and the deserializer fans them back out. Clocking is the hard part: a TX PLL generates the half-rate 2.5 GHz clocks; on the RX side a CDR extracts timing from the data itself and steers the sampling phase.",
@@ -81,7 +101,7 @@
    }
   },
   {
-   "n": 10,
+   "n": 12,
    "id": "h78e4bdb3a0fc8be2_2_202",
    "title": "5 Gb/s, in numbers",
    "notes": "At 5 Gb/s NRZ each bit lasts 200 ps and the channel has to carry energy up to the 2.5 GHz Nyquist frequency. A BER of 1e-12 or better is the usual serial-link target. This is the same rate class as PCIe Gen 2, USB 3.2 Gen 1 and 5GBASE-KR backplane Ethernet, so standard channel models exist to test against. The bracketed numbers are deliberately open: the first deliverable of the project is a feasibility study that fixes the channel, jitter, power and area budgets.",
@@ -91,7 +111,17 @@
    }
   },
   {
-   "n": 11,
+   "n": 13,
+   "id": "fs_n03",
+   "title": "What 1 m of FR-4 does to one bit",
+   "notes": "REF is the reference channel used throughout the tutorial: one meter of FR-4 with 300 fF pads, losing 17.4 dB at the 2.5 GHz Nyquist frequency. Send it a single 1 V bit and only 0.34 V arrives in that bit's own UI; the rest smears into the bits that follow. The first post-cursor alone is more than half the main cursor. Every equalizer in this project exists to clean up that tail. Figure 3.14 of the tutorial.",
+   "related": {
+    "url": "/chapters/03-the-channel/#fig:ref-pulse",
+    "label": "Ch 3, Figure 3.14"
+   }
+  },
+  {
+   "n": 14,
    "id": "h78e4bdb3a0fc8be2_2_239",
    "title": "The design space we’ll explore",
    "notes": "This is where we want community input. Our current baseline: NRZ, because at 5 Gb/s PAM4 costs SNR and receiver complexity for no real gain. An HBT current-mode driver, since SG13G2’s bipolars make CML fast and robust; a source-series-terminated voltage-mode driver is the low-power alternative. A 2–3 tap TX FFE, an RX CTLE and a 2-tap half-rate DFE: the split the tutorial's equalization study recommends for the reference channel (more taps only if a harder channel needs them). For the sampler we want to build both an HBT CML latch and a CMOS StrongARM and compare them. Half-rate clocking means a 2.5 GHz clock, very close to our existing 2.4 GHz LC-PLL. And a bang-bang (Alexander) phase detector with a digital loop filter, the most robust CDR to get working first; baud-rate Mueller–Müller and oversampled CDRs are alternatives.",
@@ -101,14 +131,44 @@
    }
   },
   {
-   "n": 12,
+   "n": 15,
+   "id": "fs_n04",
+   "title": "Equalization opens the eye",
+   "notes": "Left, the REF pulse response with and without a TX FFE; middle and right, PRBS7 eyes at the receiver input on the same scale. Without equalization the eye is closed: the worst-case patterns overlap by 78 mV. A 2-tap FFE opens it to 163 mV. The price is swing: transmit equalization takes energy away, so the open eye is only about a third of the unequalized swing. That is why the job is shared between the TX, the CTLE and the DFE. Figure 6.5 of the tutorial.",
+   "related": {
+    "url": "/chapters/06-transmit-ffe/#fig:ch6-ref",
+    "label": "Ch 6, Figure 6.5"
+   }
+  },
+  {
+   "n": 16,
+   "id": "fs_n05",
+   "title": "Every part of the pulse has an owner",
+   "notes": "The pulse response tells you who should do what. The pre-cursor arrives before the bit is decided, so only a linear equalizer can remove it: the TX pre-tap or the CTLE. The first post-cursors are the DFE's job, and the DFE removes them without amplifying noise. The long tail would need many DFE taps, so the CTLE or the TX post-tap flattens it instead. That division of labor is the Open-SERDES baseline. Figure 5.4 of the tutorial.",
+   "related": {
+    "url": "/chapters/05-equalization-fundamentals/#fig:ch5-anatomy",
+    "label": "Ch 5, Figure 5.4"
+   }
+  },
+  {
+   "n": 17,
+   "id": "fs_n06",
+   "title": "Combining equalizers loses less eye",
+   "notes": "Each curve is the worst-case (peak-distortion) eye against channel loss at Nyquist, on a log scale. Every single strategy loses about a factor of two in eye per 5 dB of loss; combinations lose less. At REF the Open-SERDES partition, FFE plus CTLE plus a 2-tap DFE, leaves 134 mV. Above about 22 dB a CTLE with more than 12 dB of peaking overtakes it, which is the signal that a lossier channel would need more equalization. Figure 8.7 of the tutorial.",
+   "related": {
+    "url": "/chapters/08-decision-feedback-equalization-and-adaptation/#fig:ch8-partition",
+    "label": "Ch 8, Figure 8.7"
+   }
+  },
+  {
+   "n": 18,
    "id": "h78e4bdb3a0fc8be2_2_280",
    "title": "Part 3 · An open flow, channel to GDS",
    "notes": "Part 3: the workflow. This is the real contribution: a design and simulation flow anyone can rerun, from a channel S-parameter file all the way to a tapeout-ready GDS.",
    "related": null
   },
   {
-   "n": 13,
+   "n": 19,
    "id": "h78e4bdb3a0fc8be2_2_290",
    "title": "The Open-SERDES flow",
    "notes": "Five stages. One: a system-level link model in Python or Julia (serdespy, PyBERT, JLSD, with scikit-rf for S-parameters) turns a channel into block specifications: EQ taps, CTLE peaking, jitter budget. Two: transistor-level design in Xschem with ngspice, Xyce or VACASK, and CACE for PVT corners and Monte Carlo. Three: the digital side (serializer, deserializer, PRBS generator and checker, CDR loop logic) in SystemVerilog, verified with Verilator and cocotb, hardened with Yosys and LibreLane. Four: custom layout in KLayout or Magic, LVS with Netgen, parasitic extraction, and openEMS for inductors and pads. Five: top-level sign-off and a GDS ready for an IHP open MPW or Tiny Tapeout. The orange loop is the key idea: extracted results go back into the link model, so the model stays honest.",
@@ -118,7 +178,7 @@
    }
   },
   {
-   "n": 14,
+   "n": 20,
    "id": "SLIDES_API1098721617_0",
    "title": "Tool map: every step on open tools",
    "notes": "Mirrors the IIC-OSIC-TOOLS overview: one open tool, or a small set of alternatives, for each stage of the Open-SERDES flow. All of them run inside the IIC-OSIC-TOOLS container with the IHP SG13G2 Open-PDK.",
@@ -128,7 +188,7 @@
    }
   },
   {
-   "n": 15,
+   "n": 21,
    "id": "h78e4bdb3a0fc8be2_2_336",
    "title": "Closing the loop: model ↔ silicon",
    "notes": "This is the piece nobody has in the open today. System-level link simulators are usually driven by idealized numbers; circuit designers work against specs handed to them. We want both directions automated: the link model generates block specs (gain, CTLE peaking, output swing, jitter allocations), and the circuit flow returns extracted pulse responses, CTLE transfer functions and noise that are dropped straight back into the model. The outcome is a statistical eye and BER for each design point, a Python GUI in the spirit of JLSD for exploring settings, and a model whose every number traces back to a simulated, and later measured, SG13G2 cell.",
@@ -138,7 +198,7 @@
    }
   },
   {
-   "n": 16,
+   "n": 22,
    "id": "h78e4bdb3a0fc8be2_2_370",
    "title": "One repository, one command",
    "notes": "We do not want to reinvent the project infrastructure. Simon Dorrer and Harald Pretl’s ihp-sg13g2-ams-chip-template already gives a Makefile-driven, recursive macro structure that goes to a tapeout-ready chip with one make all. Open-SERDES would add a model folder and a channels folder, and treat each SerDes block as a macro. The key addition is a single spec file read by both the Python model and the analog testbenches, plus continuous-integration checks that include eye opening, not only DRC and LVS. The folder names here are a proposal, and the licence is still to be decided.",
@@ -148,7 +208,7 @@
    }
   },
   {
-   "n": 17,
+   "n": 23,
    "id": "SLIDES_API1098721617_125",
    "title": "One command: the make targets",
    "notes": "Mirrors the JKU template Makefile tree. make all calls five top-level targets; build, sim and verify recurse into every macro folder, which all expose the same targets, so each block can also be built and tested on its own.",
@@ -158,7 +218,7 @@
    }
   },
   {
-   "n": 18,
+   "n": 24,
    "id": "h78e4bdb3a0fc8be2_2_400",
    "title": "Why it’s hard, and why it’s worth it",
    "notes": "Be honest about the risk. At these speeds the weak points are model accuracy (HBT compact models and layout parasitics at multi-GHz), the maturity of open RF extraction and EM tools for pads, ESD structures and inductors, simulation time for PLL and CDR loops, and the very practical problem of packaging and measuring a 5 Gb/s signal. Each of those is also a contribution in its own right. If we succeed, the community gets the first open multi-Gb/s reference design, a reusable CML cell library, a calibrated link model, and a complete teaching path from textbook link theory to silicon.",
@@ -168,14 +228,14 @@
    }
   },
   {
-   "n": 19,
+   "n": 25,
    "id": "SLIDES_API1098721617_257",
    "title": "Part 4 · What we’ll build and test",
    "notes": "Part 4: what we will actually deliver, what the chip looks like, and how we will test it, in simulation and in the lab. Everything here is a concept and will evolve.",
    "related": null
   },
   {
-   "n": 20,
+   "n": 26,
    "id": "SLIDES_API1098721617_267",
    "title": "Highlights & deliverables",
    "notes": "The A-to-Z summary. Highlights: what makes the project new. Deliverables: what anyone will be able to download at the end: the GDS, the RTL and benches, the link model with its GUI, a reusable HBT/CML cell library, documentation, and the paper with open measurement data.",
@@ -185,7 +245,7 @@
    }
   },
   {
-   "n": 21,
+   "n": 27,
    "id": "SLIDES_API1098721617_379",
    "title": "Chip block diagram (concept)",
    "notes": "One possible test chip, in the spirit of the TinyWhisper block diagram. Digital on the left: SPI configuration registers, a PRBS-7/31 generator and a PRBS checker with error counter. TX on top: serializer, FFE and driver to the TX pads. RX below: CTLE, sampler with optional DFE, and deserializer back to the checker. The LC-PLL takes an external reference and clocks the TX; the CDR recovers timing for the sampler. An internal loopback lets us test TX into RX on chip, and the external test PCB closes the loop through a real channel.",
@@ -195,7 +255,47 @@
    }
   },
   {
-   "n": 22,
+   "n": 28,
+   "id": "fs_n07",
+   "title": "The reference transceiver",
+   "notes": "This is the reference design the tutorial builds up to. Read the transmitter band left to right and the receiver band right to left. The core is CMOS at 312.5 MHz; everything at 1.25 GHz or faster is HBT CML. One 2.5 GHz PLL is used twice: divided down for the TX, and split into I and Q and rotated by phase interpolators for the RX. The CDR is a digital loop, and a near-end loopback lets the chip test itself. Figure 14.1 of the tutorial.",
+   "related": {
+    "url": "/chapters/14-the-open-serdes-architecture/#fig:arch",
+    "label": "Ch 14, Figure 14.1"
+   }
+  },
+  {
+   "n": 29,
+   "id": "fs_n08",
+   "title": "One PLL clocks the whole chip",
+   "notes": "One PLL serves the whole chip. The TX divides it down with a fixed phase to the 312.5 MHz word clock. The RX makes four phases with a polyphase filter and rotates them with two phase interpolators: D0 and D1 sample the eye centers on the edges of I, E0 and E1 sample the crossings on the edges of Q. One 400 ps clock period carries two bits and spans 64 PI steps of 6.25 ps. The CDR loop updates every 8 UI, at 625 MHz. Figure 14.2 of the tutorial.",
+   "related": {
+    "url": "/chapters/14-the-open-serdes-architecture/#fig:ch14-clock",
+    "label": "Ch 14, Figure 14.2"
+   }
+  },
+  {
+   "n": 30,
+   "id": "fs_n09",
+   "title": "Do the budgets close?",
+   "notes": "Both budgets close, but not equally. (a) Start from the 131 mV statistical eye of REF with 2-tap de-emphasis and subtract noise, jitter, offset and sampler sensitivity: 76 mV of margin remains, more than half the eye. (b) Start from one 200 ps UI and subtract the deterministic jitter linearly and 2Q times the random jitter in RSS: 141 ps remains, only 1.4 ps more than the 0.7 UI target. Clocking is where the design has the least room. Figure 14.3 of the tutorial.",
+   "related": {
+    "url": "/chapters/14-the-open-serdes-architecture/#fig:ch14-budget",
+    "label": "Ch 14, Figure 14.3"
+   }
+  },
+  {
+   "n": 31,
+   "id": "fs_n10",
+   "title": "Where the 216 mW goes",
+   "notes": "A first-cut power budget of about 216 mW, or 43 pJ/b, colored by section. The TX takes 48 percent, mostly static CML current, and the 3-tap CML driver alone is almost a quarter of the chip. The four samplers are the largest RX item, and CMOS logic is a rounding error. Right: energy per bit against the Purdue OpenSerDes in SKY130, about 219 pJ/b, and against Open-SERDES with a voltage-mode SST driver at 34 pJ/b, the first saving to go after. Figure 14.7 of the tutorial.",
+   "related": {
+    "url": "/chapters/14-the-open-serdes-architecture/#fig:ch14-power",
+    "label": "Ch 14, Figure 14.7"
+   }
+  },
+  {
+   "n": 32,
    "id": "SLIDES_API1098721617_513",
    "title": "Floorplan concept",
    "notes": "What the die could look like, in the spirit of the TinyWhisper chip render. High-speed TX and RX pads sit on one edge to keep bond wires short; the LC-PLL gets its own corner, guard ring and supply; the digital core is hardened with LibreLane. Size and placement are placeholders until the blocks exist.",
@@ -205,7 +305,7 @@
    }
   },
   {
-   "n": 23,
+   "n": 33,
    "id": "SLIDES_API1098721617_663",
    "title": "Simulation testbench & sign-off",
    "notes": "Inspired by the full top-level LVS and simulation slide. The top-level testbench drives a PRBS-31 pattern through the post-layout TX, an S-parameter channel model and the post-layout RX into a checker that reports eye, BER and jitter. We sweep channel loss, PVT, jitter and settings against pass criteria that the feasibility study will fix, and sign off with full-chip DRC and LVS without black boxes, all in CI.",
@@ -215,7 +315,7 @@
    }
   },
   {
-   "n": 24,
+   "n": 34,
    "id": "SLIDES_API1098721617_768",
    "title": "Test bench in the lab",
    "notes": "Inspired by the TinyWhisper breadboard and scope photos. A PC runs the Python GUI and talks to an FPGA or MCU board over USB; that board configures the chip over SPI and reads back the BER counter. A bench supply powers the test PCB, a clean reference clock feeds the PLL, TX goes out through SMA into a channel or loopback and back into RX, and a sampling scope or BERT captures eyes, jitter and BER.",
@@ -225,7 +325,7 @@
    }
   },
   {
-   "n": 25,
+   "n": 35,
    "id": "SLIDES_API1098721617_885",
    "title": "Package & pinout (concept)",
    "notes": "Inspired by the TinyWhisper bonding diagram. A QFN package with the high-speed TX and RX pins on one side and the shortest bond wires, an external reference clock, SPI for configuration and BER readout, separate supply domains, and a few status pins. As in the JKU template, the bonding plan would be generated from a config file.",
@@ -235,14 +335,14 @@
    }
   },
   {
-   "n": 26,
+   "n": 36,
    "id": "h78e4bdb3a0fc8be2_2_430",
    "title": "Part 5 · Roadmap & community",
    "notes": "Part 5: how we get there, and where you come in.",
    "related": null
   },
   {
-   "n": 27,
+   "n": 37,
    "id": "h78e4bdb3a0fc8be2_2_440",
    "title": "Roadmap: blocks → 5 Gb/s → beyond",
    "notes": "Five phases. Phase 0 is the feasibility study: an industry-standard channel, the link model, the architecture decision and frozen block specs. Phase 1 builds and tapes out the building blocks on a test shuttle, such as Tiny Tapeout IHP or an IHP open MPW. Phase 2 is the headline goal: a complete 5 Gb/s NRZ transceiver with TX, RX, PLL and CDR, verified with an on-chip PRBS loopback, taped out as a full chip. Phase 3 is measurement and publication, with open data, targeting IEEE JSSC or TCAS and SMACD 2027. Phase 4 pushes to 10 Gb/s and beyond: adaptive DFE, PAM4, multiple lanes and chiplet-style links. [Add dates once the timeline is agreed.]",
@@ -252,14 +352,14 @@
    }
   },
   {
-   "n": 28,
+   "n": 38,
    "id": "h78e4bdb3a0fc8be2_2_475",
    "title": "Get involved",
    "notes": "We need people across the whole stack, and you do not need to know everything to start: curiosity and willingness to learn count most. System modellers in Python or Julia; analog and RF designers for CML, CTLE, samplers and the PLL; digital designers for the serializer, deserializer, PRBS and CDR logic; layout and EM people; anyone with a lab bench for measurement; and people who love writing tutorials. Everything will live publicly on GitHub.",
    "related": null
   },
   {
-   "n": 29,
+   "n": 39,
    "id": "h78e4bdb3a0fc8be2_2_515",
    "title": "References",
    "notes": "Reference slide; leave it up during questions if useful.",

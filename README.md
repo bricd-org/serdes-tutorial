@@ -28,7 +28,8 @@ book/                 LaTeX source of the book: the same files as the Overleaf p
   tutorial/tikzext/     pre-compiled TikZ figures
 tools/build_site.py   converts book/ into the website pages below
 chapters/ appendices/ parts/ preface.html references.html   generated pages (do not edit by hand)
-assets/figs/          generated figures (SVG/PNG)    assets/pdf/   the compiled book
+assets/figs/          generated figures (SVG/PNG)    assets/pdf/   the compiled book and the intro slides
+tools/build_slides.py  rebuilds the Intro Slides page (slides.md, assets/slides/) from the exported deck
 _config.yml, _sass/, _includes/   Jekyll + just-the-docs theme settings (BRICD colours and fonts)
 .github/workflows/pages.yml       builds the site and deploys it to GitHub Pages
 ```
