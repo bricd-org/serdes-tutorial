@@ -66,9 +66,6 @@ repository settings, set **Pages → Build and deployment → Source** to **GitH
 
 ## Credits
 
-Supervision team: Avishka Herath (ENTC, University of Moratuwa), Udara Mendis (TUHH) and
-Kithmin Wickremasinghe (UBC).
-
 The tutorial draws on:
 
 - Prof. Sam Palermo's ECEN 720 course (Texas A&M)

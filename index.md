@@ -51,6 +51,6 @@ Every fast interface (PCIe, USB, Ethernet, chiplet links) rides on a SerDes, yet
 
 ## About
 
-The tutorial is written for the Open-SERDES project at [BRICD](https://www.thebricd.org) (Biomedical Research in Integrated Circuit Design), supervised by Avishka Herath (ENTC, University of Moratuwa), Udara Mendis (TUHH) and Kithmin Wickremasinghe (UBC). It draws on Prof. Sam Palermo's ECEN 720 course notes (Texas A&amp;M), Benjamin Liu's equalizer and CDR notes, serdespy, IHP's open PDK and JKU's IIC-OSIC-TOOLS.
+The tutorial is written for the Open-SERDES project at [BRICD](https://www.thebricd.org) (Biomedical Research in Integrated Circuit Design). It draws on Prof. Sam Palermo's ECEN 720 course notes (Texas A&amp;M), Benjamin Liu's equalizer and CDR notes, serdespy, IHP's open PDK and JKU's IIC-OSIC-TOOLS.
 
 This is a living draft (v0.1, October 2026). Corrections and contributions are welcome through [GitHub issues](https://github.com/bricd-org/serdes-tutorial/issues).
