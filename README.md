@@ -79,3 +79,25 @@ The site layout follows the SkillSurf
 [just-the-docs](https://github.com/just-the-docs/just-the-docs) theme.
 
 This is a living draft (v0.1, October 2026). Corrections are welcome as issues or pull requests.
+
+## Licence
+
+© 2026 the Open-SERDES Tutorial authors, BRICD.
+
+- **Content**: the LaTeX book and its text, figures, tables and slides, the website pages and the
+  PDFs are licensed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](LICENSE).
+  You may share and adapt them, including in your own courses and commercially, if you give
+  credit, for example *"Open-SERDES Tutorial, BRICD, https://www.thebricd.org/serdes-tutorial/,
+  CC BY 4.0"*, and say what you changed.
+- **Code**: the lab scripts in `book/tutorial/code/`, the figure scripts in `book/tutorial/figsrc/`,
+  the build tools in `tools/`, and the site's configuration, includes and styles are licensed under
+  the [MIT licence](LICENSE-CODE).
+
+Neither licence covers:
+
+- the BRICD name and logo;
+- the works the tutorial cites. Their ideas and results remain with their authors (see Credits
+  above and the [References](https://www.thebricd.org/serdes-tutorial/references/) page), and
+  figures marked "After …" are redrawn from the credited source;
+- the Canva elements in the graphics made with Canva (`book/tutorial/canva/`,
+  `assets/figs/canva_*`), which are used under Canva's content licence.
