@@ -25,7 +25,7 @@ The flow in \cref{fig:ch15-flow} runs left to right, but it is not a pipeline. E
 %% =====================================================================
 \section{The open toolchain}\label{sec:toolchain}
 
-Every tool in this chapter ships in one Docker image, \textbf{IIC-OSIC-TOOLS}~\cite{iicosic}, together with the IHP \sgx{} PDK~\cite{ihppdk}; pinning one image tag gives the whole team identical tools. The \OS{} repository builds on the JKU \textbf{analog mixed-signal chip template}~\cite{jkutemplate} (it needs image 2026.06 or later). Its recursive Makefiles make one \code{make all} harden the digital macros, run every testbench including PVT and Monte Carlo, run DRC, LVS and extraction on the analog macros, assemble the chip digital-on-top with seal ring, pad frame and fill, run a full-chip LVS without black boxes, and draw the bonding diagram. GitHub Actions rerun it on every commit, so a broken block is noticed the day it breaks.
+Every tool in this chapter ships in one Docker image, \textbf{IIC-OSIC-TOOLS}~\cite{iicosic}, together with the IHP \sgx{} PDK~\cite{ihppdk}; pinning one image tag gives the whole team identical tools. The \OS{} repository builds on the JKU \textbf{analog mixed-signal chip template}~\cite{jkutemplate} (it needs image 2026.06 or later). Its recursive Makefiles make one \code{make all} run every testbench including PVT and Monte Carlo, run DRC, LVS and extraction on the analog macros, harden the digital logic and assemble the chip digital-on-top with seal ring, pad frame and fill, run a full-chip LVS without black boxes, and draw the bonding diagram. GitHub Actions rerun it on every commit, so a broken block is noticed the day it breaks.
 
 \Cref{fig:ch15-tools} maps the tools onto the flow, and \cref{tab:ch15-tools} says what each one is for.
 
@@ -194,24 +194,36 @@ At 5\,Gb/s a layout can lose the margin that the schematic won. Six habits keep 
 
 \subsection{Repository structure}\label{sec:ch15-repo}
 
-The \OS{} repository follows the recursive layout of the JKU template: every macro has the same folders as the top level and its own Makefile, so a block can be built, simulated and verified alone.
+The \OS{} repository keeps the recursive layout of the JKU template: every analog block is a macro with its own schematics, testbenches, layout, verification and Makefile, so a block can be built, simulated and verified alone. The listing shows these folders for \code{tx\_serializer}; every other macro has the same ones. The digital half (PRBS, the CMOS serializer and deserializer stages, the CDR loop filter and SPI) is not a macro: it lives in \code{rtl/} and is hardened with the chip, digital-on-top. \OS{} adds four folders of its own: \code{spec/}, the one specification file that the link model and every testbench read; \code{model/}; \code{channels/}; and \code{lab/}, for the test board and the measured data of \cref{sec:labtest}. The others (\code{flow/}, \code{layout/}, \code{netlist/}, \code{ip/}, \code{packaging/}, \code{release/} and \code{doc/}) come with the template.
 
 \begin{lstlisting}[style=shell,language={},basicstyle=\ttfamily\scriptsize]
 open-serdes/                  # from ihp-sg13g2-ams-chip-template
-|-- Makefile                  # make all: build, simulate, DRC, LVS, bond plan
-|-- model/                    # serdespy model, labs (Ch. 16), GUI demo
-|-- macros/
-|   |-- tx_driver/            # analog macro: one per block
+|-- Makefile                  # make model && make all
+|-- spec/                     # one spec file: model and testbenches
+|-- model/                    # link model, stat. eye, GUI, labs (Ch. 16)
+|-- channels/                 # S-parameters: REF, REF-10, 802.3, boards
+|-- macros/                   # analog macros, one per block
+|   |-- tx_serializer/        # CML 4:2 and 2:1, CMOS-to-CML
 |   |   |-- schematic/  testbenches/  layout/  netlist/
-|   |   |-- verification/  scripts/  cace/  Makefile
-|   |-- tx_serializer/  rx_frontend/  rx_sampler/  pll/  phase_interp/
-|   `-- serdes_digital/       # PRBS, CDR loop filter, SPI
-|       |-- rtl/  testbenches/          # cocotb + Verilator/Icarus
-|       `-- flow/librelane/             # hardening config
-|-- flow/librelane/           # digital-on-top chip assembly
-|-- layout/  netlist/  verification/  release/
-`-- docs/                     # this tutorial, CACE datasheets
+|   |   |-- verification/     # drc/  lvs/  cace/ (limits from spec/)
+|   |   |-- scripts/
+|   |   |-- final/            # GDS, LEF, lib for the chip assembly
+|   |   `-- Makefile          # make all: build, sim, DRC, LVS
+|   |-- tx_ffe_driver/        # 3-tap CML driver, termination, ESD, pad
+|   |-- rx_ctle/              # termination, ESD, loopback mux, CTLE
+|   |-- rx_sampler_dfe/       # 2-tap DFE summer, four samplers
+|   |-- pll_lcvco/            # integer-N PLL, LC VCO, dividers
+|   |-- cdr_pi/               # I/Q generation, two phase interpolators
+|   `-- cml_lib/              # shared HBT CML cells
+|-- rtl/                      # PRBS, CMOS SER/DES, CDR loop filter, SPI
+|-- flow/                     # LibreLane: rtl/ hardened digital-on-top
+|-- verification/             # link regression, eye checks, full-chip DRC/LVS
+|-- layout/  netlist/  ip/  packaging/  release/
+|-- lab/                      # test board, bring-up scripts, data
+`-- doc/                      # documentation (from the template)
 \end{lstlisting}
+
+The template's \code{make macro FROM=inverter NAME=rx\_ctle} creates a new macro from its example. The macro's CACE datasheet reads every limit from \code{spec/}, so a number changes in one place only.
 
 %% =====================================================================
 \section{Testing the chip in the lab}\label{sec:labtest}
