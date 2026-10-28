@@ -96,6 +96,9 @@ $heading-font: "Spectral", Georgia, "Times New Roman", serif;
 .main-content .table-wrapper, .main-content table {
   box-shadow: none; border-collapse: collapse; margin: 1rem auto;
 }
+// KaTeX's hidden MathML copy is absolutely positioned; without this it escapes the wrapper's
+// sideways scroll and widens the whole page on a phone (the cursor table in Chapter 3)
+.main-content .table-wrapper { position: relative; }
 .main-content table {
   border-top: 2px solid $navy; border-bottom: 2px solid $navy; font-size: 0.9rem;
   th { background: $bgpale; color: $navy; font-weight: 700; border-bottom: 1px solid $navy; }
