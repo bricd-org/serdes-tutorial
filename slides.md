@@ -220,7 +220,7 @@ permalink: /slides/
 <figcaption><span class="capnum">Slide 21.</span> The Open-SERDES flow <a class="slide-related" href="{{ '/chapters/15-design-and-verification-flow-with-open-tools/' | relative_url }}#sec:toolchain">Ch 15 →</a></figcaption>
 </figure>
 <details class="slide-notes" markdown="0"><summary>Speaker notes</summary>
-<p>Five stages. One: a system-level link model in Python or Julia (serdespy, PyBERT, JLSD, with scikit-rf for S-parameters) turns a channel into block specifications: EQ taps, CTLE peaking, jitter budget. Two: transistor-level design in Xschem with ngspice, Xyce or VACASK, and CACE for PVT corners and Monte Carlo. Three: the digital side (serializer, deserializer, PRBS generator and checker, CDR loop logic) in SystemVerilog, verified with Verilator and cocotb, hardened with Yosys and LibreLane. Four: custom layout in KLayout or Magic, LVS with Netgen, parasitic extraction, and openEMS for inductors and pads. Five: top-level sign-off and a GDS ready for an IHP open MPW or Tiny Tapeout. The orange loop is the key idea: extracted results go back into the link model, so the model stays honest.</p>
+<p>Five stages. One: a system-level link model in Python or Julia (serdespy, PyBERT, JLSD, with scikit-rf for S-parameters) turns a channel into block specifications: EQ taps, CTLE peaking, jitter budget. Two: transistor-level design in Xschem with ngspice, Xyce or VACASK, and CACE for PVT corners and Monte Carlo. Three: the digital side (serializer, deserializer, PRBS generator and checker, CDR loop logic) in SystemVerilog, verified with Verilator and cocotb, hardened with Yosys and LibreLane as part of the chip, digital-on-top, rather than as separate macros. Four: custom layout in KLayout or Magic, LVS with Netgen, parasitic extraction, and openEMS for inductors and pads. Five: top-level sign-off and a GDS ready for an IHP open MPW or Tiny Tapeout. The orange loop is the key idea: extracted results go back into the link model, so the model stays honest.</p>
 </details>
 
 <figure class="slide" id="slide-22" markdown="0">
@@ -241,18 +241,18 @@ permalink: /slides/
 
 <figure class="slide" id="slide-24" markdown="0">
 <img src="{{ '/assets/slides/slide-24.png' | relative_url }}" alt="Slide 24: One repository, one command" loading="lazy" width="1600" height="900">
-<figcaption><span class="capnum">Slide 24.</span> One repository, one command <a class="slide-related" href="{{ '/chapters/15-design-and-verification-flow-with-open-tools/' | relative_url }}">Ch 15 →</a></figcaption>
+<figcaption><span class="capnum">Slide 24.</span> One repository, one command <a class="slide-related" href="{{ '/chapters/15-design-and-verification-flow-with-open-tools/' | relative_url }}#sec:ch15-repo">Ch 15, Section 15.4.1 →</a></figcaption>
 </figure>
 <details class="slide-notes" markdown="0"><summary>Speaker notes</summary>
-<p>We do not want to reinvent the project infrastructure. Simon Dorrer and Harald Pretl’s ihp-sg13g2-ams-chip-template already gives a Makefile-driven, recursive macro structure that goes to a tapeout-ready chip with one make all. Open-SERDES would add a model folder and a channels folder, and treat each SerDes block as a macro. The key addition is a single spec file read by both the Python model and the analog testbenches, plus continuous-integration checks that include eye opening, not only DRC and LVS. The folder names here are a proposal, and the licence is still to be decided.</p>
+<p>We do not want to reinvent the project infrastructure. Simon Dorrer and Harald Pretl’s ihp-sg13g2-ams-chip-template already gives a Makefile-driven, recursive macro structure that goes to a tapeout-ready chip with one make all. Open-SERDES keeps that layout: every analog block is a macro with its own schematics, testbenches, layout, verification and Makefile, so it can be built and checked on its own, and cml_lib holds the shared HBT CML cells. The digital half (PRBS, the CMOS serializer and deserializer stages, the CDR loop filter and SPI) is not a macro: it lives in rtl/ and is hardened with the chip, digital-on-top. Open-SERDES adds four folders of its own: spec, model, channels and lab. The key addition is the single spec file in spec/, read by the Python model and by every testbench, plus continuous-integration checks that include eye opening, not only DRC and LVS. The licence is still to be confirmed.</p>
 </details>
 
 <figure class="slide" id="slide-25" markdown="0">
 <img src="{{ '/assets/slides/slide-25.png' | relative_url }}" alt="Slide 25: One command: the make targets" loading="lazy" width="1600" height="900">
-<figcaption><span class="capnum">Slide 25.</span> One command: the make targets <a class="slide-related" href="{{ '/chapters/15-design-and-verification-flow-with-open-tools/' | relative_url }}">Ch 15 →</a></figcaption>
+<figcaption><span class="capnum">Slide 25.</span> One command: the make targets <a class="slide-related" href="{{ '/chapters/15-design-and-verification-flow-with-open-tools/' | relative_url }}#sec:ch15-repo">Ch 15, Section 15.4.1 →</a></figcaption>
 </figure>
 <details class="slide-notes" markdown="0"><summary>Speaker notes</summary>
-<p>Mirrors the JKU template Makefile tree. make all calls five top-level targets; build, sim and verify recurse into every macro folder, which all expose the same targets, so each block can also be built and tested on its own.</p>
+<p>Mirrors the JKU template Makefile tree as the Open-SERDES repository uses it (Section 15.4.1 of the tutorial). make model runs the link model first; make all then builds, simulates and verifies every analog macro, hardens the rtl/ logic with the chip, digital-on-top, and packages the chip with its seal ring, pads and bonding plan. build, sim and verify recurse into every macro folder, which all expose the same targets, so each block can also be built and tested on its own.</p>
 </details>
 
 <figure class="slide" id="slide-26" markdown="0">
@@ -284,7 +284,7 @@ permalink: /slides/
 <figcaption><span class="capnum">Slide 29.</span> Chip block diagram (concept) <a class="slide-related" href="{{ '/chapters/14-the-open-serdes-architecture/' | relative_url }}#sec:ch14-testchip">Ch 14 →</a></figcaption>
 </figure>
 <details class="slide-notes" markdown="0"><summary>Speaker notes</summary>
-<p>One possible test chip, in the spirit of the TinyWhisper block diagram. Digital on the left: SPI configuration registers, a PRBS-7/31 generator and a PRBS checker with error counter. TX on top: serializer, FFE and driver to the TX pads. RX below: CTLE, sampler with optional DFE, and deserializer back to the checker. The LC-PLL (a 10 GHz VCO with dividers, so one register selects 5 or 10 Gb/s) takes an external reference and clocks the TX; the CDR recovers timing for the sampler. An internal loopback lets us test TX into RX on chip, and the external test PCB closes the loop through a real channel.</p>
+<p>One possible test chip, in the spirit of the TinyWhisper block diagram. Digital on the left: SPI configuration registers, a PRBS-7/31 generator and a PRBS checker with error counter. TX on top: serializer, FFE and driver to the TX pads. RX below: CTLE, sampler with optional DFE, and deserializer back to the checker. The LC-PLL (a 10 GHz VCO with dividers, so one register selects 5 or 10 Gb/s) takes an external reference and clocks the TX; the CDR recovers timing for the sampler. An internal loopback lets us test TX into RX on chip, and the external test PCB closes the loop through a real channel. An external clock input lets both modes be measured without the on-chip PLL.</p>
 </details>
 
 <figure class="slide" id="slide-30" markdown="0">
