@@ -70,7 +70,6 @@ repository settings, set **Pages → Build and deployment → Source** to **GitH
 The tutorial draws on:
 
 - Prof. Sam Palermo's ECEN 720 course (Texas A&M)
-- Benjamin Liu's equalizer and CDR notes
 - [serdespy](https://github.com/richard259/serdespy) (Richard Barrie and Katherine Liang)
 - the IHP Open PDK
 - JKU's IIC-OSIC-TOOLS and AMS chip template

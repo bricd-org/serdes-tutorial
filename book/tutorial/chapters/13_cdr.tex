@@ -66,7 +66,7 @@ The TX and RX of a serial link run from different crystals, each accurate to abo
 A PLL's PFD does not work on data: random data skips edges, and a missing edge looks like a frequency error. A CDR phase detector must compare edges only where the data has them, and output \emph{nothing} during runs of identical bits (\textbf{tri-state}). Two classic detectors do this.
 
 \paragraph{The Hogge linear detector}
-Hogge's detector~\cite{p5:hogge1985} uses two flip-flops and two XORs (\cref{fig:ch13-hogge}). FF1 retimes the data (B), FF2 delays B by half a cycle (A). $X = D_\mathrm{in}\oplus B$ lasts from each data transition to the next rising clock edge, $\Tb/2 + \Delta t$ when the clock is $\Delta t$ late; $Y = B\oplus A$ always lasts $\Tb/2$. X pumps up and Y pumps down, so the net charge per transition is proportional to $\Delta t$: a linear detector of gain $TD\cdot I_P/2\pi$, where the \textbf{transition density} TD is about 0.5 for random data. It tri-states and retimes the data. Its weakness is speed: at 5\,Gb/s X and Y are 100\,ps pulses from gates with 20--30\,ps edges, and the clock-to-Q delay leaves a static error unless matched; Liu puts its practical limit near 10\,Gb/s~\cite{liuCDR}.
+Hogge's detector~\cite{p5:hogge1985} uses two flip-flops and two XORs (\cref{fig:ch13-hogge}). FF1 retimes the data (B), FF2 delays B by half a cycle (A). $X = D_\mathrm{in}\oplus B$ lasts from each data transition to the next rising clock edge, $\Tb/2 + \Delta t$ when the clock is $\Delta t$ late; $Y = B\oplus A$ always lasts $\Tb/2$. X pumps up and Y pumps down, so the net charge per transition is proportional to $\Delta t$: a linear detector of gain $TD\cdot I_P/2\pi$, where the \textbf{transition density} TD is about 0.5 for random data. It tri-states and retimes the data. Its weakness is speed: at 5\,Gb/s X and Y are 100\,ps pulses from gates with 20--30\,ps edges, and the clock-to-Q delay leaves a static error unless matched; at 10\,Gb/s the pulses shrink to 50\,ps, close to the practical limit.
 
 \begin{figure}[tbp]
 \centering
@@ -102,7 +102,7 @@ Hogge's detector~\cite{p5:hogge1985} uses two flip-flops and two XORs (\cref{fig
 \end{tikzpicture}
 \caption{\textbf{The Hogge detector measures phase as a pulse-width difference.} FF1 retimes the data (B), FF2 delays it by half a period (A). X spans from each data transition to the next clock edge, $\Tb/2 + \Delta t$; Y is always $\Tb/2$. With no transition, both stay low: the detector tri-states.}
 \label{fig:ch13-hogge}
-\figsrc{After Liu~\cite{liuCDR} and Razavi~\cite{razaviOptical}.}
+\figsrc{After Razavi~\cite{razaviOptical}.}
 \end{figure}
 
 \paragraph{The Alexander bang-bang detector}
@@ -156,7 +156,6 @@ The output is only the \emph{sign} of the error, hence ``bang-bang'' (BB). It re
 \end{subfigure}
 \caption{\textbf{The Alexander detector compares the edge sample with its neighbours.} (a) FF$_D$ samples the data (S3), FF$_E$ samples the edge half a period earlier (S2), FF$_P$ holds the previous bit (S1); in practice a fourth flip-flop retimes S2 to CK. (b) If the edge sample lands before the transition it equals S1 (clock early); after it, S3 (clock late).}
 \label{fig:ch13-alex}
-\figsrc{After Liu~\cite{liuCDR}.}
 \end{figure}
 
 \paragraph{Half-rate in \OS{}} At half rate the four samplers D0, E0, D1, E1 fire on I, Q, $\bar{\mathrm{I}}$, $\bar{\mathrm{Q}}$ of the 2.5\,GHz clock (\cref{sec:quadrature,sec:sampler}). Each clock cycle yields two early/late decisions, from (D0, E0, D1) and (D1, E1, D0$'$), so every transition is used. The cost is that I/Q and duty-cycle errors now appear as phase offsets between the two halves (\cref{we:ch12-iq}).
@@ -166,7 +165,7 @@ The output is only the \emph{sign} of the error, hence ``bang-bang'' (BB). It re
 %% =====================================================================
 \section{The linear CDR model and jitter transfer}\label{sec:ch13-linear}
 
-With a linear detector, a CDR is a PLL with $N = 1$ and a detector gain $TD\cdot I_P/2\pi$. With proportional resistor $R_p$ and integrating capacitor $C_p$, \cref{eq:ch12-wnz} gives~\cite{liuCDR}
+With a linear detector, a CDR is a PLL with $N = 1$ and a detector gain $TD\cdot I_P/2\pi$. With proportional resistor $R_p$ and integrating capacitor $C_p$, \cref{eq:ch12-wnz} gives
 \begin{keyeq}[Linear CDR]
 \begin{equation}
 \begin{gathered}
@@ -223,8 +222,8 @@ The last term is the \textbf{dither}: with no jitter at all, a BB loop hunts aro
 
 \begin{table}[htbp]
 \centering
-\caption{The slewing model against Liu's measured 90\,nm, 10\,Gb/s BB-CDR~\cite{liuCDR}: $R_p$ = 10\,\Ohm, $C_p$ = 100\,nF, $\Kvco$ = 1\,GHz/V, $I_P$ = 300\,\textmu{}A, so $\Delta f_P$ = 3\,MHz and, at full rate with $TD$ = 0.5, $S = 1.5\times10^6$\,UI/s.}
-\label{tab:ch13-liu}
+\caption{The slewing model against a measured 90\,nm, 10\,Gb/s BB-CDR: $R_p$ = 10\,\Ohm, $C_p$ = 100\,nF, $\Kvco$ = 1\,GHz/V, $I_P$ = 300\,\textmu{}A, so $\Delta f_P$ = 3\,MHz and, at full rate with $TD$ = 0.5, $S = 1.5\times10^6$\,UI/s.}
+\label{tab:ch13-slew}
 \small
 \begin{tabular}{lccc|lccc}
 \toprule
@@ -235,7 +234,7 @@ Measured (MHz) & 4.1 & 2.8 & 1.45 & $C_p$ = 10 / 32 / 100\,nF & \multicolumn{3}{
 \end{tabular}
 \end{table}
 
-\Cref{tab:ch13-liu} checks \cref{eq:ch13-slew} against measurements. The prediction matches at 0.25 and 0.5\,UI$_\mathrm{pp}$; at 0.125\,UI the loop is no longer slewing (the input slope is below $S$) and the measured corner saturates. The bandwidth scales with $R_p$, the proportional path, and hardly depends on $C_p$: a BB-CDR is designed through its proportional step.
+\Cref{tab:ch13-slew} checks \cref{eq:ch13-slew} against measurements. The prediction matches at 0.25 and 0.5\,UI$_\mathrm{pp}$; at 0.125\,UI the loop is no longer slewing (the input slope is below $S$) and the measured corner saturates. The bandwidth scales with $R_p$, the proportional path, and hardly depends on $C_p$: a BB-CDR is designed through its proportional step.
 
 \begin{example}{An analog BB-CDR that fails, and the fix}\label{we:ch13-bb}
 \textbf{Given:} a half-rate VCO-based BB-CDR at 5\,Gb/s, $\Kvco$ = 150\,MHz/V, $I_P$ = 100\,\textmu{}A, $R_p$ = 100\,\Ohm, $C_p$ = 1\,nF, $TD$ = 0.5, and a stressed input that leaves a timing margin TM = 0.4\,UI.

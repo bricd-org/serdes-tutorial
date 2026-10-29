@@ -20,7 +20,7 @@ The TX FFE is a finite-impulse-response filter that acts on the symbol stream $a
   x_n=A\left(c_{-1}\,a_{n+1}+c_0\,a_n+c_1\,a_{n-1}\right).
   \label{eq:ch6-fir}
 \end{equation}
-The \textbf{pre-tap} $c_{-1}$ weights the \emph{next} bit. The transmitter already knows that bit, because in hardware the whole chain is delayed by one UI. The \textbf{main tap} is $c_0$ and the \textbf{post-tap} is $c_1$. Liu writes the general $(2M+1)$-tap version as $H(z)=\sum_{k=0}^{2M}\alpha_{-M+k}z^{-k}$ with $z=e^{j\omega\Tb}$~\cite{liuEq}. It has no feedback, so it is unconditionally stable.
+The \textbf{pre-tap} $c_{-1}$ weights the \emph{next} bit. The transmitter already knows that bit, because in hardware the whole chain is delayed by one UI. The \textbf{main tap} is $c_0$ and the \textbf{post-tap} is $c_1$. The general $(2M+1)$-tap version is $H(z)=\sum_{k=0}^{2M}\alpha_{-M+k}z^{-k}$ with $z=e^{j\omega\Tb}$. It has no feedback, so it is unconditionally stable.
 
 Since the channel is linear, sending $x_n$ is the same as sending three scaled, shifted copies of each bit. The pulse response seen at the receiver is therefore the convolution of the tap list with the cursor list:
 \begin{equation}
@@ -79,7 +79,7 @@ For a low-pass channel the side taps are negative. Consider a 2-tap FFE with $c_
   \label{fig:ch6-deemph}
 \end{figure}
 
-\paragraph{Frequency response} The FFE transfer function is $H_\mathrm{FFE}(f)=\sum_k c_k\,e^{-j2\pi fk\Tb}$. For two taps, $\lvert H\rvert^2=c_0^2+c_1^2+2c_0c_1\cos(2\pi f\Tb)$. In Liu's normalization $c_0=1$, $c_1=\alpha$, with $-1<\alpha<0$:
+\paragraph{Frequency response} The FFE transfer function is $H_\mathrm{FFE}(f)=\sum_k c_k\,e^{-j2\pi fk\Tb}$. For two taps, $\lvert H\rvert^2=c_0^2+c_1^2+2c_0c_1\cos(2\pi f\Tb)$. Normalized to $c_0=1$, $c_1=\alpha$, with $-1<\alpha<0$:
 
 \begin{keyeq}[2-tap FFE response and de-emphasis]
 \begin{equation}
@@ -90,7 +90,7 @@ For a low-pass channel the side taps are negative. Consider a 2-tap FFE with $c_
 With $\sum\lvert c\rvert=1$ the response is $c_0+c_1=1-2\lvert c_1\rvert$ at DC and $c_0-c_1=1$ at $\fN$, so $\mathrm{DE}=-20\log_{10}(1-2\lvert c_1\rvert)$.
 \end{keyeq}
 
-As a check, \cref{eq:ffe-resp} gives $1+\alpha$ at DC and $1-\alpha$ at $\fN$, matching Liu's sketch. (The handwritten notes contain a typo, $\sqrt{(1+\alpha)^2+2\alpha\cos\omega\Tb}$, which fails this DC check.) The response rises monotonically from DC to $\fN$ and repeats with period $1/\Tb=\qty{5}{\giga\hertz}$ (\cref{fig:ch6-ffefreq}a). It never rises above 0\,dB. It only pulls the low frequencies down.
+As a check, \cref{eq:ffe-resp} gives $1+\alpha$ at DC and $1-\alpha$ at $\fN$. The response rises monotonically from DC to $\fN$ and repeats with period $1/\Tb=\qty{5}{\giga\hertz}$ (\cref{fig:ch6-ffefreq}a). It never rises above 0\,dB. It only pulls the low frequencies down.
 
 \begin{example}{The PCIe de-emphasis presets in volts}\label{we:ch6-pcie}
 PCIe Gen2 at 5\,GT/s specifies TX de-emphasis of \qty{-3.5}{\deci\bel} and \qty{-6}{\deci\bel}. For $-3.5$\,dB, $1-2\lvert c_1\rvert=10^{-3.5/20}=0.668$, so $c_1=-0.166$ and $c_0=0.834$. For $-6$\,dB, $1-2\lvert c_1\rvert=0.501$, so $c_1=-0.249$ and $c_0=0.751$.
@@ -123,8 +123,8 @@ In a CML driver the taps steer a fixed total tail current, so the supply current
 
 The matrix has constant diagonals: it is a \textbf{Toeplitz} matrix. A $(2M+1)$-tap FFE gives a $(2M+1)\times(2M+1)$ system of the same form. The normalization step comes last. It scales the whole equalized pulse down, but it does not change where the zeros are.
 
-\begin{example}{Liu's 3-tap zero-forcing FFE}\label{we:ch6-liu}
-Liu's example pulse has $x_{-1}=0.2$, $x_0=0.85$, $x_1=-0.2$, $x_2=0.1$ and $x_3=0.05$~\cite{liuEq}. \Cref{eq:ch6-zf} reads
+\begin{example}{A 3-tap zero-forcing FFE}\label{we:ch6-zf}
+Take an example pulse with $x_{-1}=0.2$, $x_0=0.85$, $x_1=-0.2$, $x_2=0.1$ and $x_3=0.05$. \Cref{eq:ch6-zf} reads
 \[
 \begin{bmatrix}0.85&0.2&0\\-0.2&0.85&0.2\\0.1&-0.2&0.85\end{bmatrix}
 \begin{bmatrix}\alpha_{-1}\\\alpha_0\\\alpha_1\end{bmatrix}=\begin{bmatrix}0\\1\\0\end{bmatrix}
@@ -141,7 +141,7 @@ Since $\sum\lvert\alpha\rvert=1.578$, the normalized taps are $[-0.157,\ 0.667,\
 \begin{figure}[!tbp]
   \centering
   \includegraphics[width=\linewidth]{ch06_zf}
-  \caption{\textbf{Zero forcing zeros only the cursors it is told to.} (a)~Liu's example pulse. (b)~After the normalized 3-tap ZF FFE, the cursors at $k=\pm1$ are exactly zero, but ISI appears at $k=-2$ and grows at $k=+3$ (circled). Normalization to $\sum\lvert c\rvert=1$ lowers the main cursor to 0.634.}
+  \caption{\textbf{Zero forcing zeros only the cursors it is told to.} (a)~The example pulse. (b)~After the normalized 3-tap ZF FFE, the cursors at $k=\pm1$ are exactly zero, but ISI appears at $k=-2$ and grows at $k=+3$ (circled). Normalization to $\sum\lvert c\rvert=1$ lowers the main cursor to 0.634.}
   \label{fig:ch6-zf}
 \end{figure}
 

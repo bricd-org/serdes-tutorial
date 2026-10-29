@@ -7,7 +7,7 @@
 \begin{itemize}
   \item Explain how loss at $\fN$ turns into inter-symbol interference and closes the REF eye.
   \item State the zero-forcing idea and quantify why an ideal channel inverse amplifies noise.
-  \item Use Liu's cable model to connect a loss in dB to the size of the main cursor.
+  \item Use a simple cable model to connect a loss in dB to the size of the main cursor.
   \item Name the four places an equalizer can sit in a link, and what each one can and cannot fix.
   \item Frame the partition question that \cref{sec:eq-partition} answers for \OS{}.
 \end{itemize}
@@ -17,7 +17,7 @@
 
 \Cref{sec:refchannel} showed that the REF channel loses \qty{17.4}{\deci\bel} at $\fN=\qty{2.5}{\giga\hertz}$ but only \qty{0.6}{\deci\bel} at DC. A single 1-UI pulse therefore comes out smeared. Its main cursor is only $\pk{0}=\qty{0.340}{\volt}$ instead of \qty{1}{\volt}, and its energy leaks into the neighbouring bits: $\pk{1}=0.182$, $\pk{2}=0.091$ and a long tail after it, plus a small pre-cursor $\pk{-1}=0.049$ (\cref{tab:ref-cursors}). Summed over all bits, this \textbf{inter-symbol interference} (ISI) exceeds the main cursor, so the peak-distortion eye of \cref{eq:pda} is $-0.161$\,V. The eye is closed.
 
-An \textbf{equalizer} is a filter $H_\mathrm{eq}(f)$ placed somewhere in the link so that the cascade $\Hch(f)\,H_\mathrm{eq}(f)$ is flat, at least up to $\fN$~\cite{liuEq,palermo720eq}. Flat to $\fN$ is enough. A pulse sampled once per UI is free of ISI when its spectrum, folded around multiples of $1/\Tb$, adds up to a constant. A response that is flat to $\fN$ and rolls off smoothly above it comes close to meeting that condition. In the time domain, the same goal reads: \emph{make every cursor except $\pk{0}$ zero}. \Cref{fig:ch5-inverse}(a) shows the most direct way to do it, which is to build the exact inverse of the channel.
+An \textbf{equalizer} is a filter $H_\mathrm{eq}(f)$ placed somewhere in the link so that the cascade $\Hch(f)\,H_\mathrm{eq}(f)$ is flat, at least up to $\fN$~\cite{palermo720eq}. Flat to $\fN$ is enough. A pulse sampled once per UI is free of ISI when its spectrum, folded around multiples of $1/\Tb$, adds up to a constant. A response that is flat to $\fN$ and rolls off smoothly above it comes close to meeting that condition. In the time domain, the same goal reads: \emph{make every cursor except $\pk{0}$ zero}. \Cref{fig:ch5-inverse}(a) shows the most direct way to do it, which is to build the exact inverse of the channel.
 
 \begin{figure}[tbp]
   \centering
@@ -41,7 +41,7 @@ A \textbf{zero-forcing} (ZF) equalizer chooses $H_\mathrm{eq}=1/\Hch$ over the b
 
 For REF the enhancement factor is \qty{12.1}{\deci\bel} for $B=\fN$ (\cref{fig:ch5-inverse}b). The signal is not boosted by that much on average. The main cursor recovers, but the noise integrated over the whole band grows faster than the signal does. Extending the inverse to $2\fN$ costs another \qty{10}{\deci\bel} of noise for almost no gain in eye opening. Practical equalizers are therefore \emph{partial} inverses. They stop near $\fN$ and limit their peak boost, or, like the DFE of \cref{ch:dfe}, they avoid linear filtering of the noise altogether.
 
-\paragraph{Liu's cable model} A model with a closed-form pulse helps build intuition~\cite{liuEq}. In a cable, dielectric loss dominates, and the transfer function is close to $C(f)=\exp(-k_d\,l\,\lvert f\rvert)$, with $l$ the length and $k_d$ a loss coefficient. Write $a=k_dl$. The inverse Fourier transform is a Lorentzian,
+\paragraph{A cable model} A model with a closed-form pulse helps build intuition. In a cable, dielectric loss dominates, and the transfer function is close to $C(f)=\exp(-k_d\,l\,\lvert f\rvert)$, with $l$ the length and $k_d$ a loss coefficient. Write $a=k_dl$. The inverse Fourier transform is a Lorentzian,
 \begin{equation}
   c(t)=\int_{-\infty}^{\infty}e^{-a\lvert f\rvert}e^{j2\pi ft}\,\mathrm{d}f=2\int_0^\infty e^{-af}\cos(2\pi ft)\,\mathrm{d}f=\frac{2a}{a^2+4\pi^2t^2}.
   \label{eq:ch5-lorentz}
@@ -72,7 +72,7 @@ A zero-forcing inverse needs $+15$\,dB at $\fN$. By \cref{eq:ch5-noise} with $\l
 \begin{figure}[!tbp]
   \centering
   \includegraphics[width=\linewidth]{ch05_cable}
-  \caption{\textbf{Liu's cable model ties loss in dB to the pulse.} (a)~Pulse responses from \cref{eq:ch5-cablepulse} for 5--20\,dB of loss at $\fN$. The dots mark the cursors of the 15\,dB case. The model has zero phase, so the pre-cursors equal the post-cursors. (b)~Main cursor from \cref{eq:ch5-ymax} and PDA half-eye against loss. The tails close the eye at about \qty{14}{\deci\bel}, while the main cursor is still about half its lossless value.}
+  \caption{\textbf{A simple cable model ties loss in dB to the pulse.} (a)~Pulse responses from \cref{eq:ch5-cablepulse} for 5--20\,dB of loss at $\fN$. The dots mark the cursors of the 15\,dB case. The model has zero phase, so the pre-cursors equal the post-cursors. (b)~Main cursor from \cref{eq:ch5-ymax} and PDA half-eye against loss. The tails close the eye at about \qty{14}{\deci\bel}, while the main cursor is still about half its lossless value.}
   \label{fig:ch5-cable}
 \end{figure}
 
@@ -178,7 +178,7 @@ Give each equalizer the job it does most cheaply. The TX pre-tap takes the pre-c
   \item Loss at $\fN$ spreads each bit into its neighbours. On REF the ISI sum exceeds the main cursor, so the PDA eye is $-0.161$\,V.
   \item Equalization aims for a cascade that is flat up to $\fN$. In the time domain that means zero ISI cursors.
   \item A zero-forcing inverse multiplies the noise by $\int\lvert H_\mathrm{eq}\rvert^2$. That is \qty{12.1}{\deci\bel} on REF up to $\fN$ and \qty{22.5}{\deci\bel} up to $2\fN$.
-  \item In Liu's cable model, $y_{\max}=(2V_0/\pi)\arctan(\pi\Tb/k_dl)$. At 15\,dB of loss the main cursor is 0.47 and the eye is already closed.
+  \item In the zero-phase cable model, $y_{\max}=(2V_0/\pi)\arctan(\pi\Tb/k_dl)$. At 15\,dB of loss the main cursor is 0.47 and the eye is already closed.
   \item The TX FFE, CTLE, RX FFE and DFE differ in which cursors they fix, whether they amplify noise, and what limits them.
   \item The partition between them is a design decision. \Cref{sec:eq-partition} makes it for \OS{}.
 \end{itemize}

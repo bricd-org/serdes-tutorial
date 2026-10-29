@@ -15,14 +15,14 @@
 
 \section{The DFE principle}\label{sec:ch8-principle}
 
-\paragraph{From IIR filter to DFE} Liu starts from a one-tap \emph{linear} feedback equalizer~\cite{liuEq}, $y(t)=x(t)-\alpha_1y(t-\Tb)$. Its transfer function is $H(z)=1/(1+\alpha_1z^{-1})$, with
+\paragraph{From IIR filter to DFE} Start from a one-tap \emph{linear} feedback equalizer, $y(t)=x(t)-\alpha_1y(t-\Tb)$. Its transfer function is $H(z)=1/(1+\alpha_1z^{-1})$, with
 \begin{equation}
   \lvert H\rvert=\frac{1}{\sqrt{1+\alpha_1^2+2\alpha_1\cos\omega\Tb}} .
   \label{eq:ch8-iir}
 \end{equation}
-(The notes repeat the typo of \cref{sec:ffe-taps}.) For $0<\alpha_1<1$ it rises from $1/(1+\alpha_1)$ at DC to $1/(1-\alpha_1)$ at $\fN$, so it could equalize, but it boosts noise like any linear equalizer and is unstable for $\lvert\alpha_1\rvert\ge1$.
+For $0<\alpha_1<1$ it rises from $1/(1+\alpha_1)$ at DC to $1/(1-\alpha_1)$ at $\fN$, so it could equalize, but it boosts noise like any linear equalizer and is unstable for $\lvert\alpha_1\rvert\ge1$.
 
-Liu's key step is to put a \textbf{slicer} \emph{inside} the loop. The fed-back value is then a clean decision $\hat a_{n-1}\in\{-1,+1\}$, the noise on $y$ is never recirculated, and the DFE adds no noise. With $N$ taps (\cref{fig:ch8-dfe}):
+The key step is to put a \textbf{slicer} \emph{inside} the loop. The fed-back value is then a clean decision $\hat a_{n-1}\in\{-1,+1\}$, the noise on $y$ is never recirculated, and the DFE adds no noise. With $N$ taps (\cref{fig:ch8-dfe}):
 
 \begin{keyeq}[$N$-tap DFE]
 \begin{equation}
@@ -32,7 +32,7 @@ Liu's key step is to put a \textbf{slicer} \emph{inside} the loop. The fed-back 
 \end{equation}
 \end{keyeq}
 
-Here $y_n$ is the summer input in volts and the slicer threshold is 0. In Liu's words, ``DFE coefficients = post-cursors'': the ideal $w_k$ is the post-cursor \emph{at the DFE input} (after TX FFE and CTLE) times $A$.
+Here $y_n$ is the summer input in volts and the slicer threshold is 0. The DFE coefficients are the post-cursors: the ideal $w_k$ is the post-cursor \emph{at the DFE input} (after TX FFE and CTLE) times $A$.
 
 \begin{figure}[tbp]
 \centering
@@ -81,12 +81,12 @@ Here $y_n$ is the summer input in volts and the slicer threshold is 0. In Liu's 
   \label{fig:ch8-cancel}
 \end{figure}
 
-\paragraph{Error propagation} Liu's warning that a DFE ``may be subject to instability'' applies to the linear prototype only. With a slicer in the loop the output is bounded, and the real risk is \textbf{error propagation}: a wrong decision adds $2w_1$ of error to the next sample instead of removing $w_1$. In the Lab~5 setup ($w_1=\qty{27.6}{\milli\volt}$, half-eye \qty{64.7}{\milli\volt} after two taps) that leaves only \qty{9.5}{\milli\volt} of margin on the next bit. At a BER near $10^{-12}$ first errors are so rare that this at most doubles the BER~\cite{palermo720eq}. Keep $\pk{1}/\pk{0}\lesssim0.5$ at the DFE input.
+\paragraph{Error propagation} Instability is a risk for the linear prototype only. With a slicer in the loop the output is bounded, and the real risk is \textbf{error propagation}: a wrong decision adds $2w_1$ of error to the next sample instead of removing $w_1$. In the Lab~5 setup ($w_1=\qty{27.6}{\milli\volt}$, half-eye \qty{64.7}{\milli\volt} after two taps) that leaves only \qty{9.5}{\milli\volt} of margin on the next bit. At a BER near $10^{-12}$ first errors are so rare that this at most doubles the BER~\cite{palermo720eq}. Keep $\pk{1}/\pk{0}\lesssim0.5$ at the DFE input.
 
-\begin{example}{Liu's DFE, and a DFE with a TX pre-tap}\label{we:ch8-liu}
-Liu's pulse is $x_{-1}=0.2$, $x_0=0.85$, $x_1=-0.2$, $x_2=0.1$, $x_3=0.05$. Forcing the decision sequence $\hat y=\{\dots,0,1,0,0,\dots\}$ at $t=\Tb,2\Tb,3\Tb$ gives $-\alpha_k+x_k=0$, so the taps are the post-cursors: $\alpha=[-0.2,\ 0.1,\ 0.05]$. With $2A=1$ (so $w_k=x_k/2$ in volts), the PDA eye becomes $0.85-0.2=0.65$. Only the pre-cursor remains.
+\begin{example}{A DFE alone, and a DFE with a TX pre-tap}\label{we:ch8-pretap}
+Take the pulse of \cref{we:ch6-zf}, $x_{-1}=0.2$, $x_0=0.85$, $x_1=-0.2$, $x_2=0.1$, $x_3=0.05$. Forcing the decision sequence $\hat y=\{\dots,0,1,0,0,\dots\}$ at $t=\Tb,2\Tb,3\Tb$ gives $-\alpha_k+x_k=0$, so the taps are the post-cursors: $\alpha=[-0.2,\ 0.1,\ 0.05]$. With $2A=1$ (so $w_k=x_k/2$ in volts), the PDA eye becomes $0.85-0.2=0.65$. Only the pre-cursor remains.
 
-Now add a TX pre-tap with $c_{-1}/c_0=-0.2/0.85$, normalized to $c=[-0.190,\,0.810]$. By \cref{eq:ch6-conv} the cursors for $k=-2..3$ become $-0.038$, 0, 0.726, $-0.181$, 0.071 and 0.041. The DFE re-adapts to the last three, and the eye is $0.726-0.038=\mathbf{0.688}$. That beats both the 3-tap ZF FFE alone (0.519, \cref{we:ch6-liu}) and the DFE alone (0.65). This is the canonical split: the TX takes the pre-cursor and the DFE takes the post-cursors.
+Now add a TX pre-tap with $c_{-1}/c_0=-0.2/0.85$, normalized to $c=[-0.190,\,0.810]$. By \cref{eq:ch6-conv} the cursors for $k=-2..3$ become $-0.038$, 0, 0.726, $-0.181$, 0.071 and 0.041. The DFE re-adapts to the last three, and the eye is $0.726-0.038=\mathbf{0.688}$. That beats both the 3-tap ZF FFE alone (0.519, \cref{we:ch6-zf}) and the DFE alone (0.65). This is the canonical split: the TX takes the pre-cursor and the DFE takes the post-cursors.
 \end{example}
 
 \section{The tap-1 timing loop}\label{sec:dfe-timing}
@@ -210,12 +210,12 @@ Simulate the Lab~5 setup (REF + 8\,dB CTLE) with PRBS13, \qty{4}{\milli\volt} rm
 \begin{figure}[!tbp]
   \centering
   \includegraphics[width=\linewidth]{ch08_sslms}
-  \caption{\textbf{Sign-sign LMS finds the taps, unless a pre-cursor is left in.} (a)~REF + 8\,dB CTLE, 2-tap DFE ($\mu=\qty{0.25}{\milli\volt}$, \qty{4}{\milli\volt} noise). The taps and the data level settle within a few hundred UI onto their zero-forcing values (dashed: 91.6, 27.6 and \qty{11.8}{\milli\volt}). (b)~Liu's pulse with a 3-tap DFE ($\mu=\qty{2}{\milli\volt}$, \qty{10}{\milli\volt} noise). With its 0.2 pre-cursor removed, $w_2$ stays within 36--\qty{62}{\milli\volt} of its \qty{50}{\milli\volt} target. With the pre-cursor left in, it wanders between $-6$ and \qty{92}{\milli\volt}.}
+  \caption{\textbf{Sign-sign LMS finds the taps, unless a pre-cursor is left in.} (a)~REF + 8\,dB CTLE, 2-tap DFE ($\mu=\qty{0.25}{\milli\volt}$, \qty{4}{\milli\volt} noise). The taps and the data level settle within a few hundred UI onto their zero-forcing values (dashed: 91.6, 27.6 and \qty{11.8}{\milli\volt}). (b)~The pulse of \cref{we:ch8-pretap} with a 3-tap DFE ($\mu=\qty{2}{\milli\volt}$, \qty{10}{\milli\volt} noise). With its 0.2 pre-cursor removed, $w_2$ stays within 36--\qty{62}{\milli\volt} of its \qty{50}{\milli\volt} target. With the pre-cursor left in, it wanders between $-6$ and \qty{92}{\milli\volt}.}
   \label{fig:ch8-sslms}
 \end{figure}
 
 \begin{pitfall}[An uncancelled pre-cursor makes SS-LMS wander]
-Liu's pre-cursor puts $\pm Ax_{-1}=\pm\qty{100}{\milli\volt}$ into every error sample. Once the tap errors are smaller than that, $\sgn(e_n)$ is set by $Ax_{-1}\hat a_{n+1}$ alone, which is uncorrelated with $\hat a_{n-k}$: the average update vanishes and the taps random-walk (\cref{fig:ch8-sslms}b). Cancel the pre-cursor first (TX pre-tap or CTLE), or use a smaller $\mu$ and average.
+The 0.2 pre-cursor puts $\pm Ax_{-1}=\pm\qty{100}{\milli\volt}$ into every error sample. Once the tap errors are smaller than that, $\sgn(e_n)$ is set by $Ax_{-1}\hat a_{n+1}$ alone, which is uncorrelated with $\hat a_{n-k}$: the average update vanishes and the taps random-walk (\cref{fig:ch8-sslms}b). Cancel the pre-cursor first (TX pre-tap or CTLE), or use a smaller $\mu$ and average.
 \end{pitfall}
 
 \section{The DFE on the REF channel}\label{sec:ch8-ref}
@@ -310,7 +310,7 @@ The partition follows the pulse anatomy of \cref{fig:ch5-anatomy}: the TX pre-ta
 
 \section*{Exercises}\addcontentsline{toc}{section}{Exercises}
 \begin{enumerate}[label=\textbf{8.\arabic*}, leftmargin=2.2em]
-  \item Liu's DFE (\cref{we:ch8-liu}) with one tap only: what is the PDA eye? If $\hat a_{n-1}$ is wrong, how much margin is left on bit $n$?
+  \item The DFE of \cref{we:ch8-pretap} with one tap only: what is the PDA eye? If $\hat a_{n-1}$ is wrong, how much margin is left on bit $n$?
   \item Redo \cref{we:ch8-timing} with \qty{120}{\femto\farad} of summer capacitance (more taps). Does direct feedback still fit? What $R_L$ restores it, and at what cost in summer gain?
   \item Show that the SS-LMS update $E[\sgn(e_n)\hat a_{n-1}]$ is zero at $w_1=A\pk{1}$ if the remaining ISI plus noise is symmetric. Why does this not stop the wandering in \cref{fig:ch8-sslms}(b)?
   \item From the cursors in \cref{sec:ch8-ref} ($\pk{-1}=0.0138$, $\pk{0}=0.1832$, tail to $\pk{8}$), compute the PDA eye after 0, 1 and 2 DFE taps. Why is it lower than the PRBS7 numbers of \cref{fig:ch8-taps}? Then use \cref{tab:eq-partition}: at 25\,dB, which buys more, three extra taps or a 19\,dB CTLE?
@@ -318,7 +318,7 @@ The partition follows the pulse anatomy of \cref{fig:ch5-anatomy}: the TX pre-ta
 
 \begin{takeaways}
 \begin{itemize}
-  \item A DFE is an IIR equalizer with a slicer in the loop: it cancels post-cursors without amplifying noise, with taps equal to the post-cursors at its input. It cannot touch pre-cursors, so a TX pre-tap plus a DFE beats either alone (0.688 vs 0.519 and 0.65 in Liu's example).
+  \item A DFE is an IIR equalizer with a slicer in the loop: it cancels post-cursors without amplifying noise, with taps equal to the post-cursors at its input. It cannot touch pre-cursors, so a TX pre-tap plus a DFE beats either alone (0.688 vs 0.519 and 0.65 in \cref{we:ch8-pretap}).
   \item Tap~1 must settle within 1\,UI even at half rate. At 5\,Gb/s direct feedback fits in about 140\,ps. Unrolling is the fallback if it does not.
   \item SS-LMS adapts taps with one error sampler and counters. It wanders if a large pre-cursor is left uncancelled.
   \item On REF + 8\,dB CTLE, DFE taps give $60\to111\to130\to143$\,mV for 0--3 taps. Beyond four taps the gain is negligible.

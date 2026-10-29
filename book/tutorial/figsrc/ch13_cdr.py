@@ -40,10 +40,10 @@ for R in (100, 200):
     print(f"analog BB-CDR R={R}: dphi_P = {150e6*100e-6*R*Tb*2:.1e} UI/bit, S = {S_of(R):.2e} UI/s, "
           f"JTOL(1 MHz) ~ TM + 2S/w = {0.4 + 2*S_of(R)/(2*pi*1e6):.2f} UIpp, (0.5 MHz) {0.4 + 2*S_of(R)/(2*pi*0.5e6):.2f}, "
           f"FD must land within TD*dphi = {0.5*150e6*100e-6*R*Tb*2*1e6:.0f} ppm, xi = RC/Tb = {R*1e-9/Tb:.0f}")
-# Liu's measured 90 nm example (10 Gb/s, full rate)
-S_liu = 0.5 * 1e9 * 300e-6 * 10          # UI/s, full-rate clock: 1 cycle = 1 UI
+# measured 90 nm example (10 Gb/s, full rate)
+S_bb = 0.5 * 1e9 * 300e-6 * 10          # UI/s, full-rate clock: 1 cycle = 1 UI
 for app in (0.125, 0.25, 0.5):
-    print(f"Liu check: A = {app} UIpp -> f-3dB = S/(4 A_pk) = {S_liu/(4*app/2)/1e6:.1f} MHz")
+    print(f"Slew check: A = {app} UIpp -> f-3dB = S/(4 A_pk) = {S_bb/(4*app/2)/1e6:.1f} MHz")
 
 # ================================================================== Fig: jitter transfer (linear + BB)
 fig, (a, b) = plt.subplots(1, 2, figsize=(6.3, 2.15))

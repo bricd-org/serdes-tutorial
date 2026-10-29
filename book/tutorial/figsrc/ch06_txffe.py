@@ -2,7 +2,7 @@
 
 ch06_deemph  : TX and RX waveforms with and without 6 dB de-emphasis (2-tap FFE)
 ch06_ffefreq : 2-tap FFE magnitude for several de-emphasis settings, and its product with REF
-ch06_zf      : Liu's 3-tap zero-forcing example: cursors before and after
+ch06_zf      : 3-tap zero-forcing example (Worked Example 6.2): cursors before and after
 ch06_ref     : REF pulse and eye: no FFE, 2-tap and 3-tap zero-forcing FFE (Lab 3 numbers)
 """
 from bricdstyle import *
@@ -78,7 +78,7 @@ finish(a2, "Frequency (GHz)", "Channel $\\times$ FFE (dB)")
 panel(a2, "b")
 savefig(fig, "ch06_ffefreq")
 
-# ------------------------------------------------------------------ ch06_zf (Liu's example)
+# ------------------------------------------------------------------ ch06_zf (Worked Example 6.2)
 x = {-1: 0.2, 0: 0.85, 1: -0.2, 2: 0.1, 3: 0.05}
 X = lambda k: x.get(k, 0.0)
 M = np.array([[X(i - j) for j in (-1, 0, 1)] for i in (-1, 0, 1)])
@@ -104,7 +104,7 @@ finish(a2, "Cursor $k$ (UI)")
 a2.set_title("After normalized 3-tap ZF FFE", loc="left")
 panel(a2, "b")
 savefig(fig, "ch06_zf")
-print("Liu ZF taps", a, an, "after", np.round(after, 3))
+print("ZF taps", a, an, "after", np.round(after, 3))
 
 # ------------------------------------------------------------------ ch06_ref
 c3 = sdp.forcing_ffe(1, p[i0 + SPS * np.arange(-1, 2)]); c3 = c3 / np.abs(c3).sum()
