@@ -1,6 +1,6 @@
 {
  "source": "Google Slides deck 'Open-SERDES Intro Slides' (bricd.org)",
- "exported": "2026-10-28",
+ "exported": "2026-10-29",
  "slides": [
   {
    "n": 1,
@@ -296,6 +296,116 @@
   },
   {
    "n": 32,
+   "id": "an_01",
+   "title": "The clock is the select in the 2:1 mux",
+   "notes": "The last serializer stage needs no 5 GHz clock: the 2.5 GHz clock is the select. While CK is high the even pair drives the loads, while it is low the odd pair does, so each clock half is one 200 ps bit. HBTs switch fully with about 100 mV at the input, so a 300 mV swing on 500 Ω loads gives a gain of 5.8 where a MOS pair would give 2. The catch is duty cycle: a 45 % clock makes alternating 180 and 220 ps bits, 20 ps of deterministic jitter before the channel, so a duty-cycle corrector sits right before the mux. Built three times, it feeds D(n+1), D(n) and D(n−1) to the driver's taps. First-cut proposal; sizing from Section 9.2 of the tutorial.",
+   "related": {
+    "url": "/chapters/09-the-transmitter/#sec:serializer",
+    "label": "Ch 9, Section 9.2"
+   }
+  },
+  {
+   "n": 33,
+   "id": "an_02",
+   "title": "Three FFE taps share one 20 mA driver",
+   "notes": "The FFE is built from current: one HBT pair per tap on the same pair of 50 Ω loads, which double as the back-termination. Each tail is a slice of one 20 mA budget, so the loads add the FIR sum and the supply current never changes with the preset. The pre and post pairs take inverted data, which makes those taps negative. 32 cells of 0.625 mA give 5-bit taps; the −6 dB preset is exactly 24 and 8 cells. Two things to check first: the off transistor sits at about 1.25 V against a BVceo of about 1.6 V, and the ESD diodes can take most of the 0.85 pF pad budget. A segmented driver or a T-coil are the upgrades, and an SST driver saves about 44 mW in a second tapeout. First-cut proposal; sizing from Sections 9.3 to 9.6 of the tutorial.",
+   "related": {
+    "url": "/chapters/09-the-transmitter/#sec:termination",
+    "label": "Ch 9, Sections 9.3 to 9.6"
+   }
+  },
+  {
+   "n": 34,
+   "id": "an_03",
+   "title": "The receiver terminates the line at the pad",
+   "notes": "Two 50 Ω poly resistors across the pads absorb the wave, and their centre tap is AC-grounded so common-mode noise is absorbed too. Even a ±20 % resistor spread leaves 19 dB of return loss, and a 3-bit trim takes up the rest. The ESD diodes and a supply clamp sit outside the termination. The input is DC-coupled, so it inherits the 2 V common mode of the CML driver, which suits the HBT CTLE, and a CML 2:1 picks the board or the on-chip loopback from our own driver. Its input pair is part of the pad capacitance, so it counts against the 0.85 pF budget. First-cut proposal; sizing from Sections 9.6 and 10.1 of the tutorial.",
+   "related": {
+    "url": "/chapters/09-the-transmitter/#sec:esd-pad",
+    "label": "Ch 9, Sections 9.6 and 10.1"
+   }
+  },
+  {
+   "n": 35,
+   "id": "an_04",
+   "title": "Switched banks set 0–12 dB of CTLE peaking",
+   "notes": "An emitter-degenerated HBT pair with two tail sources, so no bias current flows through the degeneration. Binary banks of resistors and capacitors, switched together by MOS switches, set the zero and the peaking from 0 to 12 dB; closing every resistor segment makes it a flat amplifier. With 2 mA, 317 Ω and 0.72 pF it realizes 10 dB at the 2.5 GHz Nyquist frequency. Our link model adds one point: on REF and REF-10 the best setting is 0 dB, because the FFE and DFE do the equalizing, yet the CTLE's bandwidth still costs 3.6 mV of eye. So the 0 dB code should be flat and wide, with the second pole at four times Nyquist, or have a bypass. First-cut proposal; sizing from Chapter 7 of the tutorial.",
+   "related": {
+    "url": "/chapters/07-continuous-time-linear-equalizer/",
+    "label": "Ch 7"
+   }
+  },
+  {
+   "n": 36,
+   "id": "an_05",
+   "title": "The DFE subtracts echoes as currents",
+   "notes": "One summer per half-rate slice. The CTLE output pair and two tap pairs share 250 Ω loads; the tap-1 pair is driven by the other half's latest decision and the tap-2 pair by this half's previous one, and the decision steers each tap current to one side. DAC tails set the weights, and a 5-bit offset DAC injects a small differential current into the same loads to trim the whole path. The tap-1 loop is the critical path: clock-to-output, tap switch, 60 ps of settling and setup add up to about 140 of the 200 ps. If layout pushes it past about 0.7 UI, tap 1 is unrolled, as it is at 10 Gb/s anyway. First-cut proposal; sizing from Section 8.2 of the tutorial.",
+   "related": {
+    "url": "/chapters/08-decision-feedback-equalization-and-adaptation/#sec:dfe-timing",
+    "label": "Ch 8, Section 8.2"
+   }
+  },
+  {
+   "n": 37,
+   "id": "an_06",
+   "title": "Bipolar latches regenerate in about 4 ps",
+   "notes": "All four samplers are HBT CML master–slave flip-flops. While the clock is high the track pair follows the summer; when it falls, the cross-coupled pair holds and regenerates with a time constant of 3 to 5 ps, three to seven times faster than a CMOS StrongARM. That speed is what lets the direct-feedback DFE close its loop: the clock-to-output delay must be 25 to 35 ps. The edge samplers use the same cell so their aperture matches the data samplers; mixing latch types would make the CDR lock off-centre. Offset comes from mismatch and is trimmed through the summer, so Monte Carlo is part of the first testbench. First-cut proposal; sizing from Sections 10.2 to 10.4 of the tutorial.",
+   "related": {
+    "url": "/chapters/10-receiver-front-end-and-samplers/#sec:sampler",
+    "label": "Ch 10, Sections 10.2 to 10.4"
+   }
+  },
+  {
+   "n": 38,
+   "id": "an_07",
+   "title": "Our SMACD PLL, retuned to 2.5 GHz",
+   "notes": "We reuse the team's SMACD 2026 PLL. Retuning it from 2.4 to 2.5 GHz is small; the bigger changes are an integer divide-by-50 in place of the fractional-N divider, a CML divide-by-2 prescaler, and a loop filter redesigned for about 3 MHz of bandwidth, where reference and VCO noise balance at about 1 ps rms. One open question matters for the jitter budget: Leeson's model predicts about −122 dBc/Hz at 1 MHz for this tank, so the measured −100.8 dBc/Hz is probably the closed loop, not the VCO. First-cut proposal; numbers from Chapter 12 of the tutorial.",
+   "related": {
+    "url": "/chapters/12-clock-generation-the-phase-locked-loop/",
+    "label": "Ch 12"
+   }
+  },
+  {
+   "n": 39,
+   "id": "an_08",
+   "title": "A proven 4 nH tank, retuned to 2.5 GHz",
+   "notes": "A cross-coupled LC oscillator: the pair's negative resistance cancels the tank loss, varactors set the fine tuning and the VCO gain, a switched MIM bank picks coarse bands for the corners, and the tail current sets the amplitude. We keep the proven 4 nH inductor with its Q of 16.8. At 2.5 GHz the tank needs 1.01 pF in total, 86 fF less than at 2.4 GHz, so one capacitor unit comes out. The 10 Gb/s target needs a new 10 GHz tank with a CML divide-by-2, which goes on the Phase 1 shuttle. Drawn with MOSFETs as in our design; HBTs work too with capacitive coupling. First-cut proposal; numbers from Section 12.4 of the tutorial.",
+   "related": {
+    "url": "/chapters/12-clock-generation-the-phase-locked-loop/#sec:lcvco",
+    "label": "Ch 12, Section 12.4"
+   }
+  },
+  {
+   "n": 40,
+   "id": "an_09",
+   "title": "An RC ring makes four phases 100 ps apart",
+   "notes": "The half-rate receiver needs four clock phases exactly 100 ps apart. A polyphase filter makes them from the 2.5 GHz VCO: each output gets a resistor from its own input and a capacitor from the previous phase. One stage gives exact 90 degree steps but equal amplitude only at its pole, so a second stage with a staggered pole follows; together they hold the amplitude within 0.07 dB over process. The phase error comes from mismatch, about 0.6 degrees rms, so the last stage needs a careful common-centroid layout. Limiting CML buffers and a duty-cycle corrector restore the 5 dB the filter loses. First-cut proposal; numbers from Section 12.5 of the tutorial.",
+   "related": {
+    "url": "/chapters/12-clock-generation-the-phase-locked-loop/#sec:quadrature",
+    "label": "Ch 12, Section 12.5"
+   }
+  },
+  {
+   "n": 41,
+   "id": "an_10",
+   "title": "Two PIs move the samplers in 6.25 ps steps",
+   "notes": "The phase interpolator adds weighted I and Q currents on shared loads. Linear weights trace the chord between the two phasors, not the arc, which gives about 4.5 ps of nonlinearity; weights taken from a quantized sine and cosine table cut it to 0.6 ps. The quadrant is chosen by swapping I and Q polarity at the inputs, and a limiting buffer removes the amplitude dip. Two copies run a quarter period apart: the data PI at code k, the edge PI at k plus 16. The CDR loop moves both every 8 UI. First-cut proposal; numbers from Section 13.6 of the tutorial.",
+   "related": {
+    "url": "/chapters/13-clock-and-data-recovery/#sec:picdr",
+    "label": "Ch 13, Section 13.6"
+   }
+  },
+  {
+   "n": 42,
+   "id": "an_11",
+   "title": "Tail currents track the load resistors",
+   "notes": "This one is our proposal rather than the tutorial's. Poly resistors spread by 20 to 30 percent, and every CML swing is a tail current times a load resistor. If an op-amp forces a bandgap voltage across a replica of the same resistor and that current biases every tail, each swing becomes a resistor ratio that only matching can disturb. Latch gain, mux swing and PI amplitude then hold across corners. The TX driver is the exception: half of its load is the 50 Ω line outside the chip, so it keeps its 3-bit termination trim. First-cut proposal; builds on Section 9.3 of the tutorial.",
+   "related": {
+    "url": "/chapters/09-the-transmitter/#sec:termination",
+    "label": "Ch 9, Section 9.3"
+   }
+  },
+  {
+   "n": 43,
    "id": "fs_n09",
    "title": "Do the budgets close?",
    "notes": "Both budgets close, but not equally. (a) Start from the 131 mV statistical eye of REF with 2-tap de-emphasis and subtract noise, jitter, offset and sampler sensitivity: 76 mV of margin remains, more than half the eye. (b) Start from one 200 ps UI and subtract the deterministic jitter linearly and 2Q times the random jitter in RSS: 141 ps remains, only 1.4 ps more than the 0.7 UI target. Clocking is where the design has the least room, and at 10 Gb/s it is the main work: the same circuits would use 0.46 UI, so every picosecond term must roughly halve. Figure 14.3 of the tutorial.",
@@ -305,7 +415,7 @@
    }
   },
   {
-   "n": 33,
+   "n": 44,
    "id": "fs_n10",
    "title": "Where the 216 mW goes",
    "notes": "A first-cut power budget of about 216 mW, or 43 pJ/b, colored by section. The TX takes 48 percent, mostly static CML current, and the 3-tap CML driver alone is almost a quarter of the chip. The four samplers are the largest RX item, and CMOS logic is a rounding error. Right: energy per bit against the Purdue OpenSerDes in SKY130, about 219 pJ/b, and against Open-SERDES with a voltage-mode SST driver at 34 pJ/b, the first saving to go after. At 10 Gb/s the same chip draws about 280 mW, or about 28 pJ/b, because CML power hardly depends on the rate. Figure 14.8 of the tutorial.",
@@ -315,7 +425,7 @@
    }
   },
   {
-   "n": 34,
+   "n": 45,
    "id": "SLIDES_API1098721617_513",
    "title": "Floorplan concept",
    "notes": "What the die could look like, in the spirit of the TinyWhisper chip render. High-speed TX and RX pads sit on one edge to keep bond wires short; the LC-PLL gets its own corner, guard ring and supply; the digital core is hardened with LibreLane. Size and placement are placeholders until the blocks exist.",
@@ -325,7 +435,7 @@
    }
   },
   {
-   "n": 35,
+   "n": 46,
    "id": "SLIDES_API1098721617_663",
    "title": "Simulation testbench & sign-off",
    "notes": "Inspired by the full top-level LVS and simulation slide. The top-level testbench drives a PRBS-31 pattern through the post-layout TX, an S-parameter channel model and the post-layout RX into a checker that reports eye, BER and jitter. We sweep channel loss, PVT, jitter and settings against pass criteria that the feasibility study will fix, and sign off with full-chip DRC and LVS without black boxes, all in CI.",
@@ -335,7 +445,7 @@
    }
   },
   {
-   "n": 36,
+   "n": 47,
    "id": "SLIDES_API1098721617_768",
    "title": "Test bench in the lab",
    "notes": "Inspired by the TinyWhisper breadboard and scope photos. A PC runs the Python GUI and talks to an FPGA or MCU board over USB; that board configures the chip over SPI and reads back the BER counter. A bench supply powers the test PCB, a clean reference clock feeds the PLL, TX goes out through SMA into a channel or loopback and back into RX, and a sampling scope or BERT captures eyes, jitter and BER.",
@@ -345,7 +455,7 @@
    }
   },
   {
-   "n": 37,
+   "n": 48,
    "id": "SLIDES_API1098721617_885",
    "title": "Package & pinout (concept)",
    "notes": "Inspired by the TinyWhisper bonding diagram. A QFN package with the high-speed TX and RX pins on one side and the shortest bond wires, an external reference clock, SPI for configuration and BER readout, separate supply domains, and a few status pins. As in the JKU template, the bonding plan would be generated from a config file.",
@@ -355,14 +465,14 @@
    }
   },
   {
-   "n": 38,
+   "n": 49,
    "id": "h78e4bdb3a0fc8be2_2_430",
    "title": "Part 5 · Roadmap & community",
    "notes": "Part 5: how we get there, and where you come in.",
    "related": null
   },
   {
-   "n": 39,
+   "n": 50,
    "id": "h78e4bdb3a0fc8be2_2_440",
    "title": "Roadmap: blocks → 5/10 Gb/s → beyond",
    "notes": "Five phases. Phase 0 is the feasibility study: an industry-standard channel, the link model, the architecture decision and frozen block specs. Phase 1 builds the building blocks, sized for 10 Gb/s, and tapes them out on a test shuttle such as Tiny Tapeout IHP or an IHP open MPW, together with the new 10 GHz VCO. Phase 2 is the headline goal: a complete transceiver with TX, RX, PLL and CDR and a rate select, verified with an on-chip PRBS loopback and taped out as a full chip. Its pass criterion is 5 Gb/s over the 1 m reference channel; 10 Gb/s over half that channel is the design target. Phase 3 is measurement in both modes and publication, with open data, targeting IEEE JSSC or TCAS and SMACD 2027. Phase 4 goes beyond: 16 to 25 Gb/s with a quarter-rate datapath, adaptive DFE, PAM4 for lossy channels, multiple lanes and chiplet-style links. [Add dates once the timeline is agreed.]",
@@ -372,14 +482,14 @@
    }
   },
   {
-   "n": 40,
+   "n": 51,
    "id": "h78e4bdb3a0fc8be2_2_475",
    "title": "Get involved",
    "notes": "We need people across the whole stack, and you do not need to know everything to start: curiosity and willingness to learn count most. System modellers in Python or Julia; analog and RF designers for CML, CTLE, samplers and the PLL; digital designers for the serializer, deserializer, PRBS and CDR logic; layout and EM people; anyone with a lab bench for measurement; and people who love writing tutorials. Everything will live publicly on GitHub.",
    "related": null
   },
   {
-   "n": 41,
+   "n": 52,
    "id": "h78e4bdb3a0fc8be2_2_515",
    "title": "References",
    "notes": "Reference slide; leave it up during questions if useful.",
