@@ -30,7 +30,7 @@ permalink: "/chapters/15-design-and-verification-flow-with-open-tools/"
 <figcaption><span class="capnum">Figure 15.1.</span> <strong>The Open-SERDES design flow, end to end.</strong> Specifications and the serdespy system model come first; schematics in <strong>Xschem</strong> with <strong>ngspice</strong>, layout in <strong>KLayout</strong>, extraction and EM simulation, and sign-off (DRC, LVS, <strong>CACE</strong> datasheets) follow; then tape-out and lab test. The arrows back to the model are the important ones: each stage returns measured numbers that replace assumptions.</figcaption>
 </figure>
 <h2 id="sec:toolchain"><span class="secnum">15.1</span>The open toolchain</h2>
-<p>Every tool in this chapter ships in one Docker image, <strong>IIC-OSIC-TOOLS</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-iicosic">2</a>], together with the IHP SG13G2 PDK [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-ihppdk">1</a>]; pinning one image tag gives the whole team identical tools. The Open-SERDES repository builds on the JKU <strong>analog mixed-signal chip template</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-jkutemplate">7</a>] (it needs image 2026.06 or later). Its recursive Makefiles make one <code>make all</code> run every testbench including PVT and Monte Carlo, run DRC, LVS and extraction on the analog macros, harden the digital logic and assemble the chip digital-on-top with seal ring, pad frame and fill, run a full-chip LVS without black boxes, and draw the bonding diagram. GitHub Actions rerun it on every commit, so a broken block is noticed the day it breaks.</p>
+<p>Every tool in this chapter ships in one Docker image, <strong>IIC-OSIC-TOOLS</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-iicosic">2</a>], together with the IHP SG13G2 PDK [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-ihppdk">1</a>]; pinning one image tag gives the whole team identical tools. The Open-SERDES repository builds on the JKU <strong>analog mixed-signal chip template</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-jkutemplate">5</a>] (it needs image 2026.06 or later). Its recursive Makefiles make one <code>make all</code> run every testbench including PVT and Monte Carlo, run DRC, LVS and extraction on the analog macros, harden the digital logic and assemble the chip digital-on-top with seal ring, pad frame and fill, run a full-chip LVS without black boxes, and draw the bonding diagram. GitHub Actions rerun it on every commit, so a broken block is noticed the day it breaks.</p>
 <p><a href="#fig:ch15-tools">Figure 15.2</a> maps the tools onto the flow, and <a href="#tab:ch15-tools">Table 15.1</a> says what each one is for.</p>
 <div id="fig:ch15-tools">
 
@@ -54,62 +54,62 @@ permalink: "/chapters/15-design-and-verification-flow-with-open-tools/"
 </thead>
 <tbody>
 <tr class="odd">
-<td style="text-align: left;"><strong>serdespy</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-serdespy">3</a>], <strong>PyBERT</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-pybert">46</a>]</td>
+<td style="text-align: left;"><strong>serdespy</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-serdespy">3</a>], <strong>PyBERT</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-pybert">44</a>]</td>
 <td style="text-align: left;">link models, eyes, BER (<a href="{% endraw %}{{ '/chapters/16-hands-on-labs-with-serdespy/' | relative_url }}{% raw %}">Chapter 16</a>); PyBERT adds a GUI and IBIS-AMI</td>
 <td style="text-align: left;">system model</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;"><strong>scikit-rf</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p2:skrf2022">20</a>]</td>
+<td style="text-align: left;"><strong>scikit-rf</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p2:skrf2022">18</a>]</td>
 <td style="text-align: left;">Touchstone files, mixed-mode S-parameters, de-embedding</td>
 <td style="text-align: left;">model, EM, lab</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;"><strong>Xschem</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:xschem">47</a>]</td>
+<td style="text-align: left;"><strong>Xschem</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:xschem">45</a>]</td>
 <td style="text-align: left;">schematics, symbols, testbench netlists for every simulator</td>
 <td style="text-align: left;">schematic</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;"><strong>ngspice</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:ngspice">48</a>]</td>
+<td style="text-align: left;"><strong>ngspice</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:ngspice">46</a>]</td>
 <td style="text-align: left;"><code>.op</code>, <code>.ac</code>, <code>.noise</code>, <code>.tran</code>, transient noise, Verilog-A via OSDI</td>
 <td style="text-align: left;">simulation</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;"><strong>Xyce</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:xyce">49</a>], <strong>VACASK</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:vacask">50</a>]</td>
+<td style="text-align: left;"><strong>Xyce</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:xyce">47</a>], <strong>VACASK</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:vacask">48</a>]</td>
 <td style="text-align: left;">parallel SPICE for large post-layout runs; Verilog-A simulator with PSS and HB</td>
 <td style="text-align: left;">simulation</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;"><strong>CACE</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:cace">51</a>]</td>
+<td style="text-align: left;"><strong>CACE</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:cace">49</a>]</td>
 <td style="text-align: left;">YAML datasheet: runs testbenches over corners, checks min/typ/max limits</td>
 <td style="text-align: left;">characterization</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;"><strong>KLayout</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:klayout">52</a>], <strong>Magic</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:magic">53</a>]</td>
+<td style="text-align: left;"><strong>KLayout</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:klayout">50</a>], <strong>Magic</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:magic">51</a>]</td>
 <td style="text-align: left;">layout editing; IHP DRC and LVS decks; RC extraction (<strong>Magic</strong>)</td>
 <td style="text-align: left;">layout, sign-off</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;"><strong>Netgen</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:netgen">54</a>], <strong>KLayout-PEX</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:klayoutpex">55</a>]</td>
+<td style="text-align: left;"><strong>Netgen</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:netgen">52</a>], <strong>KLayout-PEX</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:klayoutpex">53</a>]</td>
 <td style="text-align: left;">LVS comparison; parasitic extraction for SG13G2</td>
 <td style="text-align: left;">sign-off, extraction</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;"><strong>openEMS</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:openems">56</a>], <strong>Palace</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:palace">57</a>]</td>
+<td style="text-align: left;"><strong>openEMS</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:openems">54</a>], <strong>Palace</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:palace">55</a>]</td>
 <td style="text-align: left;">FDTD and FEM field solvers for inductors, pads and package</td>
 <td style="text-align: left;">EM</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;"><strong>Verilator</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:verilator">58</a>], <strong>Icarus</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:icarus">59</a>], <strong>cocotb</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:cocotb">60</a>]</td>
+<td style="text-align: left;"><strong>Verilator</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:verilator">56</a>], <strong>Icarus</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:icarus">57</a>], <strong>cocotb</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:cocotb">58</a>]</td>
 <td style="text-align: left;">Verilog simulation and lint; Python testbenches for PRBS, CDR, SPI</td>
 <td style="text-align: left;">RTL</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;"><strong>Yosys</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:yosys">61</a>], <strong>LibreLane</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:librelane">62</a>]</td>
-<td style="text-align: left;">synthesis to SG13G2 cells; RTL-to-GDS flow (successor of OpenLane 2 [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:openlane2">63</a>])</td>
+<td style="text-align: left;"><strong>Yosys</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:yosys">59</a>], <strong>LibreLane</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:librelane">60</a>]</td>
+<td style="text-align: left;">synthesis to SG13G2 cells; RTL-to-GDS flow (successor of OpenLane 2 [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:openlane2">61</a>])</td>
 <td style="text-align: left;">digital</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;"><strong>OpenROAD</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:openroad">64</a>], <strong>OpenSTA</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:opensta">65</a>]</td>
+<td style="text-align: left;"><strong>OpenROAD</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:openroad">62</a>], <strong>OpenSTA</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:opensta">63</a>]</td>
 <td style="text-align: left;">placement, clock tree, routing; static timing (inside <strong>LibreLane</strong>)</td>
 <td style="text-align: left;">digital</td>
 </tr>
@@ -284,12 +284,12 @@ permalink: "/chapters/15-design-and-verification-flow-with-open-tools/"
 <p>Worked Example 15.2 · Decoupling the deserializer</p>
 </div>
 <p><span id="we:ch15-decap"></span> <strong>Switched capacitance:</strong> the 1:16 deserializer burns 5 mW at 1.2 V and 312.5 MHz, so <span class="math inline">\(\alpha C_\mathrm{sw}=P/(V_\mathrm{DD}^2f)=5\,\mathrm{mW}/(1.44\times312.5\,\mathrm{MHz})=11\,\mathrm{pF}\)</span> is switched every cycle.</p>
-<p><strong>Worst case:</strong> if all of it switches on one edge, before the package can refill the rail, the droop is <span class="math inline">\(\Delta V/V\approx C_\mathrm{sw}/(C_\mathrm{sw}+C_\mathrm{dec})\)</span>. For 5 % droop, <span class="math inline">\(C_\mathrm{dec}\ge19\,C_\mathrm{sw}=210\,\mathrm{pF}\)</span>: about 0.14 mm<span class="math inline">\(^2\)</span> of MIM capacitor at roughly 1.5 fF/m<span class="math inline">\(^2\)</span> (check the PDK value). Inside the synthesized digital macros, <strong>LibreLane</strong> adds decap cells [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-jkutemplate">7</a>]; budget the rest as MIM next to the macro, and count it in the die area.</p>
+<p><strong>Worst case:</strong> if all of it switches on one edge, before the package can refill the rail, the droop is <span class="math inline">\(\Delta V/V\approx C_\mathrm{sw}/(C_\mathrm{sw}+C_\mathrm{dec})\)</span>. For 5 % droop, <span class="math inline">\(C_\mathrm{dec}\ge19\,C_\mathrm{sw}=210\,\mathrm{pF}\)</span>: about 0.14 mm<span class="math inline">\(^2\)</span> of MIM capacitor at roughly 1.5 fF/m<span class="math inline">\(^2\)</span> (check the PDK value). Inside the synthesized digital macros, <strong>LibreLane</strong> adds decap cells [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-jkutemplate">5</a>]; budget the rest as MIM next to the macro, and count it in the die area.</p>
 </div>
 <h5 id="the-digital-flow">The digital flow</h5>
 <p>The PRBS logic, the CDR loop filter, the SPI registers and the slow CMOS serializer and deserializer stages are Verilog, verified with <strong>cocotb</strong> and hardened by <strong>LibreLane</strong>. Synthesize what runs at 625 MHz or slower; place the 1.25 GHz deserializer stage and the CMOS-to-CML converters by hand from standard cells.</p>
 <h5 id="sign-off">Sign-off</h5>
-<p>DRC with the IHP <strong>KLayout</strong> decks (<strong>Magic</strong> as a second opinion), LVS with <strong>KLayout</strong> or <strong>Netgen</strong>, then antenna and density checks after fill, and the template’s full-chip LVS without black boxes [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-jkutemplate">7</a>]: run it whenever a macro changes.</p>
+<p>DRC with the IHP <strong>KLayout</strong> decks (<strong>Magic</strong> as a second opinion), LVS with <strong>KLayout</strong> or <strong>Netgen</strong>, then antenna and density checks after fill, and the template’s full-chip LVS without black boxes [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-jkutemplate">5</a>]: run it whenever a macro changes.</p>
 <h3 id="sec:ch15-repo"><span class="secnum">15.4.1</span>Repository structure</h3>
 <p>The Open-SERDES repository keeps the recursive layout of the JKU template: every analog block is a macro with its own schematics, testbenches, layout, verification and Makefile, so a block can be built, simulated and verified alone. The listing shows these folders for <code>tx_serializer</code>; every other macro has the same ones. The digital half (PRBS, the CMOS serializer and deserializer stages, the CDR loop filter and SPI) is not a macro: it lives in <code>rtl/</code> and is hardened with the chip, digital-on-top. Open-SERDES adds four folders of its own: <code>spec/</code>, the one specification file that the link model and every testbench read; <code>model/</code>; <code>channels/</code>; and <code>lab/</code>, for the test board and the measured data of <a href="#sec:labtest">Section 15.5</a>. The others (<code>flow/</code>, <code>layout/</code>, <code>netlist/</code>, <code>ip/</code>, <code>packaging/</code>, <code>release/</code> and <code>doc/</code>) come with the template.</p>
 <div class="sourceCode" id="cb2" data-language="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">open-serdes/</span>                  <span class="co"># from ihp-sg13g2-ams-chip-template</span></span>

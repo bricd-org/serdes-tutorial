@@ -86,8 +86,8 @@ print("REF SS-LMS final (mV)", np.round(1e3 * Wr[-1], 1), round(1e3 * Dr[-1], 1)
       round(1e3 * A_TX * h0, 1), "errors", er)
 i90 = [int(np.argmax(np.abs(Wr[:, j] - A_TX * post[j]) < 2e-3)) for j in range(2)]
 print("first within 2 mV at UI", i90)
-# pitfall: Liu's pulse, with and without its 0.2 pre-cursor
-def liu_samples(pre, n, sigma=10e-3, seed=3):
+# pitfall: the Worked Example 6.2 pulse, with and without its 0.2 pre-cursor
+def example_samples(pre, n, sigma=10e-3, seed=3):
     r = np.random.default_rng(seed)
     a_ = 2.0 * prbs_bits(13)[:n + 10] - 1
     x = {-1: pre, 0: 0.85, 1: -0.2, 2: 0.1, 3: 0.05}
@@ -96,9 +96,9 @@ def liu_samples(pre, n, sigma=10e-3, seed=3):
         yv[i] = A_TX * sum(v * a_[i + 4 - kk] for kk, v in x.items())
     return yv + r.normal(0, sigma, n), a_[4:4 + n]
 NL = 6000
-y1, a1_ = liu_samples(0.0, NL); Wa, Da, ea = sslms(y1, a1_, 3, 2e-3, 2e-3, 0.3, NL)
-y2, a2_ = liu_samples(0.2, NL); Wb, Db, eb = sslms(y2, a2_, 3, 2e-3, 2e-3, 0.3, NL)
-print("Liu no-pre final", np.round(Wa[-1], 3), "with pre final", np.round(Wb[-1], 3), "errors", ea, eb)
+y1, a1_ = example_samples(0.0, NL); Wa, Da, ea = sslms(y1, a1_, 3, 2e-3, 2e-3, 0.3, NL)
+y2, a2_ = example_samples(0.2, NL); Wb, Db, eb = sslms(y2, a2_, 3, 2e-3, 2e-3, 0.3, NL)
+print("Example no-pre final", np.round(Wa[-1], 3), "with pre final", np.round(Wb[-1], 3), "errors", ea, eb)
 print("with pre: w2 range after 2000 UI", Wb[2000:, 1].min(), Wb[2000:, 1].max(), " w1", Wb[2000:, 0].min(), Wb[2000:, 0].max())
 print("no pre: w2 range after 2000 UI", Wa[2000:, 1].min(), Wa[2000:, 1].max())
 
@@ -122,7 +122,7 @@ a2.axhline(1e3 * A_TX * 0.1, color=NAVY, ls="--", lw=0.8, label="target $Ax_2$ =
 a2.set_xlim(0, NL); a2.set_ylim(-10, 140)
 a2.legend(loc="upper right", fontsize=7)
 finish(a2, "Time (UI)", "Tap value (mV)")
-a2.set_title("Liu's pulse, 3-tap DFE", loc="left", fontsize=8)
+a2.set_title("Example pulse, 3-tap DFE", loc="left", fontsize=8)
 panel(a2, "b")
 savefig(fig, "ch08_sslms")
 

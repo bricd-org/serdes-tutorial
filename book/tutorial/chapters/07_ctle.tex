@@ -15,7 +15,7 @@
 
 \section{From RC to RLC: three passive ideas}\label{sec:ch7-passive}
 
-The channel is a low-pass filter, so its inverse must be a high-pass filter. Liu's notes walk through three ways to build one, shown in \cref{fig:ch7-passive}~\cite{liuEq}.
+The channel is a low-pass filter, so its inverse must be a high-pass filter. \Cref{fig:ch7-passive} shows three passive ways to build one.
 
 \begin{figure}[tbp]
 \centering
@@ -57,7 +57,7 @@ The channel is a low-pass filter, so its inverse must be a high-pass filter. Liu
   \frac{\omega_p}{\omega_z}=\frac{R_1+R_2}{R_2}\cdot\frac{C_1}{C_1+C_2}.
   \label{eq:ch7-passive}
 \end{equation}
-The DC gain is $R_2/(R_1+R_2)$ and the high-frequency gain is $C_1/(C_1+C_2)$. With $R_1C_1=R_2C_2$ it is a flat compensated probe; a larger $R_1C_1$ makes it an equalizer. It is very linear, but its gain is below 1 everywhere (``no gain'', in Liu's words), which degrades the SNR at the next stage.
+The DC gain is $R_2/(R_1+R_2)$ and the high-frequency gain is $C_1/(C_1+C_2)$. With $R_1C_1=R_2C_2$ it is a flat compensated probe; a larger $R_1C_1$ makes it an equalizer. It is very linear, but its gain is below 1 everywhere, which degrades the SNR at the next stage.
 
 \paragraph{RLC load} Put an inductor in series with the load resistor $R_S$ of a differential pair and let $C$ be the node capacitance. With $\omega_n=1/\sqrt{LC}$ and $\zeta=\tfrac{R_S}{2}\sqrt{C/L}$, the load impedance is
 \begin{equation}
@@ -65,7 +65,7 @@ The DC gain is $R_2/(R_1+R_2)$ and the high-frequency gain is $C_1/(C_1+C_2)$. W
   \frac{\lvert Z(j\omega_n)\rvert}{R_S}=\frac{\sqrt{1+4\zeta^2}}{4\zeta^2}.
   \label{eq:ch7-rlc}
 \end{equation}
-With $\zeta=0.2$ the boost is 6.7, or \qty{16.6}{\deci\bel} (\cref{fig:ch7-rlc}). Liu calls the result a ``fatal drawback'': the complex poles sit close to the $j\omega$ axis, so the step response rings as $e^{-\zeta\omega_nt}\cos(\sqrt{1-\zeta^2}\,\omega_nt)$, and the ringing is ISI of its own. Mild inductive peaking with $\zeta\approx0.5$--0.7 is still useful. It extends bandwidth without much ringing, and we return to it in \cref{sec:ctle-hbt}.
+With $\zeta=0.2$ the boost is 6.7, or \qty{16.6}{\deci\bel} (\cref{fig:ch7-rlc}). That is a serious drawback: the complex poles sit close to the $j\omega$ axis, so the step response rings as $e^{-\zeta\omega_nt}\cos(\sqrt{1-\zeta^2}\,\omega_nt)$, and the ringing is ISI of its own. Mild inductive peaking with $\zeta\approx0.5$--0.7 is still useful. It extends bandwidth without much ringing, and we return to it in \cref{sec:ctle-hbt}.
 
 \begin{figure}[!tbp]
   \centering
@@ -76,7 +76,7 @@ With $\zeta=0.2$ the boost is 6.7, or \qty{16.6}{\deci\bel} (\cref{fig:ch7-rlc})
 
 \section{The source-degenerated differential pair}\label{sec:ctle-degen}
 
-The workhorse CTLE is a differential pair with a parallel $R_S\Vert C_S$ between its sources or emitters (\cref{fig:ch7-degen}). At low frequency $R_S$ degenerates the pair and lowers its gain. At high frequency $C_S$ shorts $R_S$, and the full gain $\gm R_D$ returns. The zero and first pole are set by $R_S$ and $C_S$, so $R_S$ can be a triode MOSFET and $C_S$ a varactor, giving a tunable CTLE~\cite{liuEq,palermo720eq}.
+The workhorse CTLE is a differential pair with a parallel $R_S\Vert C_S$ between its sources or emitters (\cref{fig:ch7-degen}). At low frequency $R_S$ degenerates the pair and lowers its gain. At high frequency $C_S$ shorts $R_S$, and the full gain $\gm R_D$ returns. The zero and first pole are set by $R_S$ and $C_S$, so $R_S$ can be a triode MOSFET and $C_S$ a varactor, giving a tunable CTLE~\cite{palermo720eq}.
 
 \begin{figure}[!tbp]
 \centering

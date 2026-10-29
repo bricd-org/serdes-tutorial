@@ -1,7 +1,7 @@
 """ch05_eqfund.py -- figures for Chapter 5 (Equalization Fundamentals).
 
 ch05_inverse : REF |S21|, its ideal (zero-forcing) inverse, and the noise the inverse amplifies
-ch05_cable   : Liu's zero-phase cable model: Lorentzian pulse, main cursor and PDA eye vs loss
+ch05_cable   : zero-phase cable model: Lorentzian pulse, main cursor and PDA eye vs loss
 ch05_anatomy : REF pulse response coloured by which equalizer removes which cursors
 """
 from bricdstyle import *
