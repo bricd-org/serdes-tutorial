@@ -46,6 +46,8 @@ def page(meta, files):
              '<p class="part-blurb">The talk that introduces Open-SERDES: why an open serial link, why IHP SG13G2, '
              'the anatomy of the link, the open channel-to-GDS flow, what we will build and test, and the roadmap. '
              'Speaker notes sit under each slide; the tutorial chapter that goes deeper is linked where there is one.</p>',
+             '<p>These slides were prepared with the help of AI tools and may contain mistakes. If you find one, '
+             'please email <a href="mailto:bricd.org@gmail.com">bricd.org@gmail.com</a> and we will correct it.</p>',
              '<p><a class="btn btn-primary mr-2" href="%s">Download the slides (PDF)</a>'
              '<a class="btn" href="%s">Read the tutorial</a></p>' % (url("/assets/pdf/Open-SERDES_Intro_Slides.pdf"),
                                                                      url("/preface/")),

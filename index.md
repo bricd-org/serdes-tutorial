@@ -51,6 +51,8 @@ Every fast interface (PCIe, USB, Ethernet, chiplet links) rides on a SerDes, yet
 
 ## About
 
-The tutorial is written for the Open-SERDES project at [BRICD](https://www.thebricd.org) (Biomedical Research in Integrated Circuit Design). It draws on Prof. Sam Palermo's ECEN 720 course notes (Texas A&amp;M), Benjamin Liu's equalizer and CDR notes, serdespy, IHP's open PDK and JKU's IIC-OSIC-TOOLS.
+The tutorial is written for the Open-SERDES project at [BRICD](https://www.thebricd.org) (Biomedical Research in Integrated Circuit Design). It draws on Prof. Sam Palermo's ECEN 720 course notes (Texas A&amp;M), Benjamin Liu's equalizer and CDR notes, serdespy, IHP's open PDK and JKU's IIC-OSIC-TOOLS. Every source is listed on the [References]({{ '/references/' | relative_url }}) page. The site layout follows SkillSurf's [Art of Analog IC Design](https://github.com/SkillSurf/art_of_aicd) workshop site.
 
-This is a living draft (v0.1, October 2026). Corrections and contributions are welcome through [GitHub issues](https://github.com/bricd-org/serdes-tutorial/issues).
+**How this tutorial was made.** The Open-SERDES Tutorial was developed with the help of AI tools. The text, figures and code were reviewed by the authors, but errors may remain. The topics, structure and many of the results follow the sources listed in the References, especially Prof. Sam Palermo's ECEN 720 course and Benjamin Liu's notes. If you spot a mistake, please email [bricd.org@gmail.com](mailto:bricd.org@gmail.com) and we will correct it.
+
+This is a living draft (v0.1, October 2026). Corrections and contributions are also welcome through [GitHub issues](https://github.com/bricd-org/serdes-tutorial/issues).

@@ -81,6 +81,13 @@ The site layout follows the SkillSurf
 
 This is a living draft (v0.1, October 2026). Corrections are welcome as issues or pull requests.
 
+## AI assistance and corrections
+
+The Open-SERDES Tutorial, its slides and this website were developed with the help of AI tools.
+The text, figures and code were reviewed by the authors, but errors may remain. If you spot a
+mistake, please email [bricd.org@gmail.com](mailto:bricd.org@gmail.com) or open an issue, and we
+will correct it.
+
 ## Licence
 
 © 2026 the Open-SERDES Tutorial authors, BRICD.
