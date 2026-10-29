@@ -54,62 +54,62 @@ permalink: "/chapters/15-design-and-verification-flow-with-open-tools/"
 </thead>
 <tbody>
 <tr class="odd">
-<td style="text-align: left;"><strong>serdespy</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-serdespy">3</a>], <strong>PyBERT</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-pybert">36</a>]</td>
+<td style="text-align: left;"><strong>serdespy</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-serdespy">3</a>], <strong>PyBERT</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-pybert">46</a>]</td>
 <td style="text-align: left;">link models, eyes, BER (<a href="{% endraw %}{{ '/chapters/16-hands-on-labs-with-serdespy/' | relative_url }}{% raw %}">Chapter 16</a>); PyBERT adds a GUI and IBIS-AMI</td>
 <td style="text-align: left;">system model</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;"><strong>scikit-rf</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p2:skrf2022">18</a>]</td>
+<td style="text-align: left;"><strong>scikit-rf</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p2:skrf2022">20</a>]</td>
 <td style="text-align: left;">Touchstone files, mixed-mode S-parameters, de-embedding</td>
 <td style="text-align: left;">model, EM, lab</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;"><strong>Xschem</strong></td>
+<td style="text-align: left;"><strong>Xschem</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:xschem">47</a>]</td>
 <td style="text-align: left;">schematics, symbols, testbench netlists for every simulator</td>
 <td style="text-align: left;">schematic</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;"><strong>ngspice</strong></td>
+<td style="text-align: left;"><strong>ngspice</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:ngspice">48</a>]</td>
 <td style="text-align: left;"><code>.op</code>, <code>.ac</code>, <code>.noise</code>, <code>.tran</code>, transient noise, Verilog-A via OSDI</td>
 <td style="text-align: left;">simulation</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;"><strong>Xyce</strong>, <strong>VACASK</strong></td>
+<td style="text-align: left;"><strong>Xyce</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:xyce">49</a>], <strong>VACASK</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:vacask">50</a>]</td>
 <td style="text-align: left;">parallel SPICE for large post-layout runs; Verilog-A simulator with PSS and HB</td>
 <td style="text-align: left;">simulation</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;"><strong>CACE</strong></td>
+<td style="text-align: left;"><strong>CACE</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:cace">51</a>]</td>
 <td style="text-align: left;">YAML datasheet: runs testbenches over corners, checks min/typ/max limits</td>
 <td style="text-align: left;">characterization</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;"><strong>KLayout</strong>, <strong>Magic</strong></td>
+<td style="text-align: left;"><strong>KLayout</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:klayout">52</a>], <strong>Magic</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:magic">53</a>]</td>
 <td style="text-align: left;">layout editing; IHP DRC and LVS decks; RC extraction (<strong>Magic</strong>)</td>
 <td style="text-align: left;">layout, sign-off</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;"><strong>Netgen</strong>, <strong>KLayout-PEX</strong></td>
+<td style="text-align: left;"><strong>Netgen</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:netgen">54</a>], <strong>KLayout-PEX</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:klayoutpex">55</a>]</td>
 <td style="text-align: left;">LVS comparison; parasitic extraction for SG13G2</td>
 <td style="text-align: left;">sign-off, extraction</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;"><strong>openEMS</strong>, <strong>Palace</strong></td>
+<td style="text-align: left;"><strong>openEMS</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:openems">56</a>], <strong>Palace</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:palace">57</a>]</td>
 <td style="text-align: left;">FDTD and FEM field solvers for inductors, pads and package</td>
 <td style="text-align: left;">EM</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;"><strong>Verilator</strong>, <strong>Icarus</strong>, <strong>cocotb</strong></td>
+<td style="text-align: left;"><strong>Verilator</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:verilator">58</a>], <strong>Icarus</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:icarus">59</a>], <strong>cocotb</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:cocotb">60</a>]</td>
 <td style="text-align: left;">Verilog simulation and lint; Python testbenches for PRBS, CDR, SPI</td>
 <td style="text-align: left;">RTL</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;"><strong>Yosys</strong>, <strong>LibreLane</strong></td>
-<td style="text-align: left;">synthesis to SG13G2 cells; RTL-to-GDS flow (successor of OpenLane 2)</td>
+<td style="text-align: left;"><strong>Yosys</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:yosys">61</a>], <strong>LibreLane</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:librelane">62</a>]</td>
+<td style="text-align: left;">synthesis to SG13G2 cells; RTL-to-GDS flow (successor of OpenLane 2 [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:openlane2">63</a>])</td>
 <td style="text-align: left;">digital</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;"><strong>OpenROAD</strong>, <strong>OpenSTA</strong></td>
+<td style="text-align: left;"><strong>OpenROAD</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:openroad">64</a>], <strong>OpenSTA</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:opensta">65</a>]</td>
 <td style="text-align: left;">placement, clock tree, routing; static timing (inside <strong>LibreLane</strong>)</td>
 <td style="text-align: left;">digital</td>
 </tr>

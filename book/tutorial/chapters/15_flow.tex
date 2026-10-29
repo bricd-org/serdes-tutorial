@@ -48,16 +48,16 @@ Every tool in this chapter ships in one Docker image, \textbf{IIC-OSIC-TOOLS}~\c
 \midrule
 \tool{serdespy}~\cite{serdespy}, \tool{PyBERT}~\cite{pybert} & link models, eyes, BER (\cref{ch:labs}); PyBERT adds a GUI and IBIS-AMI & system model\\
 \tool{scikit-rf}~\cite{p2:skrf2022} & Touchstone files, mixed-mode S-parameters, de-embedding & model, EM, lab\\
-\tool{Xschem} & schematics, symbols, testbench netlists for every simulator & schematic\\
-\tool{ngspice} & \code{.op}, \code{.ac}, \code{.noise}, \code{.tran}, transient noise, Verilog-A via OSDI & simulation\\
-\tool{Xyce}, \tool{VACASK} & parallel SPICE for large post-layout runs; Verilog-A simulator with PSS and HB & simulation\\
-\tool{CACE} & YAML datasheet: runs testbenches over corners, checks min/typ/max limits & characterization\\
-\tool{KLayout}, \tool{Magic} & layout editing; IHP DRC and LVS decks; RC extraction (\tool{Magic}) & layout, sign-off\\
-\tool{Netgen}, \tool{KLayout-PEX} & LVS comparison; parasitic extraction for \sgx{} & sign-off, extraction\\
-\tool{openEMS}, \tool{Palace} & FDTD and FEM field solvers for inductors, pads and package & EM\\
-\tool{Verilator}, \tool{Icarus}, \tool{cocotb} & Verilog simulation and lint; Python testbenches for PRBS, CDR, SPI & RTL\\
-\tool{Yosys}, \tool{LibreLane} & synthesis to \sgx{} cells; RTL-to-GDS flow (successor of OpenLane 2) & digital\\
-\tool{OpenROAD}, \tool{OpenSTA} & placement, clock tree, routing; static timing (inside \tool{LibreLane}) & digital\\
+\tool{Xschem}~\cite{p6:xschem} & schematics, symbols, testbench netlists for every simulator & schematic\\
+\tool{ngspice}~\cite{p6:ngspice} & \code{.op}, \code{.ac}, \code{.noise}, \code{.tran}, transient noise, Verilog-A via OSDI & simulation\\
+\tool{Xyce}~\cite{p6:xyce}, \tool{VACASK}~\cite{p6:vacask} & parallel SPICE for large post-layout runs; Verilog-A simulator with PSS and HB & simulation\\
+\tool{CACE}~\cite{p6:cace} & YAML datasheet: runs testbenches over corners, checks min/typ/max limits & characterization\\
+\tool{KLayout}~\cite{p6:klayout}, \tool{Magic}~\cite{p6:magic} & layout editing; IHP DRC and LVS decks; RC extraction (\tool{Magic}) & layout, sign-off\\
+\tool{Netgen}~\cite{p6:netgen}, \tool{KLayout-PEX}~\cite{p6:klayoutpex} & LVS comparison; parasitic extraction for \sgx{} & sign-off, extraction\\
+\tool{openEMS}~\cite{p6:openems}, \tool{Palace}~\cite{p6:palace} & FDTD and FEM field solvers for inductors, pads and package & EM\\
+\tool{Verilator}~\cite{p6:verilator}, \tool{Icarus}~\cite{p6:icarus}, \tool{cocotb}~\cite{p6:cocotb} & Verilog simulation and lint; Python testbenches for PRBS, CDR, SPI & RTL\\
+\tool{Yosys}~\cite{p6:yosys}, \tool{LibreLane}~\cite{p6:librelane} & synthesis to \sgx{} cells; RTL-to-GDS flow (successor of OpenLane~2~\cite{p6:openlane2}) & digital\\
+\tool{OpenROAD}~\cite{p6:openroad}, \tool{OpenSTA}~\cite{p6:opensta} & placement, clock tree, routing; static timing (inside \tool{LibreLane}) & digital\\
 \bottomrule
 \end{tabularx}
 \end{table}

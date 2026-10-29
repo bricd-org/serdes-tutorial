@@ -15,7 +15,7 @@
 %% =====================================================================
 \section{The charge-pump PLL}\label{sec:cppll}
 
-A free-running VCO drifts: its TIE random-walks (\cref{fig:ch11-tie}b) and its frequency wanders with temperature and supply. A \textbf{phase-locked loop} (PLL) fixes both by comparing the divided VCO output with a crystal reference and steering the VCO until the two are aligned. Locked, the output frequency is exactly $N f_\mathrm{ref}$. \OS{} uses an integer-N charge-pump PLL (\cref{fig:ch12-arch}) with $f_\mathrm{ref} = 50$\,MHz and $N = 50$, reusing the team's LC-VCO PLL design~\cite{smacd2026pll} retuned from 2.4 to 2.5\,GHz.
+A free-running VCO drifts: its TIE random-walks (\cref{fig:ch11-tie}b) and its frequency wanders with temperature and supply. A \textbf{phase-locked loop} (PLL) fixes both by comparing the divided VCO output with a crystal reference and steering the VCO until the two are aligned. Gardner's analysis of the charge-pump PLL~\cite{p5:gardner1980} underlies this chapter; Razavi~\cite{razaviPLL}, Gardner's book~\cite{gardner2005} and ECEN~720~\cite{palermo720clk} treat it in more depth. Locked, the output frequency is exactly $N f_\mathrm{ref}$. \OS{} uses an integer-N charge-pump PLL (\cref{fig:ch12-arch}) with $f_\mathrm{ref} = 50$\,MHz and $N = 50$, reusing the team's LC-VCO PLL design~\cite{smacd2026pll} retuned from 2.4 to 2.5\,GHz.
 
 \begin{figure}[tbp]
 \centering
@@ -280,7 +280,7 @@ The amplitude grows until the pair limits, at about $(4/\pi)\,I_\mathrm{tail}R_p
 \end{example}
 
 \paragraph{Phase noise: Leeson's model}
-Leeson's empirical model captures the three regions of an oscillator's phase noise (\cref{fig:ch12-leeson}a):
+Leeson's empirical model~\cite{p5:leeson1966} captures the three regions of an oscillator's phase noise (\cref{fig:ch12-leeson}a):
 \begin{equation}
   \mathcal{L}(\Delta f) = 10\log_{10}\!\left[\frac{2FkT}{P_\mathrm{sig}}\left(1 + \Big(\frac{f_0}{2Q\,\Delta f}\Big)^2\right)\left(1 + \frac{f_{1/f^3}}{\Delta f}\right)\right] ,
   \label{eq:ch12-leeson}

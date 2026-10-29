@@ -13,7 +13,7 @@
 \end{itemize}
 \end{objectives}
 
-Here the channel is deliberately simple, a one-pole RC filter or a short line; the realistic REF channel waits for \cref{sec:refchannel}, and the tools carry over unchanged.
+Here the channel is deliberately simple, a one-pole RC filter or a short line; the realistic REF channel waits for \cref{sec:refchannel}, and the tools carry over unchanged. This chapter is standard background, covered in more depth in Palermo's ECEN~720 lectures~\cite{palermo720,palermo720ch} and in Dally and Poulton~\cite{dally1998}.
 
 \section{NRZ signaling: bits, symbols and the unit interval}\label{sec:nrz}
 A link carries \textbf{bits} $b_k \in \{0,1\}$. The simplest way to put them on a wire is \textbf{non-return-to-zero} (NRZ) signaling, also called PAM2: each bit becomes a \textbf{symbol} $a_k = 2b_k - 1 \in \{-1,+1\}$, and the transmitter holds the voltage $A\,a_k$ for one bit period (\cref{fig:ch2-nrz}). In \OS{}, $A = \qty{0.5}{\volt}$ (\qty{1}{\Vppd}). One symbol lasts one \textbf{unit interval} (UI). NRZ sends one bit per symbol, so the \textbf{bit rate} $\fb$ equals the \textbf{baud rate}; PAM4 sends two (\cref{sec:pam4}).

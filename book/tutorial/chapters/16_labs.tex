@@ -297,7 +297,7 @@ for k in range(n_upd):
 %% =====================================================================
 \section{Where to go next}\label{sec:ch16-next}
 
-\paragraph{Build the GUI demo} The proposal lists a GUI front-end for the link model among its deliverables, in the spirit of the Julia SerDes framework (JLSD) it cites. The labs are the engine: put sliders for loss, taps, peaking and noise in front of \code{channel()}, the FFE, \code{ctle()}, the DFE and \code{lab7\_bbcdr.simulate()}, and redraw the eye and bathtub on every change. Cross-check the eyes against PyBERT~\cite{pybert}, a mature open link simulator with IBIS-AMI support.
+\paragraph{Build the GUI demo} The proposal lists a GUI front-end for the link model among its deliverables, in the spirit of the Julia SerDes framework (JLSD)~\cite{p6:jlsd} it cites. The labs are the engine: put sliders for loss, taps, peaking and noise in front of \code{channel()}, the FFE, \code{ctle()}, the DFE and \code{lab7\_bbcdr.simulate()}, and redraw the eye and bathtub on every change. Cross-check the eyes against PyBERT~\cite{pybert}, a mature open link simulator with IBIS-AMI support.
 
 \paragraph{Use a measured channel} Load the test board's 4-port Touchstone file. \code{sdp.four\_port\_to\_diff} assumes ports 1$\to$2 and 3$\to$4 and returns $V_\mathrm{out}/V_s$, half of $S_{21}$ for a matched link; the data must start near DC (\tool{scikit-rf} can extrapolate).
 \begin{lstlisting}
