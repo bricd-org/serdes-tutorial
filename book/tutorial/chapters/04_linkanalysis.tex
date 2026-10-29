@@ -121,7 +121,7 @@ PDA tells us the worst case but not how often it happens. A BER target is a stat
   \label{eq:ch4-berj}
 \end{gather}
 \end{keyeq}
-Gaussian noise of rms $\sign$ is one more convolution in voltage. Sampling-clock jitter moves $\ts$, so it is a convolution in \emph{time} with the jitter PDF $f_J$. Here we use the dual-Dirac model (a Gaussian of rms $\sigma_\mathrm{RJ}$ at $\pm\mathrm{DJ}/2$); \cref{sec:dualdirac} explains where it comes from. Evaluating \cref{eq:ch4-ber} over a grid of $(\ts, v)$ gives the \textbf{statistical eye}: contours of constant BER. The \textbf{vertical bathtub} is one column of it, BER versus threshold at a fixed phase. The eye height at a BER target is the width of the bathtub at that BER.
+Gaussian noise of rms $\sign$ is one more convolution in voltage. Sampling-clock jitter moves $\ts$, so it is a convolution in \emph{time} with the jitter PDF $f_J$. Here we use the dual-Dirac model~\cite{p5:agilentdualdirac} (a Gaussian of rms $\sigma_\mathrm{RJ}$ at $\pm\mathrm{DJ}/2$); \cref{sec:dualdirac} explains where it comes from. Evaluating \cref{eq:ch4-ber} over a grid of $(\ts, v)$ gives the \textbf{statistical eye}: contours of constant BER. The \textbf{vertical bathtub} is one column of it, BER versus threshold at a fixed phase. The eye height at a BER target is the width of the bathtub at that BER.
 
 \begin{figure}[tbp]
 \centering

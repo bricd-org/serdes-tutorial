@@ -66,7 +66,7 @@ The TX and RX of a serial link run from different crystals, each accurate to abo
 A PLL's PFD does not work on data: random data skips edges, and a missing edge looks like a frequency error. A CDR phase detector must compare edges only where the data has them, and output \emph{nothing} during runs of identical bits (\textbf{tri-state}). Two classic detectors do this.
 
 \paragraph{The Hogge linear detector}
-Two flip-flops and two XORs (\cref{fig:ch13-hogge}). FF1 retimes the data (B), FF2 delays B by half a cycle (A). $X = D_\mathrm{in}\oplus B$ lasts from each data transition to the next rising clock edge, $\Tb/2 + \Delta t$ when the clock is $\Delta t$ late; $Y = B\oplus A$ always lasts $\Tb/2$. X pumps up and Y pumps down, so the net charge per transition is proportional to $\Delta t$: a linear detector of gain $TD\cdot I_P/2\pi$, where the \textbf{transition density} TD is about 0.5 for random data. It tri-states and retimes the data. Its weakness is speed: at 5\,Gb/s X and Y are 100\,ps pulses from gates with 20--30\,ps edges, and the clock-to-Q delay leaves a static error unless matched; Liu puts its practical limit near 10\,Gb/s~\cite{liuCDR}.
+Hogge's detector~\cite{p5:hogge1985} uses two flip-flops and two XORs (\cref{fig:ch13-hogge}). FF1 retimes the data (B), FF2 delays B by half a cycle (A). $X = D_\mathrm{in}\oplus B$ lasts from each data transition to the next rising clock edge, $\Tb/2 + \Delta t$ when the clock is $\Delta t$ late; $Y = B\oplus A$ always lasts $\Tb/2$. X pumps up and Y pumps down, so the net charge per transition is proportional to $\Delta t$: a linear detector of gain $TD\cdot I_P/2\pi$, where the \textbf{transition density} TD is about 0.5 for random data. It tri-states and retimes the data. Its weakness is speed: at 5\,Gb/s X and Y are 100\,ps pulses from gates with 20--30\,ps edges, and the clock-to-Q delay leaves a static error unless matched; Liu puts its practical limit near 10\,Gb/s~\cite{liuCDR}.
 
 \begin{figure}[tbp]
 \centering
@@ -106,7 +106,7 @@ Two flip-flops and two XORs (\cref{fig:ch13-hogge}). FF1 retimes the data (B), F
 \end{figure}
 
 \paragraph{The Alexander bang-bang detector}
-The Alexander detector (\cref{fig:ch13-alex}) takes two samples per bit: a data sample at the bit centre and an \textbf{edge sample} half a bit earlier, at the expected transition. Three consecutive samples, S1 (previous data), S2 (edge) and S3 (current data), tell everything. If S1 = S3 there was no transition and the detector says nothing. Otherwise S2 equals whichever data bit it was closer to: if S2 = S1 the edge sample was taken \emph{before} the transition and the clock is early; if S2 = S3 it was taken after, and the clock is late. With $X = S1\oplus S2$ and $Y = S2\oplus S3$:
+The Alexander detector~\cite{p5:alexander1975} (\cref{fig:ch13-alex}) takes two samples per bit: a data sample at the bit centre and an \textbf{edge sample} half a bit earlier, at the expected transition. Three consecutive samples, S1 (previous data), S2 (edge) and S3 (current data), tell everything. If S1 = S3 there was no transition and the detector says nothing. Otherwise S2 equals whichever data bit it was closer to: if S2 = S1 the edge sample was taken \emph{before} the transition and the clock is early; if S2 = S3 it was taken after, and the clock is late. With $X = S1\oplus S2$ and $Y = S2\oplus S3$:
 \begin{center}\small
 \begin{tabular}{cccl}
 \toprule
@@ -161,7 +161,7 @@ The output is only the \emph{sign} of the error, hence ``bang-bang'' (BB). It re
 
 \paragraph{Half-rate in \OS{}} At half rate the four samplers D0, E0, D1, E1 fire on I, Q, $\bar{\mathrm{I}}$, $\bar{\mathrm{Q}}$ of the 2.5\,GHz clock (\cref{sec:quadrature,sec:sampler}). Each clock cycle yields two early/late decisions, from (D0, E0, D1) and (D1, E1, D0$'$), so every transition is used. The cost is that I/Q and duty-cycle errors now appear as phase offsets between the two halves (\cref{we:ch12-iq}).
 
-\paragraph{Mueller-M\"uller} This \textbf{baud-rate} detector uses one data sample and one error sample per UI and no edge samplers. Its output $z_k = e_k d_{k-1} - e_{k-1}d_k$ averages to $h_1 - h_{-1}$, so it locks where the first pre- and post-cursors are equal, a channel-dependent point. It suits ADC-based receivers; \OS{} has edge samplers and uses Alexander.
+\paragraph{Mueller-M\"uller} This \textbf{baud-rate} detector~\cite{p5:mueller1976} uses one data sample and one error sample per UI and no edge samplers. Its output $z_k = e_k d_{k-1} - e_{k-1}d_k$ averages to $h_1 - h_{-1}$, so it locks where the first pre- and post-cursors are equal, a channel-dependent point. It suits ADC-based receivers; \OS{} has edge samplers and uses Alexander.
 
 %% =====================================================================
 \section{The linear CDR model and jitter transfer}\label{sec:ch13-linear}
