@@ -73,7 +73,7 @@ permalink: "/chapters/11-jitter/"
 <figure>
 <img src="{% endraw %}{{ '/assets/figs/tikz/11_jitter-0.svg' | relative_url }}{% raw %}" style="width:659px" alt="Jitter splits into an unbounded random part and bounded deterministic parts." loading="lazy" />
 <div class="figcredit">
-<p>After Palermo [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-palermo720clk">34</a>].</p>
+<p>After Palermo [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-palermo720clk">36</a>].</p>
 </div>
 <figcaption><span class="capnum">Figure 11.3.</span> <strong>Jitter splits into an unbounded random part and bounded deterministic parts.</strong> Each leaf shows the shape of its probability density. RJ terms are independent Gaussians and add in root-sum-square; DJ terms are added linearly, which is conservative.</figcaption>
 </figure>
@@ -86,7 +86,7 @@ permalink: "/chapters/11-jitter/"
 <figcaption><span class="capnum">Figure 11.4.</span> <strong>Total jitter is the convolution of RJ and DJ, and its tails are Gaussian</strong> (log scale). (a) RJ never ends. (b) DJ, here DCD of <span class="math inline">\(\pm4\)</span> ps convolved with ISI from three earlier bits, stops at <span class="math inline">\(\pm10\)</span> ps. (c) The convolution. The dashed dual-Dirac model is fitted to the tails between BER <span class="math inline">\(10^{-4}\)</span> and <span class="math inline">\(10^{-12}\)</span>; it ignores the centre and returns DJ<span class="math inline">\(_{\delta\delta}\)</span> = 15.6 ps, less than the true 20 ps peak-to-peak.</figcaption>
 </figure>
 <h2 id="sec:dualdirac"><span class="secnum">11.3</span>The dual-Dirac model and total jitter</h2>
-<p>At <span class="math inline">\(10^{-12}\)</span> only the far tails of the jitter PDF matter. The <strong>dual-Dirac model</strong> keeps the tails and simplifies the rest: all DJ becomes two impulses at <span class="math inline">\(\pm\mathrm{DJ}_{\delta\delta}/2\)</span>, each carrying a Gaussian of rms <span class="math inline">\(\sigma_\mathrm{RJ}\)</span> (<a href="#fig:ch11-bathtub">Figure 11.5</a>a).</p>
+<p>At <span class="math inline">\(10^{-12}\)</span> only the far tails of the jitter PDF matter. The <strong>dual-Dirac model</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p5:agilentdualdirac">23</a>] keeps the tails and simplifies the rest: all DJ becomes two impulses at <span class="math inline">\(\pm\mathrm{DJ}_{\delta\delta}/2\)</span>, each carrying a Gaussian of rms <span class="math inline">\(\sigma_\mathrm{RJ}\)</span> (<a href="#fig:ch11-bathtub">Figure 11.5</a>a).</p>
 <div class="tbox tbox-derivation">
 <div class="tbox-title">
 <p>From two Gaussians to total jitter</p>
