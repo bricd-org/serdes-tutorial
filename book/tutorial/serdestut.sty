@@ -85,6 +85,19 @@
 \RequirePackage[font={small,sf},labelfont={bf,color=navy},labelsep=period,justification=raggedright,singlelinecheck=false]{caption}
 \RequirePackage[font={small,sf}]{subcaption}
 \RequirePackage{float}
+% Float placement. LaTeX's defaults let figures fill only 70% of a text page and accept a page of
+% figures that is only half full, centring them with large gaps. Let figures share pages with
+% text, allow a figures-only page only when it is nearly full, and stack its figures at the top.
+\renewcommand{\topfraction}{0.85}
+\renewcommand{\bottomfraction}{0.6}
+\renewcommand{\textfraction}{0.1}
+\renewcommand{\floatpagefraction}{0.8}
+\setcounter{topnumber}{3}
+\setcounter{bottomnumber}{2}
+\setcounter{totalnumber}{4}
+\setlength{\@fptop}{0pt}
+\setlength{\@fpsep}{\floatsep}
+\setlength{\@fpbot}{0pt plus 1fil}
 
 % common TikZ styles for block diagrams (use these in every schematic/block figure)
 \tikzset{

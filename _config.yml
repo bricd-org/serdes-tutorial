@@ -24,7 +24,7 @@ aux_links:
 aux_links_new_tab: false
 
 nav_external_links:
-  - title: Download the PDF (161 pages)
+  - title: Download the PDF
     url: https://www.thebricd.org/serdes-tutorial/assets/pdf/Open-SERDES_Tutorial.pdf
     hide_icon: false
   - title: Source on GitHub
