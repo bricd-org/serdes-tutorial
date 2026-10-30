@@ -74,9 +74,7 @@ The tutorial draws on:
 - the IHP Open PDK
 - JKU's IIC-OSIC-TOOLS and AMS chip template
 
-The site layout follows the SkillSurf
-[Art of Analog IC Design](https://github.com/SkillSurf/art_of_aicd) workshop and uses the
-[just-the-docs](https://github.com/just-the-docs/just-the-docs) theme.
+The site uses the [just-the-docs](https://github.com/just-the-docs/just-the-docs) theme.
 
 This is a living draft (v0.1, October 2026). Corrections are welcome as issues or pull requests.
 
