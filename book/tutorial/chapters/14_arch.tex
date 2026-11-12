@@ -252,6 +252,25 @@ A QFN package is cheap and easy to solder to a test PCB, but every bond wire is 
 \textbf{Result:} keep the high-speed bond wires at or below about 1\,mm, and about 0.5\,mm for the 10\,Gb/s target. That rule puts the TX and RX pads on the die edge closest to their package pins, and puts those pins in the middle of one package side. If the wires cannot be that short, part of the inductance can be absorbed into the T-coil of \cref{sec:esd-pad}.
 \end{example}
 
+\paragraph{Supply and ground pins} The package sits in every supply too, and there the trouble starts far below 2.5\,GHz. The supply and ground bond wires (loop inductance $L_\mathrm{loop}$) and the on-chip decoupling $C_\mathrm{dec}$ form an LC tank. Seen from the circuits, the rail impedance peaks at $f_\mathrm{res} = 1/(2\pi\sqrt{L_\mathrm{loop}C_\mathrm{dec}})$, where it reaches $Q\sqrt{L_\mathrm{loop}/C_\mathrm{dec}}$, with $Q = \sqrt{L_\mathrm{loop}/C_\mathrm{dec}}/R_\mathrm{loop}$. Near that frequency the package no longer refills the rail between clock edges, as \cref{we:ch15-decap} assumes; it rings with it. With a few nanohenries and a few hundred picofarads, $f_\mathrm{res}$ lands in the hundreds of megahertz, where the test chip runs its 312.5\,MHz parallel clock and its 625\,MHz CDR logic.
+
+\begin{example}{Does the deserializer supply resonate near its own clock?}\label{we:ch14-pdn}
+\textbf{Given:} the 1:16 deserializer on DVDD (1.2\,V, 4.2\,mA on average) with the $C_\mathrm{dec} = \qty{210}{\pico\farad}$ of \cref{we:ch15-decap}; two DVDD bond wires of about 2.5\,nH each, since supply pins do not get the shortest wires; ground returned through several short down-bonds to the exposed pad, about 0.15\,nH in total.
+
+\textbf{Resonance:} the two supply wires in parallel give 1.25\,nH, so $L_\mathrm{loop} \approx 1.4$\,nH and $f_\mathrm{res} = 1/(2\pi\sqrt{1.4\,\mathrm{nH}\cdot210\,\mathrm{pF}}) = 294$\,MHz, within 6\,\% of the 312.5\,MHz clock that drives the deserializer.
+
+\textbf{Height of the peak:} $\sqrt{L_\mathrm{loop}/C_\mathrm{dec}} = \qty{2.6}{\ohm}$. A MIM capacitor has almost no series resistance, and the wires and the on-chip grid add only $R_\mathrm{loop} \approx 0.25$--\qty{0.5}{\ohm} (a 25\,\textmu{}m gold wire 2.5\,mm long is about \qty{0.2}{\ohm} at 300\,MHz). So $Q \approx 5$--10: the rail impedance peaks at 13--\qty{26}{\ohm} and is still 11--\qty{16}{\ohm} at 312.5\,MHz. The deserializer draws its current in pulses on the clock edges, so its 312.5\,MHz component is of the same order as its average. Just 2\,mA of it gives 20--30\,mV of ripple, half of the 60\,mV (5\,\%) droop that \cref{we:ch15-decap} allows, and on top of it.
+
+\textbf{Fixes:}
+\begin{itemize}
+  \item \textbf{Damp the tank.} A second 210\,pF in series with about $\sqrt{L_\mathrm{loop}/C_\mathrm{dec}} = \qty{2.6}{\ohm}$ lowers the peak to about \qty{5}{\ohm} and the impedance at 312.5\,MHz to about \qty{3}{\ohm}. MOS decoupling, whose channel resistance supplies the series resistance, does the same job.
+  \item \textbf{Lower $L_\mathrm{loop}$.} QFN-48 has pins to spare: give each supply several wires and return ground through down-bonds to the exposed pad. Four DVDD wires move $f_\mathrm{res}$ to about 390\,MHz. Moving the peak alone is fragile, because the chip also has clocks at 625\,MHz and 1.25\,GHz, so damp it as well.
+  \item \textbf{Keep the domains apart.} The CML on AVDD draws a near-constant current, but the VCO is sensitive to supply noise; give AVDD and the PLL supply their own pins so that DVDD ringing cannot reach them.
+\end{itemize}
+
+\textbf{Result:} as soon as the pinout and the decoupling are known, compute $f_\mathrm{res}$ and the peak impedance for every supply domain and compare them with the chip's clock frequencies. Damp any resonance that lands near one, and simulate the supply network with the bond-wire inductance and resistance in the netlist.
+\end{example}
+
 %% =====================================================================
 \section{Power budget}\label{sec:power-budget}
 
