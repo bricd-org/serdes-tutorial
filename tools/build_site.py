@@ -1056,6 +1056,8 @@ def main():
     cover.parent.mkdir(parents=True, exist_ok=True)
     subprocess.run(["pdftoppm", "-png", "-r", "60", "-f", "1", "-l", "1", "-singlefile",
                     str(BUILD / "tutorial.pdf"), str(cover.with_suffix(""))], check=True)
+    # the interactive demos (web only): re-insert them into the fresh pages
+    subprocess.run([sys.executable, str(ROOT / "tools" / "insert_demos.py")], check=True)
     print(f"done: {len(pages)} pages, {len(WARN)} warnings")
     (ROOT / "tools" / "last_build_warnings.txt").write_text("\n".join(WARN) + "\n")
 

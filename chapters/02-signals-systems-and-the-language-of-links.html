@@ -211,6 +211,8 @@ permalink: "/chapters/02-signals-systems-and-the-language-of-links/"
 <img src="{% endraw %}{{ '/assets/figs/ch02_isi_tau.svg' | relative_url }}{% raw %}" style="width:753px" alt="Slower channels spread each pulse over more UIs and close the eye." loading="lazy" />
 <figcaption><span class="capnum">Figure 2.8.</span> <strong>Slower channels spread each pulse over more UIs and close the eye.</strong> Top: one-pole pulse responses for <span class="math inline">\(\tau = 0.2\)</span>, 0.5 and 1 UI; filled dots are the main cursor, open dots the post-cursors. Bottom: PRBS7 eyes through the same channels (<span class="math inline">\(2A = 1\,\mathrm{V}\)</span>). The measured openings, 987, 729 and 265 mV, match <span class="math inline">\(2A(1-2e^{-T_\mathrm{b}/\tau})\)</span> from <a href="#eq:ch2-onepole-eye">Equation (2.7)</a>. The arrow sits at the best sampling instant, which for a one-pole channel is the pulse peak at the end of the bit, not the visual center of the eye.</figcaption>
 </figure>
+<!-- demo:isieye -->{% endraw %}{% include demos/isieye.html %}{% raw %}<!-- /demo -->
+
 <p>Subtracting the magnitudes of all other cursors from the main cursor works for any channel; this is <strong>peak-distortion analysis</strong> (<a href="{% endraw %}{{ '/chapters/04-link-budgets-and-statistical-analysis/' | relative_url }}{% raw %}#sec:pda">Section 4.2</a>). For the 10 dB line of <a href="#fig:ch2-pulse">Figure 2.6</a> it gives 230 mV out of 1 V; for the REF channel it is negative: the eye is closed.</p>
 <div class="tbox tbox-insight">
 <div class="tbox-title">

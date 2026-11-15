@@ -1,0 +1,81 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdIsiEye" role="group" aria-label="Interactive demo: how a slower channel spreads the pulse and closes the eye">
+  <div class="bd-head"><span>// try it · ISI and the eye</span>
+    <span class="bd-seg" role="group" aria-label="Preset time constants"><button type="button" data-tau="0.2" aria-pressed="false">τ 0.2 UI</button><button type="button" data-tau="0.5" aria-pressed="true">τ 0.5 UI</button><button type="button" data-tau="1" aria-pressed="false">τ 1 UI</button></span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>channel time constant τ <b data-v="tau"></b></span><input type="range" data-k="tau" min="0.1" max="1.5" step="0.01" value="0.5" aria-label="Channel time constant in UI"></label>
+  </div>
+  <div class="bd-row">
+    <div class="bd-scope"><canvas data-c="p" aria-hidden="true"></canvas><span class="bd-tag">1-UI pulse response and its cursors</span></div>
+    <div class="bd-scope"><canvas data-c="e" aria-hidden="true"></canvas><span class="bd-tag">PRBS7 eye, 2A = 1 V</span></div>
+  </div>
+  <div class="bd-read" aria-live="polite"><span>f<sub>3dB</sub> <b data-o="f3">–</b></span><span>main cursor p<sub>0</sub> <b data-o="p0">–</b></span><span>p<sub>1</sub>/p<sub>0</sub> <b data-o="r1">–</b></span><span>PRBS7 eye <b data-o="eh">–</b></span><span>2A(1 − 2e<sup>−T<sub>b</sub>/τ</sup>) <b data-o="th">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdIsiEye'); if (!root || !window.BD) return;
+  var SPS = 32, A = 0.5, TB = 200e-12, N = 127, REP = 4;
+  var bits = [], s = 0x7f;                       // PRBS7: x^7 + x^6 + 1
+  for (var i = 0; i < N; i++) { var nb = ((s >> 6) ^ (s >> 5)) & 1; s = ((s << 1) | nb) & 0x7f; bits.push(nb); }
+  var S = BD.bind(root, { tau: { fmt: function (x) { return x.toFixed(2) + ' UI (' + (x * 200).toFixed(0) + ' ps)'; } } }, function () { draw(); });
+  var sl = root.querySelector('[data-k="tau"]'), q = function (s) { return root.querySelector(s); };
+  BD.seg(root, 'tau', function (v) { sl.value = v; sl.dispatchEvent(new Event('input')); });
+  function draw() {
+    var tau = S.tau, a = Math.exp(-1 / (tau * SPS));            // exact one-pole step per sample
+    root.querySelectorAll('[data-tau]').forEach(function (b) { b.setAttribute('aria-pressed', Math.abs(parseFloat(b.getAttribute('data-tau')) - tau) < 0.005 ? 'true' : 'false'); });
+    // pulse response (amplitude 1 V, 1 UI) over 6 UI
+    var pt = [], pv = [], y = 0;
+    for (var n = 0; n <= 6 * SPS; n++) { pt.push(n / SPS); pv.push(y); var x = n < SPS ? 1 : 0; y = x + (y - x) * a; }
+    var p0 = 1 - Math.exp(-1 / tau), r1 = Math.exp(-1 / tau);
+    var d = BD.setup(q('[data-c="p"]')), f = BD.frame(d, { x: [0, 6], y: [-0.05, 1.05],
+      xt: [[0, '0'], [1, '1'], [2, '2'], [3, '3'], [4, '4'], [5, '5'], [6, '6 UI']], yt: [[0, '0'], [0.5, '0.5'], [1, '1 V']], pad: { l: 36, t: 24 } });
+    var g = d.g; g.fillStyle = 'rgba(224,184,90,.10)'; g.fillRect(f.X(0), f.p.t, f.X(1) - f.X(0), d.h - f.p.t - f.p.b);
+    BD.line(f, pt, pv, BD.C.blue, 2);
+    for (var k = 0; k <= 5; k++) {
+      var v = p0 * Math.pow(r1, k), xx = f.X(1 + k);
+      g.strokeStyle = k ? 'rgba(127,184,240,.55)' : BD.C.gold; g.lineWidth = 1.4; g.beginPath(); g.moveTo(xx, f.Y(0)); g.lineTo(xx, f.Y(v)); g.stroke();
+      BD.dot(f, 1 + k, v, k ? BD.C.teal : BD.C.gold, k ? 3 : 4);
+    }
+    g.fillStyle = BD.C.gold; g.fillText('p0', f.X(1) + 5, f.Y(p0) - 4);
+    if (p0 * r1 > 0.04) { g.fillStyle = BD.C.teal; g.fillText('p1', f.X(2) + 5, f.Y(p0 * r1) - 4); }
+    // PRBS7 waveform through the channel
+    var w = [], yy = -A, tot = N * REP * SPS;
+    for (var m = 0; m < tot; m++) { var xv = bits[Math.floor(m / SPS) % N] ? A : -A; yy = xv + (yy - xv) * a; w.push(yy); }
+    // bit k (held over samples kSPS..(k+1)SPS-1) is sampled at kSPS + ph; find the best phase
+    var best = -1e9, bph = SPS - 1;
+    for (var ph = 0; ph < SPS; ph++) {
+      var lo1 = 1e9, hi0 = -1e9;
+      for (var b = N; b < N * REP; b++) { var smp = w[b * SPS + ph]; if (bits[b % N]) lo1 = Math.min(lo1, smp); else hi0 = Math.max(hi0, smp); }
+      if (lo1 - hi0 > best) { best = lo1 - hi0; bph = ph; }
+    }
+    var de = BD.setup(q('[data-c="e"]')), fe = BD.frame(de, { x: [0, 2], y: [-0.6, 0.6],
+      xt: [[0, '−1'], [0.5, '−0.5'], [1, '0'], [1.5, '0.5'], [2, '1 UI']], yt: [[-0.5, '−0.5'], [0, '0'], [0.5, '0.5 V']], pad: { l: 40, t: 24 } });
+    var ge = de.g; fe.clipIn(); ge.strokeStyle = 'rgba(127,184,240,.16)'; ge.lineWidth = 1;
+    for (var c = N; c < N * REP - 2; c++) {
+      var st = c * SPS + bph - SPS; ge.beginPath();
+      for (var j = 0; j <= 2 * SPS; j++) { var X = fe.X(j / SPS), Y = fe.Y(w[st + j]); if (j) ge.lineTo(X, Y); else ge.moveTo(X, Y); }
+      ge.stroke();
+    }
+    fe.clipOut();
+    if (best > 0) {
+      var top = best / 2, xm = fe.X(1);
+      ge.strokeStyle = BD.C.gold; ge.lineWidth = 1.5; ge.beginPath(); ge.moveTo(xm, fe.Y(top)); ge.lineTo(xm, fe.Y(-top)); ge.stroke();
+      [top, -top].forEach(function (yv) { ge.beginPath(); ge.moveTo(xm - 5, fe.Y(yv)); ge.lineTo(xm + 5, fe.Y(yv)); ge.stroke(); });
+      ge.fillStyle = BD.C.gold; ge.fillText((best * 1e3).toFixed(0) + ' mV', xm + 8, fe.Y(0) + 3);
+    } else { ge.fillStyle = '#f39a7c'; ge.textAlign = 'center'; ge.fillText('eye closed', fe.X(1), fe.Y(0) + 3); ge.textAlign = 'left'; }
+    var th = 2 * A * (1 - 2 * Math.exp(-1 / tau));
+    q('[data-o="f3"]').textContent = (1 / (2 * Math.PI * tau * TB) / 1e9).toFixed(2) + ' GHz';
+    q('[data-o="p0"]').textContent = p0.toFixed(3) + ' V';
+    q('[data-o="r1"]').textContent = (100 * r1).toFixed(0) + ' %';
+    var eh = q('[data-o="eh"]'); eh.textContent = (best * 1e3).toFixed(0) + ' mV'; eh.className = best > 0 ? 'ok' : 'bad';
+    q('[data-o="th"]').textContent = (th * 1e3).toFixed(0) + ' mV';
+    q('[data-o="cap"]').innerHTML = tau < 0.3
+      ? 'A fast channel: the pulse settles inside its own UI, the post-cursors are tiny and the eye is almost the full 1 V.'
+      : tau < 0.9
+      ? 'Each pulse now leaks into the next UIs. The post-cursors add up: a lone 1 after a run of 0s starts from −A and cannot climb as far, so the inner eye shrinks to 2A(1 − 2e<sup>−T<sub>b</sub>/τ</sup>).'
+      : 'The tail ISI Σp<sub>k</sub> = e<sup>−T<sub>b</sub>/τ</sup> is ' + (r1 > 0.5 ? 'larger than half the swing, so the eye is closed' : 'close to the main cursor') + '. PRBS7 runs are at most 7 bits long, so its measured eye sits slightly above the infinite-run formula.';
+  }
+  BD.observe(root, draw);
+})();
+</script>
