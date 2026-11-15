@@ -1,0 +1,65 @@
+{% include demos/assets.html %}
+<style>
+.bd-lfsr{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:4px 2px 8px;font-family:"IBM Plex Mono",monospace;font-size:10.5px;}
+.bd-lfsr i{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:4px;border:1px solid rgba(140,190,240,.35);font-style:normal;color:#d7e6f7;}
+.bd-lfsr i.one{background:rgba(127,184,240,.35);color:#fff;}
+.bd-lfsr i.tap{border-color:#e0b85a;box-shadow:0 0 0 1px rgba(224,184,90,.45) inset;}
+.bd-lfsr span{color:rgba(170,205,240,.75);margin:0 4px;}
+</style>
+<div class="bd" id="bdLfsr" role="group" aria-label="Interactive demo: an LFSR generating a PRBS pattern">
+  <div class="bd-head"><span>// try it · LFSR and PRBS</span>
+    <span class="bd-seg" role="group" aria-label="Pattern"><button type="button" data-n="7" aria-pressed="true">PRBS7</button><button type="button" data-n="9" aria-pressed="false">PRBS9</button><button type="button" data-n="15" aria-pressed="false">PRBS15</button><button type="button" data-n="31" aria-pressed="false">PRBS31</button></span></div>
+  <div class="bd-lfsr" data-o="reg" aria-hidden="true"></div>
+  <div class="bd-row">
+    <div class="bd-scope short"><canvas data-c="w" aria-hidden="true"></canvas><span class="bd-tag">last 64 output bits</span></div>
+    <div class="bd-scope short"><canvas data-c="h" aria-hidden="true"></canvas><span class="bd-tag">run lengths so far</span></div>
+  </div>
+  <div class="bd-read" aria-live="polite"><span>period 2<sup>n</sup> − 1 <b data-o="per">–</b></span><span>bits sent <b data-o="cnt">–</b></span><span>ones / zeros <b data-o="oz">–</b></span><span>longest run <b data-o="lr">–</b></span></div>
+  <div class="bd-controls"><button type="button" class="bd-btn" data-b="step">step 1 bit</button><button type="button" class="bd-btn" data-b="per">run one period</button><button type="button" class="bd-toggle" data-t="run" aria-pressed="false">run</button><button type="button" class="bd-btn" data-b="reset">reset</button></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdLfsr'); if (!root || !window.BD) return;
+  var TAPS = { 7: [7, 6], 9: [9, 5], 15: [15, 14], 31: [31, 28] }, n = 7, reg, out, runs, cur, last, ones, timer = 0;
+  var q = function (s) { return root.querySelector(s); };
+  function reset() { reg = []; for (var i = 0; i < n; i++) reg.push(1); out = []; runs = {}; cur = 0; last = -1; ones = 0; }
+  function step() {                       // stage 1 takes tapA XOR tapB; the output is the last stage
+    var t = TAPS[n], fb = reg[t[0] - 1] ^ reg[t[1] - 1], o = reg[n - 1];
+    reg.pop(); reg.unshift(fb); out.push(o); if (out.length > 64) out.shift(); ones += o;
+    if (o === last) cur++; else { if (last >= 0) runs[cur] = (runs[cur] || 0) + 1; cur = 1; last = o; }
+    count++;
+  }
+  var count = 0;
+  BD.seg(root, 'n', function (v) { n = parseInt(v, 10); count = 0; reset(); draw(); });
+  q('[data-b="step"]').addEventListener('click', function () { step(); draw(); });
+  q('[data-b="per"]').addEventListener('click', function () { var m = Math.min(Math.pow(2, n) - 1, 1 << 16); for (var i = 0; i < m; i++) step(); draw(); });
+  q('[data-b="reset"]').addEventListener('click', function () { count = 0; reset(); draw(); });
+  var tb = q('[data-t="run"]');
+  BD.toggle(tb, function (on) { clearInterval(timer); if (on) timer = setInterval(function () { if (!root.isConnected) return clearInterval(timer); step(); draw(); }, 90); });
+  function draw() {
+    var t = TAPS[n], h = '';
+    for (var i = 0; i < n; i++) h += '<i class="' + (reg[i] ? 'one' : '') + (i === t[0] - 1 || i === t[1] - 1 ? ' tap' : '') + '">' + reg[i] + '</i>' + (n <= 15 && i === n - 1 ? '<span>→ out</span>' : '');
+    q('[data-o="reg"]').innerHTML = '<span>' + t[0] + ' ⊕ ' + t[1] + ' → stage 1:</span>' + h;
+    var d = BD.setup(q('[data-c="w"]')), g = d.g, w = (d.w - 16) / 64, y1 = 26, y0 = d.h - 12;
+    g.strokeStyle = BD.C.blue; g.lineWidth = 1.8; g.beginPath();
+    out.forEach(function (b, k) { var x = 8 + (64 - out.length + k) * w, y = b ? y1 : y0; if (k) g.lineTo(x, y); else g.moveTo(x, y); g.lineTo(x + w, y); });
+    g.stroke();
+    var dh = BD.setup(q('[data-c="h"]')), ks = Object.keys(runs).map(Number), mx = Math.max.apply(null, ks.map(function (k) { return runs[k]; }).concat([1]));
+    var f = BD.frame(dh, { x: [0.5, Math.max(n, 8) + 0.5], y: [0, mx * 1.15], xt: [[1, '1'], [2, '2'], [4, '4'], [n, String(n)]], yt: [[0, '0'], [mx, String(mx)]], pad: { l: 34, t: 22, b: 22 } });
+    var gg = dh.g, bw = (f.X(2) - f.X(1)) * 0.7; gg.fillStyle = 'rgba(127,208,184,.75)';
+    ks.forEach(function (k) { if (k <= Math.max(n, 8)) gg.fillRect(f.X(k) - bw / 2, f.Y(runs[k]), bw, f.Y(0) - f.Y(runs[k])); });
+    var per = Math.pow(2, n) - 1, lr = ks.length ? Math.max.apply(null, ks.concat([cur])) : cur;
+    q('[data-o="per"]').textContent = per.toLocaleString('en');
+    q('[data-o="cnt"]').textContent = count.toLocaleString('en');
+    q('[data-o="oz"]').textContent = ones + ' / ' + (count - ones);
+    q('[data-o="lr"]').textContent = String(lr);
+    q('[data-o="cap"]').innerHTML = count === 0
+      ? 'Press <i>step</i> to clock the register: every bit moves one stage right, and stage 1 takes the XOR of the two gold taps. Any non-zero start works; all zeros would stick.'
+      : count >= per && n <= 15
+      ? 'One full period: ' + Math.pow(2, n - 1) + ' ones and ' + (Math.pow(2, n - 1) - 1) + ' zeros, every n-bit pattern except all zeros exactly once, and run counts that halve with each extra bit, like coin flips. The longest run, ' + n + ' ones, sets how long the CDR must coast and how far a long run charges the channel.'
+      : 'The run histogram fills in like coin flips: about half the runs are 1 bit long, a quarter 2 bits, and so on up to ' + n + '. Longer registers stress lower frequencies: PRBS31 for compliance, PRBS7 for bring-up.';
+  }
+  reset(); draw();
+})();
+</script>
