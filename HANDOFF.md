@@ -59,7 +59,7 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 6. `lfsr` · Step an LFSR: 7-stage register animates bit by bit; choose PRBS7/9/15/31 taps; run-length histogram
    builds up (32, 16, 8 … runs); period 127. After fig:ch2-lfsr. todo
 7. `onepole` · Bandwidth ↔ rise time: f3dB slider; Bode and step response; 10–90 % = 0.35/f3dB (140 ps = 0.7 UI
-   at 2.5 GHz). After fig:ch2-onepole. todo
+   at 2.5 GHz). After fig:ch2-onepole. **done** (140 ps = 0.70 UI, −3.0 dB at f_N, 913 mV worst eye)
 8. ★ `superpos` · Build the waveform from pulses: edit a bit pattern by clicking; each bit's shifted pulse drawn,
    sum shown with sample dots (334 mV vs 156 mV for the 10 dB line). After fig:ch2-superposition. todo
 9. ★ `isieye` · One-pole ISI and the eye: τ slider (0.1–1.5 UI) → pulse, cursors, PRBS7 eye, measured opening vs
@@ -159,7 +159,8 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 
 **Ch 11 · Jitter**
 54. `tie` · TIE, period and cycle-to-cycle jitter from edges (Ex 11.1): drag six edges. After fig:ch11-tie. todo
-55. `slope` · Noise to jitter: σ_v and slew → σ_t (0.4 → 0.1 V_ppd = 4×). After fig:ch11-slope. todo
+55. `slope` · Noise to jitter: σ_v and slew → σ_t (0.4 → 0.1 V_ppd = 4×). After fig:ch11-slope. **done**
+    (3.14 mV/ps at 0.4 V_ppd; 300 noisy edges measured against σ_v/SR)
 56. ★ `dualdirac` · RJ ⊗ DJ convolution and the dual-Dirac fit: DCD, ISI, RJ sliders → PDF on log axis, TJ(BER)
     (DJδδ 15.6 ps vs DJpp). After fig:ch11-hist. todo
 57. ★ `bathtub` · Bathtub builder: DJδδ, σ_RJ → eye width at 1e−12 (0.71/0.59/0.45 UI at 1.32/3/5 ps). After
@@ -218,7 +219,8 @@ noise, jitter) → stat eye and margin, the whole book on one panel. todo
   asked to merge into main, so the branch was merged and pushed (site deployed).
 - 15 Nov (later): `bathtub` (Ch 11) done; fixed a start-up console error in `bounce` (a slider event fired
   before `pres` was set). Merged and pushed. Weekly usage reached 99 %.
-- 15 Nov (later): `pi` (Ch 13) done, merged and pushed. 7 demos live: isieye, nrzpsd, berq, bounce, bathtub, pi.
+- 15 Nov (later): `pi` (Ch 13) done, merged and pushed. 6 demos live: isieye, nrzpsd, berq, bounce, bathtub, pi.
+- 15 Nov (later): `onepole` (Ch 2) and `slope` (Ch 11) done, merged and pushed: 8 demos live.
 
 ### Next steps
 
