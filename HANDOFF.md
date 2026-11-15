@@ -55,7 +55,7 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 
 **Ch 2 · Signals and systems**
 5. ★ `nrzpsd` · NRZ spectrum: sinc² PSD, cumulative power; drag a cursor frequency → % power below it
-   (77 % below f_N, 90 % below f_b, −3.9 dB at f_N). After fig:ch2-psd. todo
+   (77 % below f_N, 90 % below f_b, −3.9 dB at f_N). After fig:ch2-psd. **done** (77.4 %, 90.3 %, −3.9 dB)
 6. `lfsr` · Step an LFSR: 7-stage register animates bit by bit; choose PRBS7/9/15/31 taps; run-length histogram
    builds up (32, 16, 8 … runs); period 127. After fig:ch2-lfsr. todo
 7. `onepole` · Bandwidth ↔ rise time: f3dB slider; Bode and step response; 10–90 % = 0.35/f3dB (140 ps = 0.7 UI
@@ -67,7 +67,7 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 10. `eyefold` · Fold the waveform: animate 2-UI windows dropping onto the eye; persistence slider. After
     fig:ch2-eye-fold. todo
 11. `berq` · BER cliff: EH and σn sliders → Gaussian tails, Q, BER (Q = 7.03 ↔ 1e−12, 16.9 dB, ~3 decades/dB).
-    After fig:ch2-ber. todo
+    After fig:ch2-ber. **done** (Q 7.03, 16.9 dB, 1.0e−12, 3.28 min between errors at 5 Gb/s)
 12. `bathtub2` · Bathtub from edge jitter: RJ slider → BER vs phase, opening at 1e−12 (0.72/0.45 UI at 0.02/0.04 UI).
     After fig:ch2-bathtub. todo
 
@@ -79,7 +79,7 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 15. ★ `lossbuild` · Build the channel loss: sliders for k_R, tanδ, ε_r, length, pad C → conductor (√f) and
     dielectric (f) loss in dB/in and total |S21| (REF −17.4 dB; 0.44 dB/in). Uses SL. After fig:ch3-loss. todo
 16. ★ `bounce` · Lattice diagram: R_S, Z0, R_L sliders → animated bounce diagram and load voltage (25/50/100 Ω:
-    0.889, 0.790, 0.8 V). After fig:ch3-bounce. todo
+    0.889, 0.790, 0.8 V). After fig:ch3-bounce. **done** (0.667 launched, 0.889 first step, 0.800 final)
 17. `padrl` · Pad C and return loss: C_p and bondwire L → |S11| vs f, 10 dB line, echo in the pulse response
     (2t_d = 6.7 UI). After fig:ch3-pad. todo
 18. `viastub` · Via stub notch: stub length → quarter-wave null f = c/(4L√ε_eff) (6 mm → 6.2 GHz) over the NRZ
@@ -213,6 +213,8 @@ noise, jitter) → stat eye and margin, the whole book on one panel. todo
   in light mode. Weekly usage was at 97 %, so work stopped there.
 - Preview: `preview_start serdes` (entry in `~/SkillSurf/.claude/launch.json`, Docker container
   `serdes-jekyll`, gems volume `serdes-gems`, port 4007) → http://localhost:4007/serdes-tutorial/
+- 15 Nov (later): `nrzpsd`, `berq` (Ch 2) and `bounce` (Ch 3) done and checked in the browser; the user
+  asked to merge into main, so the branch was merged and pushed (site deployed).
 
 ### Next steps
 

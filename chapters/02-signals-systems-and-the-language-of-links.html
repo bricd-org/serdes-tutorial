@@ -60,6 +60,8 @@ permalink: "/chapters/02-signals-systems-and-the-language-of-links/"
 <img src="{% endraw %}{{ '/assets/figs/ch02_nrz_psd.svg' | relative_url }}{% raw %}" style="width:753px" alt="Random NRZ puts most of its power below the Nyquist frequency." loading="lazy" />
 <figcaption><span class="capnum">Figure 2.2.</span> <strong>Random NRZ puts most of its power below the Nyquist frequency.</strong> (a) The PSD follows <span class="math inline">\(\mathrm{sinc}^2(fT_\mathrm{b})\)</span>, with nulls at multiples of <span class="math inline">\(f_\mathrm{b}= 5\,\mathrm{GHz}\)</span> and only 3.9 dB of roll-off at <span class="math inline">\(f_\mathrm{N}= 2.5\,\mathrm{GHz}\)</span>. (b) Cumulative power: 77% lies below <span class="math inline">\(f_\mathrm{N}\)</span> and 90% below <span class="math inline">\(f_\mathrm{b}\)</span>. This is why channel loss is always quoted at <span class="math inline">\(f_\mathrm{N}\)</span>.</figcaption>
 </figure>
+<!-- demo:nrzpsd -->{% endraw %}{% include demos/nrzpsd.html %}{% raw %}<!-- /demo -->
+
 <div class="tbox tbox-example">
 <div class="tbox-title">
 <p>Worked Example 2.1 · Where the power of a 5 Gb/s stream sits</p>
@@ -279,6 +281,8 @@ permalink: "/chapters/02-signals-systems-and-the-language-of-links/"
 <img src="{% endraw %}{{ '/assets/figs/ch02_ber.svg' | relative_url }}{% raw %}" style="width:753px" alt="BER is the area of a Gaussian tail beyond half the eye." loading="lazy" />
 <figcaption><span class="capnum">Figure 2.11.</span> <strong>BER is the area of a Gaussian tail beyond half the eye.</strong> (a) Received 1s and 0s spread by noise of rms <span class="math inline">\(\sigma_\mathrm{n}\)</span> around <span class="math inline">\(\pm\mathrm{EH}/2\)</span>; the shaded tails beyond the threshold are errors. (b) BER against <span class="math inline">\(\mathrm{SNR}= 20\log_{10}(\mathrm{EH}/2\sigma_\mathrm{n})\)</span>. The curve is a cliff: near <span class="math inline">\(10^{-12}\)</span> (Q = 7.03, 16.9 dB), one extra dB of SNR buys about three decades of BER.</figcaption>
 </figure>
+<!-- demo:berq -->{% endraw %}{% include demos/berq.html %}{% raw %}<!-- /demo -->
+
 <div class="tbox tbox-example">
 <div class="tbox-title">
 <p>Worked Example 2.4 · How much noise can the eye tolerate?</p>

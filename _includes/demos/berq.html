@@ -1,0 +1,67 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdBerQ" role="group" aria-label="Interactive demo: bit-error rate as the Gaussian tail beyond half the eye">
+  <div class="bd-head"><span>// try it · the BER cliff</span>
+    <span class="bd-seg" role="group" aria-label="Bit rate"><button type="button" data-fb="5e9" aria-pressed="true">5 Gb/s</button><button type="button" data-fb="1e10" aria-pressed="false">10 Gb/s</button></span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>eye height EH <b data-v="eh"></b></span><input type="range" data-k="eh" min="10" max="300" step="1" value="100" aria-label="Eye height in millivolts"></label>
+    <label class="bd-sl"><span>rms noise σ<sub>n</sub> <b data-v="sn"></b></span><input type="range" data-k="sn" min="1" max="30" step="0.01" value="7.11" aria-label="RMS noise in millivolts"></label>
+  </div>
+  <div class="bd-row">
+    <div class="bd-scope"><canvas data-c="p" aria-hidden="true"></canvas><span class="bd-tag">received levels, log scale</span></div>
+    <div class="bd-scope"><canvas data-c="b" aria-hidden="true"></canvas><span class="bd-tag">BER against SNR</span></div>
+  </div>
+  <div class="bd-read" aria-live="polite"><span>Q = EH/2σ<sub>n</sub> <b data-o="q">–</b></span><span>SNR <b data-o="snr">–</b></span><span>BER <b data-o="ber">–</b></span><span>one error every <b data-o="mt">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdBerQ'); if (!root || !window.BD) return;
+  var fb = 5e9;
+  function erfc(x) { var z = Math.abs(x), t = 1 / (1 + 0.5 * z);
+    var r = t * Math.exp(-z * z - 1.26551223 + t * (1.00002368 + t * (0.37409196 + t * (0.09678418 + t * (-0.18628806 + t * (0.27886807 + t * (-1.13520398 + t * (1.48851587 + t * (-0.82215223 + t * 0.17087277)))))))));
+    return x >= 0 ? r : 2 - r; }
+  var Qf = function (q) { return 0.5 * erfc(q / Math.SQRT2); };
+  var S = BD.bind(root, { eh: { fmt: function (x) { return x.toFixed(0) + ' mV'; } }, sn: { fmt: function (x) { return x.toFixed(2) + ' mV'; } } }, function () { draw(); });
+  BD.seg(root, 'fb', function (v) { fb = parseFloat(v); draw(); });
+  var q = function (s) { return root.querySelector(s); };
+  var sci = function (v) { if (v < 1e-300) return '< 1e−300'; var e = Math.floor(Math.log10(v)), m = v / Math.pow(10, e); return m.toFixed(1) + 'e' + (e < 0 ? '−' : '') + Math.abs(e); };
+  function dur(s) { if (!isFinite(s) || s > 3.15e13) return 'longer than a million years';
+    var u = [[3.15e7, 'years'], [86400, 'days'], [3600, 'h'], [60, 'min'], [1, 's'], [1e-3, 'ms'], [1e-6, 'µs'], [1e-9, 'ns']];
+    for (var i = 0; i < u.length; i++) if (s >= u[i][0]) return (s / u[i][0]).toPrecision(3) + ' ' + u[i][1]; return (s * 1e12).toFixed(0) + ' ps'; }
+  function draw() {
+    var eh = S.eh, sn = S.sn, Q = eh / (2 * sn), ber = Qf(Q), snr = 20 * Math.log10(Q);
+    // level PDFs on a log axis
+    var d = BD.setup(q('[data-c="p"]')), lim = Math.max(eh / 2 + 6 * sn, 60);
+    var f = BD.frame(d, { x: [-lim, lim], y: [1e-16, 1], ylog: true,
+      xt: [[-eh / 2, '−EH/2'], [0, '0'], [eh / 2, '+EH/2']], yt: [[1, '1'], [1e-4, '1e−4'], [1e-8, '1e−8'], [1e-12, '1e−12'], [1e-16, '1e−16']], pad: { l: 46, t: 24 } });
+    var xs = [], p1 = [], p0 = [], g = d.g;
+    for (var i = 0; i <= 400; i++) { var x = -lim + 2 * lim * i / 400; xs.push(x);
+      p1.push(Math.exp(-0.5 * Math.pow((x - eh / 2) / sn, 2))); p0.push(Math.exp(-0.5 * Math.pow((x + eh / 2) / sn, 2))); }
+    f.clipIn(); g.fillStyle = 'rgba(240,138,106,.35)';
+    [[p1, -1], [p0, 1]].forEach(function (pr) { g.beginPath(); g.moveTo(f.X(0), f.Y(1e-16));
+      for (var k = 0; k <= 400; k++) if ((xs[k] - 0) * pr[1] >= 0) g.lineTo(f.X(xs[k]), f.Y(Math.max(pr[0][k], 1e-16)));
+      g.lineTo(f.X(0), f.Y(1e-16)); g.fill(); }); f.clipOut();
+    BD.line(f, xs, p1, BD.C.blue, 1.8); BD.line(f, xs, p0, BD.C.gold, 1.8);
+    BD.vline(f, 0, 'rgba(255,255,255,.6)', [3, 3], 'threshold');
+    g.fillStyle = BD.C.blue; g.fillText('"1"', f.X(eh / 2) + 4, f.Y(0.6)); g.fillStyle = BD.C.gold; g.fillText('"0"', f.X(-eh / 2) + 4, f.Y(0.6));
+    // BER vs SNR
+    var db = BD.setup(q('[data-c="b"]')), fb2 = BD.frame(db, { x: [6, 20], y: [1e-16, 1], ylog: true,
+      xt: [[6, '6'], [8, '8'], [10, '10'], [12, '12'], [14, '14'], [16, '16'], [18, '18'], [20, '20 dB']],
+      yt: [[1, '1'], [1e-4, '1e−4'], [1e-8, '1e−8'], [1e-12, '1e−12'], [1e-16, '1e−16']], pad: { l: 46, t: 24 } });
+    var sx = [], sy = []; for (i = 0; i <= 280; i++) { var s = 6 + 14 * i / 280; sx.push(s); sy.push(Qf(Math.pow(10, s / 20))); }
+    BD.hline(fb2, 1e-12, 'rgba(224,184,90,.7)', [5, 4], '1e−12');
+    BD.line(fb2, sx, sy, BD.C.blue, 2);
+    if (snr >= 6 && snr <= 20) BD.dot(fb2, snr, Math.max(ber, 1e-16), ber <= 1e-12 ? BD.C.green : BD.C.red, 5);
+    q('[data-o="q"]').textContent = Q.toFixed(2);
+    q('[data-o="snr"]').textContent = snr.toFixed(1) + ' dB';
+    var be = q('[data-o="ber"]'); be.textContent = sci(ber); be.className = ber <= 1e-12 ? 'ok' : 'bad';
+    q('[data-o="mt"]').textContent = dur(1 / (ber * fb));
+    var slope = Math.log10(Qf(Math.pow(10, (snr - 0.5) / 20)) / Qf(Math.pow(10, (snr + 0.5) / 20)));
+    q('[data-o="cap"]').innerHTML = (ber <= 1e-12
+      ? 'The eye is at least 14.07 σ<sub>n</sub> tall, so the tails beyond the threshold hold less than 10<sup>−12</sup> of the bits. '
+      : 'The Gaussian tails cross the threshold too often for a 10<sup>−12</sup> link: the eye must be 14.07 σ<sub>n</sub> tall (Q = 7.03). ') +
+      'Here one dB of SNR moves the BER by about ' + slope.toFixed(1) + ' decades. That is the cliff: a link that works and one that fails are only a few dB apart.';
+  }
+  BD.observe(root, draw);
+})();
+</script>

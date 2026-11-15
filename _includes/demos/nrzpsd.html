@@ -1,0 +1,51 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdNrzPsd" role="group" aria-label="Interactive demo: where the power of random NRZ sits">
+  <div class="bd-head"><span>// try it · NRZ spectrum</span>
+    <span class="bd-seg" role="group" aria-label="Jump to"><button type="button" data-at="0.5" aria-pressed="true">f = f<sub>N</sub></button><button type="button" data-at="1" aria-pressed="false">f = f<sub>b</sub></button><button type="button" data-at="1.5" aria-pressed="false">f = 1.5 f<sub>b</sub></button></span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>bit rate f<sub>b</sub> <b data-v="fb"></b></span><input type="range" data-k="fb" min="1" max="25" step="0.5" value="5" aria-label="Bit rate in Gb/s"></label>
+    <label class="bd-sl"><span>frequency f <b data-v="fr"></b></span><input type="range" data-k="fr" min="0.02" max="3" step="0.01" value="0.5" aria-label="Frequency as a fraction of the bit rate"></label>
+  </div>
+  <div class="bd-row">
+    <div class="bd-scope"><canvas data-c="s" aria-hidden="true"></canvas><span class="bd-tag">PSD A²T<sub>b</sub>sinc²(fT<sub>b</sub>), dB re DC</span></div>
+    <div class="bd-scope"><canvas data-c="c" aria-hidden="true"></canvas><span class="bd-tag">power below f</span></div>
+  </div>
+  <div class="bd-read" aria-live="polite"><span>f <b data-o="f">–</b></span><span>PSD at f <b data-o="psd">–</b></span><span>power below f <b data-o="frac">–</b></span><span>f<sub>N</sub> <b data-o="fn">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdNrzPsd'); if (!root || !window.BD) return;
+  var U = 3, NP = 1200, us = [], cum = [0];                  // u = f T_b
+  var sinc2 = function (u) { if (u === 0) return 1; var x = Math.PI * u; return Math.pow(Math.sin(x) / x, 2); };
+  for (var i = 0; i <= NP; i++) us.push(U * i / NP);
+  for (i = 1; i <= NP; i++) { var a = us[i - 1], b = us[i]; cum.push(cum[i - 1] + 2 * (b - a) / 6 * (sinc2(a) + 4 * sinc2((a + b) / 2) + sinc2(b))); }
+  var S = BD.bind(root, { fb: { fmt: function (x) { return x + ' Gb/s'; } }, fr: { fmt: function (x) { return x.toFixed(2) + ' f_b'; } } }, function () { draw(); });
+  var q = function (s) { return root.querySelector(s); }, fr = q('[data-k="fr"]');
+  BD.seg(root, 'at', function (v) { fr.value = v; fr.dispatchEvent(new Event('input')); });
+  function draw() {
+    var fb = S.fb, u = S.fr, idx = Math.round(u / U * NP);
+    root.querySelectorAll('[data-at]').forEach(function (b) { b.setAttribute('aria-pressed', Math.abs(parseFloat(b.getAttribute('data-at')) - u) < 0.006 ? 'true' : 'false'); });
+    var xt = [[0, '0'], [0.5, 'f_N'], [1, 'f_b'], [2, '2f_b'], [3, '3f_b']];
+    var d = BD.setup(q('[data-c="s"]')), f = BD.frame(d, { x: [0, U], y: [-40, 3], xt: xt, yt: [[0, '0'], [-10, '−10'], [-20, '−20'], [-30, '−30'], [-40, '−40 dB']], pad: { l: 46, t: 24 } });
+    var g = d.g, db = us.map(function (x) { return 10 * Math.log10(Math.max(sinc2(x), 1e-9)); });
+    f.clipIn(); g.fillStyle = 'rgba(224,184,90,.16)'; g.beginPath(); g.moveTo(f.X(0), f.Y(-40));
+    for (i = 0; i <= idx; i++) g.lineTo(f.X(us[i]), f.Y(Math.max(db[i], -40))); g.lineTo(f.X(u), f.Y(-40)); g.fill(); f.clipOut();
+    BD.line(f, us, db, BD.C.blue, 2);
+    BD.vline(f, u, BD.C.gold, [4, 3]); BD.dot(f, u, Math.max(db[idx], -40), BD.C.gold, 4);
+    var dc = BD.setup(q('[data-c="c"]')), fc = BD.frame(dc, { x: [0, U], y: [0, 1.02], xt: xt, yt: [[0, '0'], [0.5, '50'], [0.77, '77'], [0.9, '90'], [1, '100 %']], pad: { l: 46, t: 24 } });
+    BD.line(fc, us, cum, BD.C.teal, 2);
+    BD.vline(fc, u, BD.C.gold, [4, 3]); BD.dot(fc, u, cum[idx], BD.C.gold, 4);
+    var fGHz = u * fb;
+    q('[data-o="f"]').textContent = fGHz.toFixed(2) + ' GHz';
+    q('[data-o="psd"]').textContent = db[idx] < -60 ? 'null' : db[idx].toFixed(1) + ' dB';
+    q('[data-o="frac"]').textContent = (100 * cum[idx]).toFixed(1) + ' %';
+    q('[data-o="fn"]').textContent = (fb / 2).toFixed(2) + ' GHz';
+    q('[data-o="cap"]').innerHTML = 'The spectrum depends only on fT<sub>b</sub>, so every NRZ link looks the same on this axis: at ' + fb + ' Gb/s, f<sub>N</sub> = ' + (fb / 2) + ' GHz and the first null is at ' + fb + ' GHz. ' +
+      (u < 0.45 ? 'Below f<sub>N</sub> the PSD is within 4 dB of DC, which is why a channel that is flat to f<sub>N</sub> carries most of the signal. '
+       : u < 0.55 ? 'At f<sub>N</sub> the PSD is only 3.9 dB below DC and 77 % of the power lies below it. That is why channel loss is always quoted at f<sub>N</sub>. '
+       : 'Above f<sub>N</sub> the lobes fall fast: 90 % of the power lies below f<sub>b</sub>, so equalizing beyond about f<sub>N</sub> buys little signal and a lot of noise. ');
+  }
+  BD.observe(root, draw);
+})();
+</script>
