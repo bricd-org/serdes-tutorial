@@ -182,7 +182,8 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 66. `alex` · Alexander PD: drag the clock phase across a transition → early/late votes. After fig:ch13-alex. todo
 67. ★ `bbgain` · Bang-bang gain linearized by jitter: σ_j slider → smoothed sign, slope √(2/π)/σ_j. After fig:ch13-bbchar. todo
 68. ★ `jtol` · Jitter tolerance vs mask: K_P, K_I, latency → JTOL curve over the mask (dips at 1–2 MHz). After fig:ch13-jtol. todo
-69. ★ `pi` · Phase interpolator: linear vs sin/cos weights, bits → phasor, INL (±4.1° vs ±0.55°). After fig:ch13-pi. todo
+69. ★ `pi` · Phase interpolator: linear vs sin/cos weights, bits → phasor, INL (±4.1° vs ±0.55°). After fig:ch13-pi.
+    **done** (18.43° at α = 1/4, ±4.07° = 4.52 ps linear, ±0.55° with 6-bit sin/cos; phasor drawing not yet eyeballed)
 70. ★ `cdrsim` · Live PI-CDR: ppm offset, K_P, K_P/K_I, step count → PI code wrap, phase error, lock time
     (+200 ppm locks in 0.2 s). After fig:ch13-sim. todo
 
@@ -217,6 +218,7 @@ noise, jitter) → stat eye and margin, the whole book on one panel. todo
   asked to merge into main, so the branch was merged and pushed (site deployed).
 - 15 Nov (later): `bathtub` (Ch 11) done; fixed a start-up console error in `bounce` (a slider event fired
   before `pres` was set). Merged and pushed. Weekly usage reached 99 %.
+- 15 Nov (later): `pi` (Ch 13) done, merged and pushed. 7 demos live: isieye, nrzpsd, berq, bounce, bathtub, pi.
 
 ### Next steps
 
