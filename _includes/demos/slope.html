@@ -1,0 +1,64 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdSlope" role="group" aria-label="Interactive demo: voltage noise becomes timing jitter through the edge slope">
+  <div class="bd-head"><span>// try it · noise → jitter</span>
+    <span class="bd-seg" role="group" aria-label="Clock swing presets"><button type="button" data-a="0.4" aria-pressed="true">0.4 V<sub>ppd</sub></button><button type="button" data-a="0.1" aria-pressed="false">0.1 V<sub>ppd</sub></button></span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>2.5 GHz clock swing <b data-v="a"></b></span><input type="range" data-k="a" min="0.05" max="1" step="0.01" value="0.4" aria-label="Clock swing"></label>
+    <label class="bd-sl"><span>voltage noise σ<sub>v</sub> <b data-v="sv"></b></span><input type="range" data-k="sv" min="0.2" max="30" step="0.1" value="5" aria-label="Voltage noise rms in mV"></label>
+  </div>
+  <div class="bd-row">
+    <div class="bd-scope"><canvas data-c="e" aria-hidden="true"></canvas><span class="bd-tag">noisy edges at the threshold</span></div>
+    <div class="bd-scope"><canvas data-c="j" aria-hidden="true"></canvas><span class="bd-tag">σ<sub>t</sub> = σ<sub>v</sub>/SR</span></div>
+  </div>
+  <div class="bd-read" aria-live="polite"><span>slew rate at the crossing <b data-o="sr">–</b></span><span>jitter σ<sub>t</sub> <b data-o="st">–</b></span><span>measured from 300 edges <b data-o="sm">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdSlope'); if (!root || !window.BD) return;
+  var F = 2.5e9, NE = 300;
+  var S = BD.bind(root, { a: { fmt: function (x) { return x.toFixed(2) + ' V'; } }, sv: { fmt: function (x) { return x.toFixed(1) + ' mV rms'; } } }, function () { draw(); });
+  var q = function (s) { return root.querySelector(s); }, sl = q('[data-k="a"]');
+  BD.seg(root, 'a', function (v) { sl.value = v; sl.dispatchEvent(new Event('input')); });
+  function draw() {
+    var A = S.a, sv = S.sv * 1e-3, sr = Math.PI * F * A, st = sv / sr;            // V/s, s
+    root.querySelectorAll('[data-a]').forEach(function (b) { b.setAttribute('aria-pressed', Math.abs(parseFloat(b.getAttribute('data-a')) - A) < 0.005 ? 'true' : 'false'); });
+    var span = 40e-12, d = BD.setup(q('[data-c="e"]')), vlim = 0.6 * Math.max(A / 2 * Math.sin(2 * Math.PI * F * span), 4 * sv) + 1e-3;
+    var f = BD.frame(d, { x: [-span * 1e12, span * 1e12], y: [-vlim * 1e3, vlim * 1e3], xt: [[-40, '−40'], [-20, '−20'], [0, '0'], [20, '20'], [40, '40 ps']],
+      yt: [[0, '0']], yl: '', pad: { l: 30, t: 24, b: 40 } });
+    var g = d.g, rnd = BD.rng(7), gs = function () { var u = 1 - rnd(), v = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+    f.clipIn(); g.strokeStyle = 'rgba(127,184,240,.18)'; g.lineWidth = 1;
+    var cross = [], sum2 = 0;
+    for (var e = 0; e < NE; e++) {
+      var c1 = gs(), s1 = gs(), c2 = gs(), s2n = gs(), w1 = 2 * Math.PI / 70e-12, w2 = 2 * Math.PI / 37e-12;   // smooth noise, variance σv² at every t
+      var prev = null, pt = null; g.beginPath();
+      for (var i = 0; i <= 80; i++) { var t = -span + 2 * span * i / 80;
+        var v = A / 2 * Math.sin(2 * Math.PI * F * t) + sv * Math.SQRT1_2 * (c1 * Math.cos(w1 * t) + s1 * Math.sin(w1 * t) + c2 * Math.cos(w2 * t) + s2n * Math.sin(w2 * t));
+        if (e < 60) { if (i) g.lineTo(f.X(t * 1e12), f.Y(v * 1e3)); else g.moveTo(f.X(t * 1e12), f.Y(v * 1e3)); }
+        if (prev !== null && prev < 0 && v >= 0 && pt === null) pt = t - v / ((v - prev) / (2 * span / 80));
+        prev = v; }
+      if (e < 60) g.stroke();
+      if (pt !== null) { cross.push(pt); sum2 += pt * pt; }
+    }
+    f.clipOut();
+    BD.hline(f, 0, 'rgba(255,255,255,.55)', [3, 3], 'threshold');
+    var bins = new Array(40).fill(0); cross.forEach(function (c) { var b = Math.floor((c + span) / (2 * span) * 40); if (b >= 0 && b < 40) bins[b]++; });
+    var mx = Math.max.apply(null, bins) || 1; g.fillStyle = 'rgba(224,184,90,.7)';
+    bins.forEach(function (c, b) { var x0 = f.X((-span + 2 * span * b / 40) * 1e12), x1 = f.X((-span + 2 * span * (b + 1) / 40) * 1e12), hh = 26 * c / mx;
+      g.fillRect(x0, d.h - 14 - hh, x1 - x0 - 1, hh); });
+    var sm = Math.sqrt(sum2 / Math.max(cross.length, 1));
+    var dj = BD.setup(q('[data-c="j"]')), fj = BD.frame(dj, { x: [0.1, 10], y: [0.01, 30], xlog: true, ylog: true,
+      xt: [[0.1, '0.1'], [1, '1'], [10, '10 mV/ps']], yt: [[0.01, '10 fs'], [0.1, '100 fs'], [1, '1 ps'], [10, '10 ps']], pad: { l: 50, t: 24 } });
+    var xs = [], ys = []; for (i = 0; i <= 100; i++) { var s2 = 0.1 * Math.pow(100, i / 100); xs.push(s2); ys.push(S.sv / s2); }
+    BD.line(fj, xs, ys, BD.C.blue, 2);
+    BD.dot(fj, sr * 1e-9, st * 1e12, BD.C.gold, 5);
+    var fmt = function (s) { return s < 1e-12 ? (s * 1e15).toFixed(0) + ' fs' : (s * 1e12).toFixed(2) + ' ps'; };
+    q('[data-o="sr"]').textContent = (sr * 1e-9).toFixed(2) + ' mV/ps';
+    q('[data-o="st"]').textContent = fmt(st);
+    q('[data-o="sm"]').textContent = fmt(sm);
+    q('[data-o="cap"]').innerHTML = 'A sine clock is steepest at its crossing, SR = πfV<sub>pp</sub>. Noise moves the waveform up and down; the slope turns that into a shift left and right, σ<sub>t</sub> = σ<sub>v</sub>/SR. ' +
+      'Attenuating the clock from 0.4 to 0.1 V<sub>ppd</sub> quarters the slope, so the same noise gives four times the jitter. Keep clock swings large and edges sharp all the way to the sampler.';
+  }
+  BD.observe(root, draw);
+})();
+</script>

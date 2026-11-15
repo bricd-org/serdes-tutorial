@@ -18,9 +18,11 @@ CH = "chapters/"
 
 DEMOS = [
     (CH + "02-signals-systems-and-the-language-of-links.html", "nrzpsd", "after:fig:ch2-psd"),
+    (CH + "02-signals-systems-and-the-language-of-links.html", "onepole", "after:fig:ch2-onepole"),
     (CH + "02-signals-systems-and-the-language-of-links.html", "isieye", "after:fig:ch2-isi-tau"),
     (CH + "02-signals-systems-and-the-language-of-links.html", "berq", "after:fig:ch2-ber"),
     (CH + "03-the-channel.html", "bounce", "after:fig:ch3-bounce"),
+    (CH + "11-jitter.html", "slope", "after:fig:ch11-slope"),
     (CH + "11-jitter.html", "bathtub", "after:fig:ch11-bathtub"),
     (CH + "13-clock-and-data-recovery.html", "pi", "after:fig:ch13-pi"),
 ]
