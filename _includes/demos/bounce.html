@@ -1,0 +1,92 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdBounce" role="group" aria-label="Interactive demo: lattice diagram of reflections on a transmission line">
+  <div class="bd-head"><span>// try it · reflections</span>
+    <span class="bd-seg" role="group" aria-label="Presets"><button type="button" data-pre="25,50,100" aria-pressed="true">book example</button><button type="button" data-pre="50,50,50" aria-pressed="false">matched</button><button type="button" data-pre="50,50,1000" aria-pressed="false">open end</button><button type="button" data-pre="10,50,10" aria-pressed="false">low Z both ends</button></span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>source R<sub>S</sub> <b data-v="rs"></b></span><input type="range" data-k="rs" min="5" max="200" step="1" value="25" aria-label="Source resistance"></label>
+    <label class="bd-sl"><span>line Z<sub>0</sub> <b data-v="z0"></b></span><input type="range" data-k="z0" min="30" max="100" step="1" value="50" aria-label="Line impedance"></label>
+    <label class="bd-sl"><span>load R<sub>L</sub> <b data-v="rl"></b></span><input type="range" data-k="rl" min="0" max="100" step="0.01" value="56.57" aria-label="Load resistance"></label>
+  </div>
+  <div class="bd-row">
+    <div class="bd-scope tall"><canvas data-c="l" aria-hidden="true"></canvas><span class="bd-tag">lattice: position → , time ↓</span></div>
+    <div class="bd-scope tall"><canvas data-c="v" aria-hidden="true"></canvas><span class="bd-tag">voltage after a 1 V step</span></div>
+  </div>
+  <div class="bd-read" aria-live="polite"><span>Γ<sub>S</sub> <b data-o="gs">–</b></span><span>Γ<sub>L</sub> <b data-o="gl">–</b></span><span>launched <b data-o="v1">–</b></span><span>first step at load <b data-o="vl1">–</b></span><span>final <b data-o="vf">–</b></span><span>within 1 % after <b data-o="ts">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdBounce'); if (!root || !window.BD) return;
+  var rlMap = function (v) { return 5 * Math.pow(10, 2.3 * v / 100); };          // 5 Ω … 1 kΩ, log
+  var rlInv = function (r) { return 100 * Math.log10(r / 5) / 2.3; };
+  var S = BD.bind(root, {
+    rs: { fmt: function (x) { return x.toFixed(0) + ' Ω'; } },
+    z0: { fmt: function (x) { return x.toFixed(0) + ' Ω'; } },
+    rl: { map: rlMap, fmt: function (x) { return x >= 999 ? '1 kΩ (≈ open)' : x.toFixed(x < 20 ? 1 : 0) + ' Ω'; } }
+  }, function () { syncPre(); draw(); });
+  var q = function (s) { return root.querySelector(s); };
+  q('[data-k="rl"]').value = rlInv(100); q('[data-k="rl"]').dispatchEvent(new Event('input'));
+  var pres = root.querySelectorAll('[data-pre]');
+  function syncPre() { pres.forEach(function (b) { var p = b.getAttribute('data-pre').split(',').map(Number);
+    b.setAttribute('aria-pressed', Math.abs(p[0] - S.rs) < 0.5 && Math.abs(p[1] - S.z0) < 0.5 && Math.abs(p[2] - S.rl) / p[2] < 0.02 ? 'true' : 'false'); }); }
+  pres.forEach(function (b) { b.addEventListener('click', function () { var p = b.getAttribute('data-pre').split(',').map(Number);
+    q('[data-k="rs"]').value = p[0]; q('[data-k="z0"]').value = p[1]; q('[data-k="rl"]').value = rlInv(p[2]);
+    ['rs', 'z0', 'rl'].forEach(function (k) { q('[data-k="' + k + '"]').dispatchEvent(new Event('input')); }); }); });
+  var mv = function (v) { return (v >= 0 ? '+' : '−') + Math.abs(v * 1e3).toFixed(0) + ' mV'; };
+  function draw() {
+    var rs = S.rs, z0 = S.z0, rl = S.rl, gs = (rs - z0) / (rs + z0), gl = (rl - z0) / (rl + z0);
+    var v1 = z0 / (rs + z0), NW = 8, T = 10;              // waves drawn, time span in t_d
+    var waves = []; for (var n = 0; n < 12; n++) waves.push(v1 * Math.pow(gl, Math.ceil(n / 2)) * Math.pow(gs, Math.floor(n / 2)));
+    // lattice
+    var d = BD.setup(q('[data-c="l"]')), g = d.g, L = 54, R = d.w - 54, Tp = 30, Bt = d.h - 12;
+    var ty = function (t) { return Tp + (Bt - Tp) * t / NW; };
+    g.strokeStyle = BD.C.axis; g.lineWidth = 2; [L, R].forEach(function (x) { g.beginPath(); g.moveTo(x, Tp); g.lineTo(x, Bt); g.stroke(); });
+    g.fillStyle = BD.C.axis; g.textAlign = 'center'; g.fillText('source', L, Tp - 8); g.fillText('load', R, Tp - 8);
+    g.textAlign = 'right'; for (var t = 0; t <= NW; t += 2) g.fillText(t + ' t_d', L - 6, ty(t) + 3);
+    for (n = 0; n < NW; n++) {
+      var a = waves[n], x0 = n % 2 ? R : L, x1 = n % 2 ? L : R, y0 = ty(n), y1 = ty(n + 1), big = Math.abs(a) / v1;
+      g.strokeStyle = a >= 0 ? 'rgba(127,184,240,' + (0.35 + 0.65 * big) + ')' : 'rgba(240,138,106,' + (0.35 + 0.65 * big) + ')';
+      g.lineWidth = 1.6; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+      var ang = Math.atan2(y1 - y0, x1 - x0); g.fillStyle = g.strokeStyle; g.beginPath();
+      g.moveTo(x1, y1); g.lineTo(x1 - 7 * Math.cos(ang - 0.4), y1 - 7 * Math.sin(ang - 0.4)); g.lineTo(x1 - 7 * Math.cos(ang + 0.4), y1 - 7 * Math.sin(ang + 0.4)); g.fill();
+      if (Math.abs(a) > 5e-4) { g.fillStyle = a >= 0 ? '#cfe4fa' : '#f6b9a4'; g.textAlign = 'center'; g.fillText(mv(a), (x0 + x1) / 2, (y0 + y1) / 2 - 5); }
+    }
+    g.textAlign = 'left';
+    // waveforms
+    var dv = BD.setup(q('[data-c="v"]')), ts = [], vl = [], vs = [], vf = rl / (rs + rl);
+    for (var i = 0; i <= T * 40; i++) {
+      var tt = i / 40, kL = Math.floor((tt - 1) / 2), kS = Math.floor(tt / 2), sl = 0, ss = v1;
+      for (var j = 0; j <= kL; j++) sl += v1 * Math.pow(gl * gs, j) * (1 + gl);
+      for (j = 1; j <= kS; j++) ss += v1 * Math.pow(gl, j) * Math.pow(gs, j - 1) * (1 + gs);
+      ts.push(tt); vl.push(tt < 1 ? 0 : sl); vs.push(ss);
+    }
+    var lo = Math.min(0, Math.min.apply(null, vl), Math.min.apply(null, vs)), hi = Math.max(1, Math.max.apply(null, vl), Math.max.apply(null, vs));
+    var f = BD.frame(dv, { x: [0, T], y: [lo - 0.05, hi + 0.05], xt: [[0, '0'], [2, '2'], [4, '4'], [6, '6'], [8, '8'], [10, '10 t_d']],
+      yt: [[0, '0'], [0.5, '0.5'], [1, '1 V']].concat(hi > 1.4 ? [[1.5, '1.5'], [2, '2']] : []), pad: { l: 36, t: 24 } });
+    BD.hline(f, vf, BD.C.gold, [5, 4], 'final ' + vf.toFixed(3) + ' V');
+    BD.line(f, ts, vs, 'rgba(127,208,184,.75)', 1.4, [4, 3]);
+    BD.line(f, ts, vl, BD.C.blue, 2);
+    var gg = dv.g; gg.fillStyle = BD.C.blue; gg.fillText('load', f.X(1.15), f.Y(vl[60]) - 6);
+    gg.fillStyle = BD.C.teal; gg.fillText('source end', f.X(0.1), f.Y(v1) - 6);
+    // settling: first round trip after which every later load value stays within 1 % of final
+    var settle = null; for (var k = 0; k < 60; k++) { var ok = true, s2 = 0;
+      for (j = 0; j <= 80; j++) { s2 += v1 * Math.pow(gl * gs, j) * (1 + gl); if (j >= k && Math.abs(s2 - vf) > 0.01 * Math.max(vf, 0.01)) { ok = false; break; } }
+      if (ok) { settle = k; break; } }
+    q('[data-o="gs"]').textContent = (gs >= 0 ? '+' : '−') + Math.abs(gs).toFixed(3);
+    q('[data-o="gl"]').textContent = (gl >= 0 ? '+' : '−') + Math.abs(gl).toFixed(3);
+    q('[data-o="v1"]').textContent = v1.toFixed(3) + ' V';
+    q('[data-o="vl1"]').textContent = (v1 * (1 + gl)).toFixed(3) + ' V';
+    q('[data-o="vf"]').textContent = vf.toFixed(3) + ' V';
+    var tsEl = q('[data-o="ts"]'); tsEl.textContent = settle === null ? '> 60 round trips' : settle === 0 ? 'first arrival' : (2 * settle + 1) + ' t_d';
+    tsEl.className = settle !== null && settle <= 1 ? 'ok' : 'bad';
+    var cap;
+    if (Math.abs(gl) < 0.01) cap = 'The load matches the line, so nothing comes back: the first wave is the whole story. This is why a link terminates its receiver in Z<sub>0</sub>.';
+    else if (Math.abs(gs) < 0.01) cap = 'The load reflects, but the matched source absorbs the echo, so the load settles after one round trip. Double termination costs half the swing and buys this.';
+    else cap = 'Both ends reflect, so the echo bounces back and forth, multiplied by Γ<sub>S</sub>Γ<sub>L</sub> = ' + (gs * gl).toFixed(3) + ' every round trip of 2t<sub>d</sub>. ' +
+      (gs * gl < 0 ? 'The product is negative, so the load voltage overshoots and undershoots around its final value. ' : 'The product is positive, so the load creeps towards its final value in steps. ') +
+      'In a link each of these steps is a bump in the pulse response, many UIs after the main cursor.';
+    q('[data-o="cap"]').innerHTML = cap;
+  }
+  BD.observe(root, draw);
+})();
+</script>

@@ -93,6 +93,7 @@ exclude:
   - book/
   - tools/
   - README.md
+  - HANDOFF.md
   - LICENSE*
   - Gemfile
   - Gemfile.lock
