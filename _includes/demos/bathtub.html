@@ -1,0 +1,59 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdBathtub" role="group" aria-label="Interactive demo: dual-Dirac bathtub curve and eye width at a BER">
+  <div class="bd-head"><span>// try it · the bathtub</span>
+    <span class="bd-seg" role="group" aria-label="Random jitter presets"><button type="button" data-rj="1.32" aria-pressed="true">σ 1.32 ps (budget)</button><button type="button" data-rj="3" aria-pressed="false">3 ps</button><button type="button" data-rj="5" aria-pressed="false">5 ps</button></span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>deterministic jitter DJ<sub>δδ</sub> <b data-v="dj"></b></span><input type="range" data-k="dj" min="0" max="100" step="1" value="40" aria-label="Deterministic jitter in ps"></label>
+    <label class="bd-sl"><span>random jitter σ<sub>RJ</sub> <b data-v="rj"></b></span><input type="range" data-k="rj" min="0.2" max="10" step="0.01" value="1.32" aria-label="Random jitter rms in ps"></label>
+    <label class="bd-sl"><span>target BER <b data-v="ber"></b></span><input type="range" data-k="ber" min="3" max="15" step="1" value="12" aria-label="Target BER exponent"></label>
+  </div>
+  <div class="bd-scope tall"><canvas data-c="b" aria-hidden="true"></canvas><span class="bd-tag">BER against sampling instant, 5 Gb/s (UI = 200 ps)</span></div>
+  <div class="bd-read" aria-live="polite"><span>Q <b data-o="q">–</b></span><span>TJ = DJ<sub>δδ</sub> + 2Qσ<sub>RJ</sub> <b data-o="tj">–</b></span><span>eye width <b data-o="ew">–</b></span><span>RJ share of TJ <b data-o="rs">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdBathtub'); if (!root || !window.BD) return;
+  var UI = 200;
+  function erfc(x) { var z = Math.abs(x), t = 1 / (1 + 0.5 * z);
+    var r = t * Math.exp(-z * z - 1.26551223 + t * (1.00002368 + t * (0.37409196 + t * (0.09678418 + t * (-0.18628806 + t * (0.27886807 + t * (-1.13520398 + t * (1.48851587 + t * (-0.82215223 + t * 0.17087277)))))))));
+    return x >= 0 ? r : 2 - r; }
+  var Qf = function (q) { return 0.5 * erfc(q / Math.SQRT2); };
+  function Qinv(b) { var lo = 0, hi = 40; for (var i = 0; i < 80; i++) { var m = (lo + hi) / 2; if (Qf(m) > b) lo = m; else hi = m; } return (lo + hi) / 2; }
+  var S = BD.bind(root, {
+    dj: { fmt: function (x) { return x.toFixed(0) + ' ps'; } },
+    rj: { fmt: function (x) { return x.toFixed(2) + ' ps rms'; } },
+    ber: { map: function (v) { return Math.pow(10, -v); }, fmt: function (x) { return '1e−' + Math.round(-Math.log10(x)); } }
+  }, function () { draw(); });
+  var q = function (s) { return root.querySelector(s); }, rjs = q('[data-k="rj"]');
+  BD.seg(root, 'rj', function (v) { rjs.value = v; rjs.dispatchEvent(new Event('input')); });
+  function draw() {
+    var dj = S.dj, s = S.rj, tb = S.ber, Q = Qinv(tb);
+    root.querySelectorAll('[data-rj]').forEach(function (b) { b.setAttribute('aria-pressed', Math.abs(parseFloat(b.getAttribute('data-rj')) - s) < 0.005 ? 'true' : 'false'); });
+    // dual-Dirac edges at 0 and UI, each split into Diracs at ±DJ/2 with a Gaussian of σ around each
+    var ber = function (t) {
+      var l = 0.5 * (Qf((t - dj / 2) / s) + Qf((t + dj / 2) / s)), r = 0.5 * (Qf((UI - dj / 2 - t) / s) + Qf((UI + dj / 2 - t) / s));
+      return Math.min(1, 2 * (l + r));     // ×2: the inner Dirac alone sets the tail, matching TJ = DJ + 2Qσ
+    };
+    var d = BD.setup(q('[data-c="b"]')), f = BD.frame(d, { x: [-20, UI + 20], y: [1e-16, 1], ylog: true,
+      xt: [[0, '0'], [50, '0.25'], [100, '0.5'], [150, '0.75'], [200, '1 UI']], yt: [[1, '1'], [1e-4, '1e−4'], [1e-8, '1e−8'], [1e-12, '1e−12'], [1e-16, '1e−16']], pad: { l: 46, t: 24 } });
+    var xs = [], ys = []; for (var i = 0; i <= 600; i++) { var t = -20 + (UI + 40) * i / 600; xs.push(t); ys.push(Math.max(ber(t), 1e-17)); }
+    var g = d.g, tl = dj / 2 + Q * s, tr = UI - dj / 2 - Q * s, w = tr - tl;
+    if (w > 0) { g.fillStyle = 'rgba(127,224,160,.10)'; g.fillRect(f.X(tl), f.p.t, f.X(tr) - f.X(tl), d.h - f.p.t - f.p.b); }
+    BD.hline(f, tb, 'rgba(224,184,90,.75)', [5, 4], 'target');
+    [[-dj / 2, 'DJ'], [dj / 2, ''], [UI - dj / 2, ''], [UI + dj / 2, '']].forEach(function (p) { BD.vline(f, p[0], 'rgba(240,138,106,.45)', [2, 3]); });
+    BD.line(f, xs, ys, BD.C.blue, 2);
+    if (w > 0) { var y = f.Y(tb) + 14; g.strokeStyle = BD.C.green; g.lineWidth = 1.4; g.beginPath(); g.moveTo(f.X(tl), y); g.lineTo(f.X(tr), y); g.stroke();
+      g.fillStyle = BD.C.green; g.textAlign = 'center'; g.fillText((w / UI).toFixed(2) + ' UI', f.X(UI / 2), y + 12); g.textAlign = 'left'; }
+    var tj = dj + 2 * Q * s;
+    q('[data-o="q"]').textContent = Q.toFixed(2);
+    q('[data-o="tj"]').textContent = tj.toFixed(1) + ' ps';
+    var ew = q('[data-o="ew"]'); ew.textContent = w > 0 ? w.toFixed(1) + ' ps = ' + (w / UI).toFixed(2) + ' UI' : 'closed'; ew.className = w / UI >= 0.7 ? 'ok' : 'bad';
+    q('[data-o="rs"]').textContent = tj > 0 ? (100 * 2 * Q * s / tj).toFixed(0) + ' %' : '–';
+    q('[data-o="cap"]').innerHTML = 'The deterministic jitter moves each crossing by a bounded ±DJ<sub>δδ</sub>/2; the random jitter adds Gaussian tails that never end. ' +
+      'At a BER of ' + q('[data-v="ber"]').textContent + ' each tail eats Q·σ<sub>RJ</sub> = ' + (Q * s).toFixed(1) + ' ps, so every picosecond of RJ costs ' + (2 * Q).toFixed(1) + ' ps of eye. ' +
+      (w / UI >= 0.7 ? 'The eye meets the 0.7 UI target.' : 'The eye is below the 0.7 UI target: cut the RJ first, it is multiplied by 2Q.');
+  }
+  BD.observe(root, draw);
+})();
+</script>

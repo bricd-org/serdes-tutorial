@@ -25,7 +25,6 @@
     rl: { map: rlMap, fmt: function (x) { return x >= 999 ? '1 kΩ (≈ open)' : x.toFixed(x < 20 ? 1 : 0) + ' Ω'; } }
   }, function () { syncPre(); draw(); });
   var q = function (s) { return root.querySelector(s); };
-  q('[data-k="rl"]').value = rlInv(100); q('[data-k="rl"]').dispatchEvent(new Event('input'));
   var pres = root.querySelectorAll('[data-pre]');
   function syncPre() { pres.forEach(function (b) { var p = b.getAttribute('data-pre').split(',').map(Number);
     b.setAttribute('aria-pressed', Math.abs(p[0] - S.rs) < 0.5 && Math.abs(p[1] - S.z0) < 0.5 && Math.abs(p[2] - S.rl) / p[2] < 0.02 ? 'true' : 'false'); }); }
