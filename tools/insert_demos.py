@@ -21,6 +21,7 @@ DEMOS = [
     (CH + "02-signals-systems-and-the-language-of-links.html", "isieye", "after:fig:ch2-isi-tau"),
     (CH + "02-signals-systems-and-the-language-of-links.html", "berq", "after:fig:ch2-ber"),
     (CH + "03-the-channel.html", "bounce", "after:fig:ch3-bounce"),
+    (CH + "11-jitter.html", "bathtub", "after:fig:ch11-bathtub"),
 ]
 
 BLOCK = re.compile(r"\n?<!-- demo:[\w-]+ -->.*?<!-- /demo -->\n?", re.S)

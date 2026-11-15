@@ -111,6 +111,8 @@ permalink: "/chapters/11-jitter/"
 <img src="{% endraw %}{{ '/assets/figs/ch11_bathtub.svg' | relative_url }}{% raw %}" style="width:753px" alt="The bathtub: BER against sampling instant." loading="lazy" />
 <figcaption><span class="capnum">Figure 11.5.</span> <strong>The bathtub: BER against sampling instant.</strong> (a) Dual-Dirac PDFs at both crossings of the eye, DJ<span class="math inline">\(_{\delta\delta}\)</span> = 40 ps and <span class="math inline">\(\sigma_\mathrm{RJ}\)</span> = 3 ps. (b) Bathtubs for DJ<span class="math inline">\(_{\delta\delta}\)</span> = 40 ps. At <span class="math inline">\(10^{-12}\)</span> the eye is 0.71 UI wide with the Open-SERDES budget (<span class="math inline">\(\sigma = 1.32\)</span> ps), 0.59 UI with 3 ps and 0.45 UI with 5 ps.</figcaption>
 </figure>
+<!-- demo:bathtub -->{% endraw %}{% include demos/bathtub.html %}{% raw %}<!-- /demo -->
+
 <p><a href="#fig:ch11-bathtub">Figure 11.5</a>(b) completes the teaser of <a href="{% endraw %}{{ '/chapters/02-signals-systems-and-the-language-of-links/' | relative_url }}{% raw %}#sec:ber">Section 2.7</a>. Note the factor 14.07 in <a href="#eq:tj">Equation (11.3)</a>: a picosecond of RJ costs 14 ps of eye at <span class="math inline">\(10^{-12}\)</span>, while a picosecond of DJ costs one.</p>
 <div class="tbox tbox-pitfall">
 <div class="tbox-title">

@@ -163,7 +163,7 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 56. ★ `dualdirac` · RJ ⊗ DJ convolution and the dual-Dirac fit: DCD, ISI, RJ sliders → PDF on log axis, TJ(BER)
     (DJδδ 15.6 ps vs DJpp). After fig:ch11-hist. todo
 57. ★ `bathtub` · Bathtub builder: DJδδ, σ_RJ → eye width at 1e−12 (0.71/0.59/0.45 UI at 1.32/3/5 ps). After
-    fig:ch11-bathtub. todo
+    fig:ch11-bathtub. **done** (TJ 58.6 ps; 0.71/0.59/0.45 UI at σ 1.32/3/5 ps, DJδδ 40 ps)
 58. ★ `pnjitter` · Phase noise to jitter: drag the PN profile and integration limits → rms jitter (1.01 ps from
     10 kHz, 0.61 ps above …). After fig:ch11-pn. todo
 59. `jbudget` · Jitter budget: each DJ/RJ term → TJ 58.6 ps, 0.71 UI eye. After fig:ch11-budget. todo
@@ -215,6 +215,8 @@ noise, jitter) → stat eye and margin, the whole book on one panel. todo
   `serdes-jekyll`, gems volume `serdes-gems`, port 4007) → http://localhost:4007/serdes-tutorial/
 - 15 Nov (later): `nrzpsd`, `berq` (Ch 2) and `bounce` (Ch 3) done and checked in the browser; the user
   asked to merge into main, so the branch was merged and pushed (site deployed).
+- 15 Nov (later): `bathtub` (Ch 11) done; fixed a start-up console error in `bounce` (a slider event fired
+  before `pres` was set). Merged and pushed. Weekly usage reached 99 %.
 
 ### Next steps
 
