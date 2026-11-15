@@ -57,7 +57,7 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 5. ★ `nrzpsd` · NRZ spectrum: sinc² PSD, cumulative power; drag a cursor frequency → % power below it
    (77 % below f_N, 90 % below f_b, −3.9 dB at f_N). After fig:ch2-psd. **done** (77.4 %, 90.3 %, −3.9 dB)
 6. `lfsr` · Step an LFSR: 7-stage register animates bit by bit; choose PRBS7/9/15/31 taps; run-length histogram
-   builds up (32, 16, 8 … runs); period 127. After fig:ch2-lfsr. todo
+   builds up (32, 16, 8 … runs); period 127. Placed after fig:ch2-prbs. **done** (period 127, 64/63, longest run 7)
 7. `onepole` · Bandwidth ↔ rise time: f3dB slider; Bode and step response; 10–90 % = 0.35/f3dB (140 ps = 0.7 UI
    at 2.5 GHz). After fig:ch2-onepole. **done** (140 ps = 0.70 UI, −3.0 dB at f_N, 913 mV worst eye)
 8. ★ `superpos` · Build the waveform from pulses: edit a bit pattern by clicking; each bit's shifted pulse drawn,
@@ -83,7 +83,7 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 17. `padrl` · Pad C and return loss: C_p and bondwire L → |S11| vs f, 10 dB line, echo in the pulse response
     (2t_d = 6.7 UI). After fig:ch3-pad. todo
 18. `viastub` · Via stub notch: stub length → quarter-wave null f = c/(4L√ε_eff) (6 mm → 6.2 GHz) over the NRZ
-    lobe; pulse distortion. After fig:ch3-via. todo
+    lobe. After fig:ch3-via. **done** (6.2 GHz at 6 mm, ε_eff 4; 5/10/25 Gb/s presets)
 19. `tdr` · TDR explorer: place an L bump and a C dip, rise-time slider (Fig 3.9). After fig:ch3-tdr. todo
 20. ★ `s21pulse` · From S21 to the pulse: loss slider over the LOSS_FAMILY (5–30 dB) → |S21|, pulse, cursors,
     p1/p0 (46 % at 15 dB; REF 53.5 %, p0 = 0.340 V). Uses SL. After fig:ref-pulse. todo
@@ -221,6 +221,7 @@ noise, jitter) → stat eye and margin, the whole book on one panel. todo
   before `pres` was set). Merged and pushed. Weekly usage reached 99 %.
 - 15 Nov (later): `pi` (Ch 13) done, merged and pushed. 6 demos live: isieye, nrzpsd, berq, bounce, bathtub, pi.
 - 15 Nov (later): `onepole` (Ch 2) and `slope` (Ch 11) done, merged and pushed: 8 demos live.
+- 15 Nov (later): `lfsr` (Ch 2) and `viastub` (Ch 3) done, merged and pushed: 10 demos live.
 
 ### Next steps
 

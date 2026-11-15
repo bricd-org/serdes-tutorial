@@ -97,6 +97,8 @@ permalink: "/chapters/02-signals-systems-and-the-language-of-links/"
 <img src="{% endraw %}{{ '/assets/figs/ch02_prbs7.svg' | relative_url }}{% raw %}" style="width:753px" alt="PRBS7 behaves like random data with short memory." loading="lazy" />
 <figcaption><span class="capnum">Figure 2.4.</span> <strong>PRBS7 behaves like random data with short memory.</strong> (a) One full period of 127 bits, with the longest runs (seven 1s, six 0s) shaded. (b) Run-length histogram: 32 runs of length 1, 16 of length 2, halving at each step, as for coin flips. (c) The line spectrum follows the <span class="math inline">\(\mathrm{sinc}^2\)</span> envelope of <a href="#fig:ch2-psd">Figure 2.2</a>. (d) Zoom near DC: lines every <span class="math inline">\(f_\mathrm{b}/127 = 39.4\,\mathrm{MHz}\)</span>, with an almost empty DC line because the pattern is balanced.</figcaption>
 </figure>
+<!-- demo:lfsr -->{% endraw %}{% include demos/lfsr.html %}{% raw %}<!-- /demo -->
+
 <h5 id="choosing-a-prbs">Choosing a PRBS</h5>
 <p>PRBS7 repeats every 25.4 ns and never holds a level longer than 7 UI: ideal for bring-up. PRBS31 (<span class="math inline">\(x^{31}+x^{28}+1\)</span>) has runs of up to 31 bits and a period of 0.43 s; its low-frequency content stresses AC coupling (baseline wander), long ISI tails and the CDR’s ability to hold phase without transitions, so it is the compliance pattern. Model work uses PRBS13 (8191 bits), far longer than the channel’s ISI memory. Real protocols also <em>encode</em> the data: <strong>8b/10b</strong> (PCIe 1/2, USB 3.2 Gen 1, SATA) maps each byte to 10 bits with at most five equal bits in a row and long-term DC balance, at 25% overhead.</p>
 <div class="tbox tbox-pitfall">

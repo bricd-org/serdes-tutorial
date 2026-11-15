@@ -1,0 +1,48 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdViaStub" role="group" aria-label="Interactive demo: a via stub is a quarter-wave notch in the channel">
+  <div class="bd-head"><span>// try it · via stub</span>
+    <span class="bd-seg" role="group" aria-label="Bit rate"><button type="button" data-fb="5" aria-pressed="true">5 Gb/s</button><button type="button" data-fb="10" aria-pressed="false">10 Gb/s</button><button type="button" data-fb="25" aria-pressed="false">25 Gb/s</button></span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>stub length L <b data-v="len"></b></span><input type="range" data-k="len" min="0.3" max="10" step="0.1" value="6" aria-label="Stub length in mm"></label>
+    <label class="bd-sl"><span>effective ε<sub>r</sub> <b data-v="er"></b></span><input type="range" data-k="er" min="2" max="5" step="0.05" value="4" aria-label="Effective dielectric constant"></label>
+  </div>
+  <div class="bd-scope tall"><canvas data-c="s" aria-hidden="true"></canvas><span class="bd-tag">through-path |S<sub>21</sub>| with an open stub, dB</span></div>
+  <div class="bd-read" aria-live="polite"><span>notch f = c/(4L√ε) <b data-o="fn">–</b></span><span>notch / f<sub>b</sub> <b data-o="rat">–</b></span><span>|S<sub>21</sub>| at f<sub>N</sub> <b data-o="sn">–</b></span><span>stub limit for notch ≥ 1.5 f<sub>b</sub> <b data-o="lmax">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdViaStub'); if (!root || !window.BD) return;
+  var fb = 5, C0 = 2.998e8;
+  var S = BD.bind(root, { len: { fmt: function (x) { return x.toFixed(1) + ' mm'; } }, er: { fmt: function (x) { return x.toFixed(2); } } }, function () { draw(); });
+  BD.seg(root, 'fb', function (v) { fb = parseFloat(v); draw(); });
+  var q = function (s) { return root.querySelector(s); };
+  function s21(fG, L, er) {                 // S21 = 2/(2 + tanh(γL)) for an open stub of impedance Z0 at a T
+    var b = 2 * Math.PI * fG * 1e9 * Math.sqrt(er) / C0 * L, a = 0.03 * (L / 6e-3) * Math.sqrt(Math.max(fG, 0.01) / 6);
+    var den = Math.cosh(2 * a) + Math.cos(2 * b), tr = Math.sinh(2 * a) / den, ti = Math.sin(2 * b) / den;
+    var re = 2 + tr, im = ti; return 2 / Math.hypot(re, im);
+  }
+  function draw() {
+    var L = S.len * 1e-3, er = S.er, fmax = Math.max(20, 3 * fb), fn = C0 / (4 * L * Math.sqrt(er)) / 1e9;
+    var d = BD.setup(q('[data-c="s"]')), f = BD.frame(d, { x: [0, fmax], y: [-30, 2],
+      xt: [0, 0.25, 0.5, 0.75, 1].map(function (r) { return [r * fmax, (r * fmax).toFixed(0) + (r === 1 ? ' GHz' : '')]; }),
+      yt: [[0, '0'], [-10, '−10'], [-20, '−20'], [-30, '−30 dB']], pad: { l: 46, t: 24 } });
+    var g = d.g; g.fillStyle = 'rgba(224,184,90,.10)'; g.fillRect(f.X(0), f.p.t, f.X(Math.min(fb, fmax)) - f.X(0), d.h - f.p.t - f.p.b);
+    g.fillStyle = 'rgba(233,208,143,.75)'; g.fillText('NRZ main lobe (0 – f_b)', f.X(0) + 6, d.h - f.p.b - 6);
+    var xs = [], ys = []; for (var i = 0; i <= 800; i++) { var fr = fmax * i / 800; xs.push(fr); ys.push(20 * Math.log10(s21(fr, L, er))); }
+    BD.line(f, xs, ys, BD.C.blue, 2);
+    BD.vline(f, fb / 2, 'rgba(170,205,240,.5)', [3, 3], 'f_N');
+    if (fn <= fmax) { BD.vline(f, fn, BD.C.red, [4, 3]); g.fillStyle = BD.C.red; g.fillText(fn.toFixed(1) + ' GHz', Math.min(f.X(fn) + 5, d.w - 60), f.p.t + 24); }
+    var sn = 20 * Math.log10(s21(fb / 2, L, er)), lmax = C0 / (4 * 1.5 * fb * 1e9 * Math.sqrt(er)) * 1e3;
+    q('[data-o="fn"]').textContent = fn.toFixed(1) + ' GHz';
+    var r = q('[data-o="rat"]'); r.textContent = (fn / fb).toFixed(2) + ' f_b'; r.className = fn >= 1.5 * fb ? 'ok' : 'bad';
+    q('[data-o="sn"]').textContent = (sn < 0 ? '−' : '') + Math.abs(sn).toFixed(2) + ' dB';
+    q('[data-o="lmax"]').textContent = lmax.toFixed(1) + ' mm';
+    q('[data-o="cap"]').innerHTML = 'The unused via barrel below the signal layer is an open stub. A quarter wavelength down and back, its open end looks like a short at the trace, and the through-path loses almost everything at f = c/(4L√ε<sub>eff</sub>). ' +
+      (fn < fb ? '<b style="color:#f39a7c">The notch sits inside the NRZ main lobe</b>: it removes signal energy and rings in the pulse response. Back-drill the via or route on a deeper layer.'
+       : fn < 1.5 * fb ? 'The notch is just above f<sub>b</sub>, close enough to tilt the response near the main lobe. A shorter stub buys margin.'
+       : 'The notch is well above the main lobe, so at this rate the stub costs only a fraction of a dB at f<sub>N</sub>. Raise the bit rate and watch the same stub become a problem.');
+  }
+  BD.observe(root, draw);
+})();
+</script>
