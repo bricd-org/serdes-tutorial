@@ -130,6 +130,8 @@ permalink: "/chapters/02-signals-systems-and-the-language-of-links/"
 <img src="{% endraw %}{{ '/assets/figs/ch02_onepole.svg' | relative_url }}{% raw %}" style="width:753px" alt="Bandwidth and rise time are two views of the same pole." loading="lazy" />
 <figcaption><span class="capnum">Figure 2.5.</span> <strong>Bandwidth and rise time are two views of the same pole.</strong> (a) A one-pole response with <span class="math inline">\(f_\mathrm{3dB} = 2.5\,\mathrm{GHz}\)</span>: −3 dB at the corner, then −20 dB per decade. (b) Its step response rises from 10% to 90% in 140 ps <span class="math inline">\(= 0.35/f_\mathrm{3dB}\)</span>, which is 0.7 UI at 5 Gb/s.</figcaption>
 </figure>
+<!-- demo:onepole -->{% endraw %}{% include demos/onepole.html %}{% raw %}<!-- /demo -->
+
 <div class="tbox tbox-example">
 <div class="tbox-title">
 <p>Worked Example 2.2 · What bandwidth keeps ISI small at 5 Gb/s?</p>

@@ -1,0 +1,52 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdOnePole" role="group" aria-label="Interactive demo: bandwidth and rise time of a one-pole channel">
+  <div class="bd-head"><span>// try it · bandwidth ↔ rise time</span>
+    <span class="bd-seg" role="group" aria-label="Presets"><button type="button" data-f="2.5" aria-pressed="true">f<sub>3dB</sub> = f<sub>N</sub></button><button type="button" data-f="1.25" aria-pressed="false">f<sub>N</sub>/2</button><button type="button" data-f="5" aria-pressed="false">2f<sub>N</sub></button></span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>bandwidth f<sub>3dB</sub> <b data-v="f3"></b></span><input type="range" data-k="f3" min="0" max="100" step="0.1" value="50" aria-label="3 dB bandwidth"></label>
+  </div>
+  <div class="bd-row">
+    <div class="bd-scope"><canvas data-c="m" aria-hidden="true"></canvas><span class="bd-tag">|H(f)|, dB</span></div>
+    <div class="bd-scope"><canvas data-c="s" aria-hidden="true"></canvas><span class="bd-tag">step response, 5 Gb/s UI grid</span></div>
+  </div>
+  <div class="bd-read" aria-live="polite"><span>τ <b data-o="tau">–</b></span><span>10–90 % rise <b data-o="tr">–</b></span><span>loss at f<sub>N</sub> <b data-o="ln">–</b></span><span>worst-case eye <b data-o="eye">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdOnePole'); if (!root || !window.BD) return;
+  var map = function (v) { return 0.5 * Math.pow(10, 1.30103 * v / 100); }, inv = function (f) { return 100 * Math.log10(f / 0.5) / 1.30103; };  // 0.5–10 GHz
+  var S = BD.bind(root, { f3: { map: map, fmt: function (x) { return x.toFixed(2) + ' GHz'; } } }, function () { draw(); });
+  var q = function (s) { return root.querySelector(s); }, sl = q('[data-k="f3"]');
+  sl.value = inv(2.5); sl.dispatchEvent(new Event('input'));
+  BD.seg(root, 'f', function (v) { sl.value = inv(parseFloat(v)); sl.dispatchEvent(new Event('input')); });
+  function draw() {
+    var f3 = S.f3, tau = 1 / (2 * Math.PI * f3 * 1e9), TB = 200e-12, tr = tau * Math.log(9), fN = 2.5;
+    root.querySelectorAll('[data-f]').forEach(function (b) { b.setAttribute('aria-pressed', Math.abs(parseFloat(b.getAttribute('data-f')) - f3) / f3 < 0.01 ? 'true' : 'false'); });
+    var d = BD.setup(q('[data-c="m"]')), f = BD.frame(d, { x: [0.1, 30], y: [-30, 3], xlog: true,
+      xt: [[0.1, '0.1'], [1, '1'], [2.5, 'f_N'], [10, '10 GHz']], yt: [[0, '0'], [-3, '−3'], [-10, '−10'], [-20, '−20'], [-30, '−30 dB']], pad: { l: 44, t: 24 } });
+    var xs = [], ys = []; for (var i = 0; i <= 300; i++) { var fr = 0.1 * Math.pow(300, i / 300); xs.push(fr); ys.push(-10 * Math.log10(1 + Math.pow(fr / f3, 2))); }
+    BD.line(f, xs, ys, BD.C.blue, 2);
+    var ln = -10 * Math.log10(1 + Math.pow(fN / f3, 2));
+    BD.vline(f, f3, 'rgba(170,205,240,.45)', [3, 3], 'f3dB'); BD.dot(f, fN, ln, BD.C.gold, 4.5);
+    var ds = BD.setup(q('[data-c="s"]')), fs = BD.frame(ds, { x: [-0.5, 4], y: [-0.05, 1.08], xt: [[0, '0'], [1, '1'], [2, '2'], [3, '3'], [4, '4 UI']],
+      yt: [[0, '0'], [0.1, '10 %'], [0.9, '90 %'], [1, '1']], pad: { l: 44, t: 24 } });
+    var ts = [], vs = []; for (i = 0; i <= 400; i++) { var t = -0.5 + 4.5 * i / 400; ts.push(t); vs.push(t < 0 ? 0 : 1 - Math.exp(-t * TB / tau)); }
+    var g = ds.g, t1 = tau * Math.log(1 / 0.9) / TB, t2 = tau * Math.log(10) / TB;
+    g.fillStyle = 'rgba(224,184,90,.13)'; g.fillRect(fs.X(t1), fs.p.t, fs.X(t2) - fs.X(t1), ds.h - fs.p.t - fs.p.b);
+    BD.hline(fs, 0.1, 'rgba(170,205,240,.35)', [3, 3]); BD.hline(fs, 0.9, 'rgba(170,205,240,.35)', [3, 3]);
+    BD.line(fs, ts, vs, BD.C.blue, 2);
+    g.fillStyle = BD.C.gold; g.fillText('t_r = ' + (tr * 1e12).toFixed(0) + ' ps', Math.min(fs.X(t2) + 6, ds.w - 80), fs.Y(0.5));
+    var eye = 1 - 2 * Math.exp(-TB / tau);
+    q('[data-o="tau"]').textContent = (tau * 1e12).toFixed(1) + ' ps';
+    q('[data-o="tr"]').textContent = (tr * 1e12).toFixed(0) + ' ps = ' + (tr / TB).toFixed(2) + ' UI';
+    q('[data-o="ln"]').textContent = ln.toFixed(1) + ' dB';
+    var e = q('[data-o="eye"]'); e.textContent = eye > 0 ? (1000 * eye).toFixed(0) + ' mV of 1 V' : 'closed'; e.className = eye > 0.5 ? 'ok' : 'bad';
+    q('[data-o="cap"]').innerHTML = 'The rise time and the bandwidth are the same pole seen twice: t<sub>r</sub> = 2.2τ = 0.35/f<sub>3dB</sub>. ' +
+      (f3 < 1.9 ? 'Below f<sub>N</sub> the edge takes more than a UI, so each bit still carries the last one with it: ISI.'
+       : f3 < 3.2 ? 'With f<sub>3dB</sub> at f<sub>N</sub> the edge takes 0.7 UI and loses 3 dB at Nyquist; the worst-case eye keeps 91 % of the swing.'
+       : 'A pole above f<sub>N</sub> settles well inside the UI, but every extra GHz costs power, and passes more noise.');
+  }
+  BD.observe(root, draw);
+})();
+</script>

@@ -59,6 +59,8 @@ permalink: "/chapters/11-jitter/"
 <img src="{% endraw %}{{ '/assets/figs/ch11_slope.svg' | relative_url }}{% raw %}" style="width:753px" alt="Timing jitter is voltage noise divided by the slope." loading="lazy" />
 <figcaption><span class="capnum">Figure 11.2.</span> <strong>Timing jitter is voltage noise divided by the slope.</strong> (a) Noisy edges (noise exaggerated to 30 mV rms) cross the threshold at spread-out times, with spread <span class="math inline">\(\sigma_v/\mathrm{SR}\)</span>. (b) <span class="math inline">\(\sigma_t\)</span> against slew rate. Attenuating a 2.5 GHz clock from 0.4 to 0.1 V<span class="math inline">\(_\mathrm{ppd}\)</span> makes it four times more jitter-sensitive.</figcaption>
 </figure>
+<!-- demo:slope -->{% endraw %}{% include demos/slope.html %}{% raw %}<!-- /demo -->
+
 <div class="tbox tbox-insight">
 <div class="tbox-title">
 <p>Design rule of thumb</p>
