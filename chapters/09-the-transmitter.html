@@ -168,6 +168,8 @@ permalink: "/chapters/09-the-transmitter/"
 <img src="{% endraw %}{{ '/assets/figs/tikz/09_tx-5.svg' | relative_url }}{% raw %}" style="width:497px" alt="A 3-tap FFE is three CML pairs on one pair of loads." loading="lazy" />
 <figcaption><span class="capnum">Figure 9.7.</span> <strong>A 3-tap FFE is three CML pairs on one pair of loads.</strong> Each pair is driven by its own copy of the data and steers a tail current proportional to its tap weight. The pre and post pairs have their inputs swapped, which gives <span class="math inline">\(c_{-1},c_1&lt;0\)</span>. The tails are current DACs sharing one reference, with <span class="math inline">\(I_{-1}+I_0+I_1=I_T=20\,\mathrm{mA}\)</span>, so the supply current never changes. Hops mark crossings without connection.</figcaption>
 </figure>
+<!-- demo:ffecurr -->{% endraw %}{% include demos/ffecurr.html %}{% raw %}<!-- /demo -->
+
 <div class="tbox tbox-keyeq">
 <div class="tbox-title">
 <p>Key equation · Current-summing FFE</p>

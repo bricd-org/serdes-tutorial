@@ -486,6 +486,8 @@ permalink: "/chapters/14-the-open-serdes-architecture/"
 <img src="{% endraw %}{{ '/assets/figs/ch14_power.svg' | relative_url }}{% raw %}" style="width:753px" alt="The CML driver alone is almost a quarter of the chip’s power; CMOS logic is a rounding error." loading="lazy" />
 <figcaption><span class="capnum">Figure 14.8.</span> <strong>The CML driver alone is almost a quarter of the chip’s power; CMOS logic is a rounding error.</strong> (a) The first-cut budget of <a href="#tab:ch14-power">Table 14.3</a>, colored by section. The TX takes 48 %, mostly static CML current; the four samplers are the largest RX item. (b) Energy per bit against the Purdue OpenSerDes, an all-digital 2 Gb/s link in SKY130 at about 438 mW [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-openserdes2021">11</a>], and against Open-SERDES with the voltage-mode (SST) driver of <a href="{% endraw %}{{ '/chapters/09-the-transmitter/' | relative_url }}{% raw %}#sec:cml-driver">Section 9.4</a>.</figcaption>
 </figure>
+<!-- demo:power -->{% endraw %}{% include demos/power.html %}{% raw %}<!-- /demo -->
+
 <div class="tbox tbox-example">
 <div class="tbox-title">
 <p>Worked Example 14.3 · Energy per bit, and where to save</p>

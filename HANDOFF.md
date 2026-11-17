@@ -148,7 +148,7 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
     toggle (a wrong decision doubles ISI). After fig:ch8-cancel. **done** as `dfe` (REF + 8 dB CTLE: data level
     91.6 mV, taps 27.6/11.8 mV, eye 60 → 129 mV with 2 taps; no step-through or error propagation yet)
 39. `tap1` · Tap-1 timing budget: clk-Q, summer settling, setup sliders vs 1 UI and 0.5 UI; unroll toggle
-    (140 ps direct). After fig:ch8-timing. todo
+    (140 ps direct). After fig:ch8-timing. **done** (Ex 8.2: 30+10+60+20+20 = 140 ps, 60 ps slack; unrolled 80 ps)
 40. ★ `sslms` · Sign-sign LMS live: μ, noise, pre-cursor sliders → taps converge to 91.6/27.6/11.8 mV, wander
     when p−1 is uncancelled. After fig:ch8-sslms. **done** (Worked Ex 8.3 set-up: PRBS13, 4 mV, μ 0.25 mV, start
     d_lev 50 mV; w1 within 2 mV after 277 UI (book ~310), no decision errors; extra pre-cursor slider shows the wander)
@@ -164,7 +164,8 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 45. `cmlsst` · CML vs SST current: swing and de-emphasis → supply current and power (4×; 1.38× SST at 6 dB).
     After fig:ch9-current. **done** (Eq 9.3: 20 mA/50 mW vs 6 mW at 1 V_ppd, 16 mA/40 mW vs 4.8 mW at 0.8 V;
     the 1.38× SST de-emphasis penalty is not modelled yet)
-46. `ffecurr` · Tap currents: preset → I−1, I0, I1 summing to 20 mA, output levels. After fig:ch9-ffe. todo
+46. `ffecurr` · Tap currents: preset → I−1, I0, I1 summing to 20 mA, output levels. After fig:ch9-ffe. **done** (Ex 9.4:
+    −6 dB = 24 + 8 cells, 15/5 mA, 1.0/0.5 V_ppd; 32 cells of 0.625 mA, quantized)
 47. `tcoil` · Pad C and T-coil: C_p → return loss (0.85 pF limit) and pole (10.1 → 14.3 GHz). After fig:ch9-pad. **done**
     (Eq 9.6 at 0.63 pF: L1 = L2 0.59 nH, M 0.20 nH, C_B 79 fF, 10.1 → 14.3 GHz; T-coil response idealized)
 
@@ -234,7 +235,8 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 72. `budget10g` · Design for 10, guarantee 5: rate and length → PDA eye and timing budget (Fig 14.4). After fig:ch14-rate. todo
 73. `bondwire` · Bond-wire length (Ex 14.2): L per mm and C_pad → resonance and return loss. End of sec14.5.3.
     **done as `padbond`** (1/2.5/3 mm → 16.2/8.7/7.4 dB; 1 mm at 5 GHz 10.5 dB; 2.5 nH + 1 pF artificial line)
-74. `power` · Power budget: currents per block → total power and pJ/bit (Fig 14.8). After fig:ch14-power. todo
+74. `power` · Power budget: currents per block → total power and pJ/bit (Fig 14.8). After fig:ch14-power. **done**
+    (Ex 14.3: 216 mW, 43.2 pJ/b; SST 172 mW, 34.4 pJ/b; Purdue 219 pJ/b; per-block table rows not itemized)
 
 **Ch 15 · Flow**
 75. `mcruns` · How many Monte Carlo runs (key eq): yield target and confidence → N. End of sec:testbenches. **done**
@@ -291,15 +293,15 @@ noise, jitter) → stat eye and margin, the whole book on one panel. todo
 
 ### Next steps
 
-State on 17 Nov (third window): 56 placements; was 32 (31 includes incl. `labmap`), every chapter 1–16 covered, all merged
+State on 17 Nov (third window): 59 placements; was 32 (31 includes incl. `labmap`), every chapter 1–16 covered, all merged
 into `main` (deployed). Each `done` entry above lists the book numbers it reproduces.
 
 0. Values for the rest are already extracted in this pass: Ex 8.2 tap-1 budget (clk-Q 25–35, tap 10, 3τ = 60 with
    250 Ω·80 fF, setup 20, margin 20 → 135–145 ps; unrolled fits 100 ps), Ex 9.4 tap currents (I_T 20 mA, 32 cells of
    0.625 mA; −6 dB → 15/5 mA), Ex 11.3 budget (DJ 8+6+6+20 = 40 ps, RJ √(1.0²+0.7²+0.5²) = 1.32 ps, TJ 58.6 ps),
    Ex 14.3 power (CML 77 mA × 2.5 V = 192 mW + 25 mW = 216 mW, 43.2 pJ/b; SST −44 mW; 0.8 V_ppd −10 mW; Purdue
-   219 pJ/b), Ex 3.1 (t_r 50 ps → t_r·v/6 = 1.25 mm, 6.67 ps/mm, 334 nH/m, 133 pF/m). Build `tap1`, `ffecurr`,
-   `jbudget` (needs Table 11.1 row labels), `power`, `tline` from these.
+   219 pJ/b), Ex 3.1 (t_r 50 ps → t_r·v/6 = 1.25 mm, 6.67 ps/mm, 334 nH/m, 133 pF/m). `tap1`, `ffecurr` and `power` are done;
+   still to build from these: `jbudget` (needs Table 11.1 row labels) and `tline`.
 1. Remaining ★ demos: `stateye` (Ch 4, needs a jitter-aware statistical eye in SL), `ctlebode` (Ch 7 degenerated
    pair g_m/R_S/C_S/R_D/C_L → 14 dB ideal, 10.9 dB realized), `term` (Ch 9), `dfe` step-through with error
    propagation (Ch 8).

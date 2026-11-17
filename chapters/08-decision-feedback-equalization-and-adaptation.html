@@ -102,6 +102,8 @@ and Adaptation</h1>
 <img src="{% endraw %}{{ '/assets/figs/tikz/08_dfe-2.svg' | relative_url }}{% raw %}" style="width:607px" alt="The tap-1 budget fits in one UI with direct feedback." loading="lazy" />
 <figcaption><span class="capnum">Figure 8.4.</span> <strong>The tap-1 budget fits in one UI with direct feedback.</strong> Numbers from <a href="#we:ch8-timing">Worked Example 8.2</a>. Direct feedback (140 ps) meets the 1 UI deadline but not the half-UI one. Unrolling removes the summer settling and fits both.</figcaption>
 </figure>
+<!-- demo:tap1 -->{% endraw %}{% include demos/tap1.html %}{% raw %}<!-- /demo -->
+
 <h2 id="sec:adaptation"><span class="secnum">8.3</span>Adapting the taps</h2>
 <p>The ideal taps depend on channel, temperature and supply, so the receiver should find them itself. Define the slicer error <span class="math inline">\(e_n=z_n-d_\mathrm{lev}\,\hat a_n\)</span>, where <span class="math inline">\(d_\mathrm{lev}\)</span> is the expected signal level (ideally <span class="math inline">\(Ap_{0}\)</span>). Since <span class="math inline">\(\partial E[e_n^2]/\partial w_k=-2E[e_n\hat a_{n-k}]\)</span>, stepping against the gradient gives the <strong>LMS</strong> update. Hardware prefers the <strong>sign-sign</strong> form (SS-LMS), which needs only signs [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-palermo720eq">22</a>, <a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-stojanovic2005">23</a>]:</p>
 <div class="tbox tbox-keyeq">
