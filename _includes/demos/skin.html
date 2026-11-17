@@ -1,0 +1,46 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdSkin" role="group" aria-label="Interactive demo: skin depth and the resistance of a stripline">
+  <div class="bd-head"><span>// try it · skin effect</span><span>copper, 5-mil (127 µm) trace</span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>frequency <b data-v="f"></b></span><input type="range" data-k="f" min="6" max="10.3" step="0.01" value="9.398" aria-label="Frequency, log scale"></label>
+    <label class="bd-sl"><span>copper thickness <b data-v="t"></b></span><input type="range" data-k="t" min="5" max="70" step="0.5" value="17.5" aria-label="Copper thickness in micrometres"></label>
+  </div>
+  <div class="bd-row">
+    <div class="bd-scope"><canvas data-c="x" aria-hidden="true"></canvas><span class="bd-tag">trace cross-section: where the current flows</span></div>
+    <div class="bd-scope"><canvas data-c="r" aria-hidden="true"></canvas><span class="bd-tag">resistance per metre</span></div>
+  </div>
+  <div class="bd-read" aria-live="polite"><span>skin depth δ <b data-o="d">–</b></span><span>R<sub>DC</sub> <b data-o="rdc">–</b></span><span>R at f <b data-o="r">–</b></span><span>skin effect starts at <b data-o="fs">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdSkin'); if (!root || !window.BD) return;
+  var RHO = 1.72e-8, MU = 4e-7 * Math.PI, W = 127e-6;
+  var S = BD.bind(root, { f: { map: function (v) { return Math.pow(10, v); }, fmt: function (x) { return BD.eng(x) + 'Hz'; } }, t: { fmt: function (x) { return x.toFixed(1) + ' µm'; } } }, function () { draw(); });
+  var q = function (s) { return root.querySelector(s); };
+  var delta = function (f) { return Math.sqrt(RHO / (Math.PI * f * MU)); };
+  function R(f, t) { var rdc = RHO / (W * t), d = delta(f), rac = RHO / (2 * d * (W + t)); return Math.sqrt(rdc * rdc + rac * rac); }   // current in a δ-thick skin around the perimeter
+  function draw() {
+    var f = S.f, t = S.t * 1e-6, d = delta(f), rdc = RHO / (W * t), fs = RHO / (Math.PI * MU * Math.pow(t / 2, 2));
+    // cross-section
+    var dx = BD.setup(q('[data-c="x"]')), g = dx.g, sc = Math.min((dx.w - 40) / (W * 1e6), (dx.h - 60) / (t * 1e6)), ww = W * 1e6 * sc, hh = t * 1e6 * sc;
+    var x0 = (dx.w - ww) / 2, y0 = (dx.h - hh) / 2 + 6, dd = Math.min(d * 1e6 * sc, hh / 2);
+    g.fillStyle = 'rgba(170,205,240,.12)'; g.fillRect(x0, y0, ww, hh);
+    g.fillStyle = 'rgba(224,184,90,.8)'; g.fillRect(x0, y0, ww, dd); g.fillRect(x0, y0 + hh - dd, ww, dd); g.fillRect(x0, y0, Math.min(dd, ww / 2), hh); g.fillRect(x0 + ww - Math.min(dd, ww / 2), y0, Math.min(dd, ww / 2), hh);
+    g.strokeStyle = BD.C.axis; g.strokeRect(x0, y0, ww, hh);
+    g.fillStyle = BD.C.axis; g.textAlign = 'center'; g.fillText('127 µm', dx.w / 2, y0 + hh + 16); g.fillText(dd >= hh / 2 - 0.5 ? 'current uses the whole section' : 'current in a δ = ' + (d * 1e6).toFixed(2) + ' µm skin', dx.w / 2, y0 - 8); g.textAlign = 'left';
+    // R(f)
+    var dr = BD.setup(q('[data-c="r"]')), fr = BD.frame(dr, { x: [1e6, 2e10], y: [1, 300], xlog: true, ylog: true, xt: [[1e6, '1M'], [1e7, '10M'], [1e8, '100M'], [1e9, '1G'], [1e10, '10 GHz']],
+      yt: [[1, '1'], [10, '10'], [100, '100 Ω/m']], pad: { l: 50, t: 22 } });
+    var xs = [], ys = []; for (var i = 0; i <= 200; i++) { var ff = 1e6 * Math.pow(2e4, i / 200); xs.push(ff); ys.push(R(ff, t)); }
+    BD.line(fr, xs, ys, BD.C.blue, 2); BD.vline(fr, fs, 'rgba(224,184,90,.5)', [3, 3], 'δ = t/2'); BD.vline(fr, 2.5e9, 'rgba(255,255,255,.3)', [2, 3]); BD.dot(fr, f, R(f, t), BD.C.gold, 4.5);
+    q('[data-o="d"]').textContent = d >= 1e-3 ? (d * 1e3).toFixed(2) + ' mm' : (d * 1e6).toFixed(2) + ' µm';
+    q('[data-o="rdc"]').textContent = rdc.toFixed(1) + ' Ω/m';
+    q('[data-o="r"]').textContent = R(f, t).toFixed(1) + ' Ω/m';
+    q('[data-o="fs"]').textContent = BD.eng(fs) + 'Hz';
+    q('[data-o="cap"]').innerHTML = 'At high frequency the current crowds into a skin of depth δ = √(ρ/πfμ) at the conductor surface, so the resistance rises as √f once δ falls below half the thickness. ' +
+      'For a half-ounce (17.5 µm) 5-mil trace that happens near 57 MHz, and at the 2.5 GHz Nyquist frequency R is about six times R<sub>DC</sub>. ' + (S.t > 30 ? 'Thicker copper lowers R<sub>DC</sub> but barely helps at gigahertz: the current only uses the skin.' : 'Surface roughness, ignored here, adds more: that is why REF uses a lossier conductor.');
+  }
+  BD.observe(root, draw);
+})();
+</script>

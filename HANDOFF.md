@@ -77,7 +77,7 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 13. `tline` · When is a wire a transmission line: rise time and length → t_d vs t_r/6 rule; FR-4 delay
     (Ex 3.1). End of sec3.2.1. todo
 14. `skin` · Skin depth and R(f): frequency slider; δ vs thickness; R_DC 7.7 Ω/m → 46 Ω/m at 2.5 GHz. After
-    fig:ch3-skin. todo
+    fig:ch3-skin. **done** (7.7 → 45.8 Ω/m, onset 56.9 MHz; perimeter-skin model)
 15. ★ `lossbuild` · Build the channel loss: sliders for k_R, tanδ, ε_r, length, pad C → conductor (√f) and
     dielectric (f) loss in dB/in and total |S21| (REF −17.4 dB; 0.44 dB/in). Uses SL. After fig:ch3-loss. **done**
     (REF 0.438 dB/in; presets smooth 5-mil stripline k_R 29 → 0.332, low-loss tanδ 0.0045 → 0.153, as Fig 3.4)
@@ -223,7 +223,8 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 74. `power` · Power budget: currents per block → total power and pJ/bit (Fig 14.8). After fig:ch14-power. todo
 
 **Ch 15 · Flow**
-75. `mcruns` · How many Monte Carlo runs (key eq): yield target and confidence → N. End of sec:testbenches. todo
+75. `mcruns` · How many Monte Carlo runs (key eq): yield target and confidence → N. End of sec:testbenches. **done**
+    (Δσ/σ ≈ 1/√(2N): 200 runs 4.9 ± 0.25 mV, 50 runs 10 %; 200 repeated sets confirm it)
 76. `bercount` · Bits needed to claim a BER: target BER, confidence, errors seen → N bits and test time
     (3/N rule at 95 %). End of sec:labtest. **done** (Poisson bound: 3.00e12 bits, 10 min at 1e−12/95 %; k errors)
 77. `lumped` · Sections for a lumped line model: rise time and t_d → N sections. todo
@@ -276,7 +277,7 @@ noise, jitter) → stat eye and margin, the whole book on one panel. todo
 
 ### Next steps
 
-State at the end of 17 Nov: 32 placements (31 includes incl. `labmap`), every chapter 1–16 covered, all merged
+State at the end of 17 Nov (second window): 41 placements; was 32 (31 includes incl. `labmap`), every chapter 1–16 covered, all merged
 into `main` (deployed). Each `done` entry above lists the book numbers it reproduces.
 
 1. Remaining ★ demos: `stateye` (Ch 4, needs a jitter-aware statistical eye in SL), `ctlebode` (Ch 7 degenerated
