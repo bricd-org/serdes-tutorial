@@ -1,0 +1,68 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdFfe" role="group" aria-label="Interactive demo: a 3-tap TX FFE on the REF channel">
+  <div class="bd-head"><span>// try it · TX FFE on REF</span>
+    <span class="bd-seg" role="group" aria-label="Tap presets"><button type="button" data-pre="0,0" aria-pressed="false">no FFE</button><button type="button" data-pre="0,-0.166" aria-pressed="false">−3.5 dB</button><button type="button" data-pre="0,-0.249" aria-pressed="false">−6 dB</button><button type="button" data-pre="zf2" aria-pressed="true">2-tap ZF</button><button type="button" data-pre="zf3" aria-pressed="false">3-tap ZF</button></span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>pre-tap c<sub>−1</sub> <b data-v="cm"></b></span><input type="range" data-k="cm" min="-0.25" max="0" step="0.001" value="0" aria-label="Pre-tap weight"></label>
+    <label class="bd-sl"><span>post-tap c<sub>1</sub> <b data-v="cp"></b></span><input type="range" data-k="cp" min="-0.45" max="0" step="0.001" value="-0.349" aria-label="Post-tap weight"></label>
+  </div>
+  <div class="bd-row">
+    <div class="bd-scope"><canvas data-c="p" aria-hidden="true"></canvas><span class="bd-tag">pulse at the RX: without FFE (faint) and with</span></div>
+    <div class="bd-scope"><canvas data-c="e" aria-hidden="true"></canvas><span class="bd-tag">PRBS7 eye at the RX input</span></div>
+  </div>
+  <div class="bd-read" aria-live="polite"><span>main tap c<sub>0</sub> = 1 − |c<sub>−1</sub>| − |c<sub>1</sub>| <b data-o="c0">–</b></span><span>de-emphasis <b data-o="de">–</b></span><span>main cursor <b data-o="m">–</b></span><span>PDA eye <b data-o="pda">–</b></span><span>PRBS7 eye <b data-o="eye">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdFfe'); if (!root || !window.BD || !window.SL) return;
+  var H = SL.channel(), p0 = SL.pulseOf(H), c0 = SL.cursors(p0, 2, 10), bits = SL.prbs(7, 127);
+  var z2 = SL.zfTaps(c0, 0, 1), z3 = SL.zfTaps(c0, 1, 1);
+  var S = BD.bind(root, { cm: { fmt: function (x) { return x.toFixed(3); } }, cp: { fmt: function (x) { return x.toFixed(3); } } }, function () { draw(); });
+  var q = function (s) { return root.querySelector(s); }, sm = q('[data-k="cm"]'), sp = q('[data-k="cp"]');
+  function set(a, b) { sm.value = a; sp.value = b; sm.dispatchEvent(new Event('input')); sp.dispatchEvent(new Event('input')); }
+  root.querySelectorAll('[data-pre]').forEach(function (b) { b.addEventListener('click', function () {
+    var v = b.getAttribute('data-pre');
+    if (v === 'zf2') set(0, z2[1]); else if (v === 'zf3') set(z3[0], z3[2]); else { var t = v.split(','); set(parseFloat(t[0]), parseFloat(t[1])); } }); });
+  set(0, z2[1]);
+  var mv = function (v) { return (v < 0 ? '−' : '') + Math.abs(v * 1e3).toFixed(0) + ' mV'; };
+  function draw() {
+    var cm = S.cm, cp = S.cp, cc = 1 - Math.abs(cm) - Math.abs(cp), taps = [cm, cc, cp];
+    var near = function (a, b) { return Math.abs(a - b) < 0.0015; };
+    root.querySelectorAll('[data-pre]').forEach(function (b) { var v = b.getAttribute('data-pre'), on;
+      if (v === 'zf2') on = near(cm, 0) && near(cp, z2[1]); else if (v === 'zf3') on = near(cm, z3[0]) && near(cp, z3[2]);
+      else { var t = v.split(','); on = near(cm, +t[0]) && near(cp, +t[1]); }
+      b.setAttribute('aria-pressed', on ? 'true' : 'false'); });
+    var p = SL.ffe(p0, taps, 1), c = SL.cursors(p, 2, 10), es = SL.eyeScan(p, bits);
+    // pulses
+    var d = BD.setup(q('[data-c="p"]')), f = BD.frame(d, { x: [-3, 10], y: [-0.14, 0.38], xt: [[-2, '−2'], [0, '0'], [2, '2'], [4, '4'], [6, '6'], [8, '8'], [10, '10 UI']],
+      yt: [[-0.1, '−0.1'], [0, '0'], [0.1, '0.1'], [0.2, '0.2'], [0.3, '0.3 V']], pad: { l: 42, t: 24 } });
+    var i0 = SL.argmax(p0), tx = [], a = [], b = [];
+    for (var n = i0 - 3 * SL.SPS; n <= i0 + 10 * SL.SPS; n += 2) { tx.push((n - i0) / SL.SPS); a.push(p0[n]); b.push(p[n]); }
+    BD.line(f, tx, a, 'rgba(170,205,240,.3)', 1.4, [4, 3]);
+    BD.line(f, tx, b, 'rgba(127,184,240,.75)', 1.8);
+    BD.hline(f, 0, 'rgba(255,255,255,.25)', [2, 3]);
+    SL.drawCursors(f, SL.cursors(p, 2, 10, i0));
+    // eye
+    var de = BD.setup(q('[data-c="e"]')), fe = BD.frame(de, { x: [-1, 1], y: [-0.5, 0.5], xt: [[-1, '−1'], [-0.5, '−0.5'], [0, '0'], [0.5, '0.5'], [1, '1 UI']],
+      yt: [[-0.4, '−0.4'], [-0.2, '−0.2'], [0, '0'], [0.2, '0.2'], [0.4, '0.4 V']], pad: { l: 42, t: 24 } });
+    SL.drawEye(fe, SL.eyeTraces(p, bits, es.phase, 0.5, 2));
+    var gx = de.g, xm = fe.X(0);
+    if (es.best > 0) { gx.strokeStyle = BD.C.gold; gx.lineWidth = 1.5; gx.beginPath(); gx.moveTo(xm, fe.Y(es.best / 2)); gx.lineTo(xm, fe.Y(-es.best / 2)); gx.stroke();
+      gx.fillStyle = BD.C.gold; gx.fillText(mv(es.best), xm + 8, fe.Y(0) + 3); }
+    else { gx.fillStyle = '#f39a7c'; gx.textAlign = 'center'; gx.fillText('closed by ' + mv(-es.best), xm, fe.Y(0) + 3); gx.textAlign = 'left'; }
+    var dB = cc + cp > 0 ? 20 * Math.log10((cc - Math.abs(cp)) / (cc + Math.abs(cp))) : -Infinity, pda = SL.pda(c);
+    q('[data-o="c0"]').textContent = cc.toFixed(3);
+    q('[data-o="de"]').textContent = isFinite(dB) ? (dB < -0.05 ? '−' + Math.abs(dB).toFixed(1) : '0') + ' dB' : '–';
+    q('[data-o="m"]').textContent = mv(0.5 * 2 * c.v[2]);
+    var pe = q('[data-o="pda"]'); pe.textContent = mv(pda); pe.className = pda > 0 ? 'ok' : 'bad';
+    var ee = q('[data-o="eye"]'); ee.textContent = mv(es.best); ee.className = es.best > 0 ? 'ok' : 'bad';
+    var post = c.v[3], pre = c.v[1];
+    q('[data-o="cap"]').innerHTML = (cp > -0.01 && cm > -0.005 ? 'Without FFE the long tail of REF closes the eye. Pull the post-tap negative: each bit then subtracts a scaled copy of itself one UI later, cancelling the first post-cursor.'
+      : (post < -0.01 ? 'Too much post-tap: p<sub>1</sub> has turned negative, so the FFE now makes ISI of its own. ' : 'The post-tap cancels most of p<sub>1</sub> and flattens the tail. ') +
+        'But the driver cannot exceed its peak swing, so Σ|c| = 1 and every bit of de-emphasis comes out of c<sub>0</sub>: the open eye is only a fraction of the 1 V launched. ' +
+        (cm < -0.03 ? 'The pre-tap removes p<sub>−1</sub> (' + pre.toFixed(3) + ' left), but it costs main cursor too; on REF the 3-tap ZF eye is smaller than the 2-tap one.' : ''));
+  }
+  BD.observe(root, draw);
+})();
+</script>

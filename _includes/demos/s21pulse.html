@@ -1,0 +1,55 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdS21Pulse" role="group" aria-label="Interactive demo: from channel loss to the pulse response and its cursors">
+  <div class="bd-head"><span>// try it · from S21 to the pulse</span>
+    <span class="bd-seg" role="group" aria-label="Channel presets"><button type="button" data-len="0.572" aria-pressed="false">10 dB</button><button type="button" data-len="1" aria-pressed="true">REF, 1 m</button><button type="button" data-len="1.441" aria-pressed="false">25 dB</button></span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>FR-4 line length <b data-v="len"></b></span><input type="range" data-k="len" min="0.1" max="2" step="0.001" value="1" aria-label="Line length in metres"></label>
+    <label class="bd-sl"><span>pad capacitance (each end) <b data-v="cp"></b></span><input type="range" data-k="cp" min="0" max="1500" step="10" value="300" aria-label="Pad capacitance in femtofarads"></label>
+  </div>
+  <div class="bd-row">
+    <div class="bd-scope"><canvas data-c="s" aria-hidden="true"></canvas><span class="bd-tag">|S<sub>21</sub>|, dB</span></div>
+    <div class="bd-scope"><canvas data-c="p" aria-hidden="true"></canvas><span class="bd-tag">1 V, 1-UI pulse response and cursors</span></div>
+  </div>
+  <div class="bd-read" aria-live="polite"><span>loss at f<sub>N</sub> <b data-o="ln">–</b></span><span>peak arrives <b data-o="td">–</b></span><span>p<sub>−1</sub> <b data-o="pm">–</b></span><span>p<sub>0</sub> <b data-o="p0">–</b></span><span>p<sub>1</sub>/p<sub>0</sub> <b data-o="r1">–</b></span><span>PDA eye (13 cursors) <b data-o="eh">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdS21Pulse'); if (!root || !window.BD || !window.SL) return;
+  var S = BD.bind(root, { len: { fmt: function (x) { return x.toFixed(2) + ' m'; } }, cp: { fmt: function (x) { return x.toFixed(0) + ' fF'; } } }, function () { draw(); });
+  var q = function (s) { return root.querySelector(s); }, sl = q('[data-k="len"]');
+  BD.seg(root, 'len', function (v) { sl.value = v; sl.dispatchEvent(new Event('input')); });
+  var mv = function (v) { return (v < 0 ? '−' : '') + Math.abs(v * 1e3).toFixed(0) + ' mV'; };
+  function draw() {
+    root.querySelectorAll('[data-len]').forEach(function (b) { b.setAttribute('aria-pressed', Math.abs(parseFloat(b.getAttribute('data-len')) - S.len) < 0.002 && Math.abs(S.cp - 300) < 1 ? 'true' : 'false'); });
+    var H = SL.channel({ length: S.len, cpad: S.cp * 1e-15 }), p = SL.pulseOf(H), c = SL.cursors(p, 2, 10), ln = SL.magDb(H, 2.5e9);
+    // |S21|
+    var d = BD.setup(q('[data-c="s"]')), f = BD.frame(d, { x: [0, 10], y: [-50, 2], xt: [[0, '0'], [2.5, 'f_N'], [5, 'f_b'], [7.5, '7.5'], [10, '10 GHz']],
+      yt: [[0, '0'], [-10, '−10'], [-20, '−20'], [-30, '−30'], [-40, '−40'], [-50, '−50 dB']], pad: { l: 46, t: 24 } });
+    var xs = [], ys = [], kmax = Math.round(10e9 / SL.DF);
+    for (var k = 0; k <= kmax; k += 2) { xs.push(SL.F[k] / 1e9); ys.push(10 * Math.log10(H.re[k] * H.re[k] + H.im[k] * H.im[k])); }
+    BD.line(f, xs, ys, BD.C.blue, 2); BD.dot(f, 2.5, ln, BD.C.gold, 4.5);
+    d.g.fillStyle = BD.C.gold; d.g.fillText(ln.toFixed(1) + ' dB', f.X(2.5) + 7, f.Y(ln) - 6);
+    // pulse
+    var dp = BD.setup(q('[data-c="p"]')), top = Math.max(0.2, c.v[2] * 1.15);
+    var fp = BD.frame(dp, { x: [-3, 12], y: [-0.03 * top / 0.4, top], xt: [[-2, '−2'], [0, '0'], [2, '2'], [4, '4'], [6, '6'], [8, '8'], [10, '10'], [12, '12 UI']],
+      yt: [[0, '0'], [top > 0.5 ? 0.5 : 0.2, top > 0.5 ? '0.5 V' : '0.2 V']], pad: { l: 40, t: 24 } });
+    var tx = [], pv = []; for (var n = c.idx0 - 3 * SL.SPS; n <= c.idx0 + 12 * SL.SPS && n < p.length; n += 2) { if (n < 0) continue; tx.push((n - c.idx0) / SL.SPS); pv.push(p[n]); }
+    BD.line(fp, tx, pv, 'rgba(127,184,240,.55)', 1.6);
+    SL.drawCursors(fp, c);
+    var eh = SL.pda(c), r1 = c.v[3] / c.v[2];
+    q('[data-o="ln"]').textContent = ln.toFixed(1) + ' dB';
+    q('[data-o="td"]').textContent = (c.idx0 * SL.DT * 1e9).toFixed(2) + ' ns';
+    q('[data-o="pm"]').textContent = c.v[1].toFixed(3);
+    q('[data-o="p0"]').textContent = c.v[2].toFixed(3) + ' V';
+    q('[data-o="r1"]').textContent = (100 * r1).toFixed(1) + ' %';
+    var e = q('[data-o="eh"]'); e.textContent = mv(eh); e.className = eh > 0 ? 'ok' : 'bad';
+    q('[data-o="cap"]').innerHTML = 'The pulse is the inverse FFT of S<sub>21</sub>, averaged over one UI. ' +
+      (ln > -12 ? 'At ' + (-ln).toFixed(0) + ' dB most of the pulse still lands in its own UI, the tail is short and the eye is open without equalization.'
+       : ln > -20 ? 'Near REF only a third of the pulse arrives in its own UI (p<sub>0</sub> = ' + c.v[2].toFixed(2) + '), and the previous bit adds ' + (100 * r1).toFixed(0) + ' % of that again: the tail outweighs the main cursor and the eye is closed.'
+       : 'At ' + (-ln).toFixed(0) + ' dB the main cursor is a small fraction of the pulse and the tail stretches over many UIs. Only heavy equalization opens this eye.') +
+      (S.cp > 700 ? ' The large pads add reflections that return as bumps in the tail.' : '');
+  }
+  BD.observe(root, draw);
+})();
+</script>
