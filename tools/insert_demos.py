@@ -26,6 +26,7 @@ DEMOS = [
     (CH + "02-signals-systems-and-the-language-of-links.html", "onepole", "after:fig:ch2-onepole"),
     (CH + "02-signals-systems-and-the-language-of-links.html", "superpos", "after:fig:ch2-superposition"),
     (CH + "02-signals-systems-and-the-language-of-links.html", "isieye", "after:fig:ch2-isi-tau"),
+    (CH + "02-signals-systems-and-the-language-of-links.html", "eyefold", "after:fig:ch2-eye-fold"),
     (CH + "02-signals-systems-and-the-language-of-links.html", "berq", "after:fig:ch2-ber"),
     (CH + "02-signals-systems-and-the-language-of-links.html", "bathtub2", "after:fig:ch2-bathtub"),
     (CH + "03-the-channel.html", "tline", "end:sec3.2.1-when-is-a-wire-a-transmission-line"),
