@@ -49,6 +49,7 @@ DEMOS = [
     (CH + "11-jitter.html", "dualdirac", "after:fig:ch11-hist"),
     (CH + "11-jitter.html", "bathtub", "after:fig:ch11-bathtub"),
     (CH + "11-jitter.html", "pllnoise", "after:fig:ch11-pn"),
+    (CH + "12-clock-generation-the-phase-locked-loop.html", "pfd", "after:fig:ch12-pfd"),
     (CH + "12-clock-generation-the-phase-locked-loop.html", "pllloop", "after:fig:ch12-loop"),
     (CH + "12-clock-generation-the-phase-locked-loop.html", "pllnoise", "after:fig:ch12-noise"),
     (CH + "13-clock-and-data-recovery.html", "alex", "after:fig:ch13-alex"),

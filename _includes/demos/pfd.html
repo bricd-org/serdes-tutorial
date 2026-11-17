@@ -1,0 +1,41 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdPfd" role="group" aria-label="Interactive demo: phase-frequency detector and charge pump waveforms">
+  <div class="bd-head"><span>// try it · PFD and charge pump</span><span>f<sub>ref</sub> = 50 MHz, I<sub>CP</sub> = 200 µA, C<sub>1</sub> = 52.6 pF</span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>REF leads DIV by Δt <b data-v="dt"></b></span><input type="range" data-k="dt" min="-4" max="4" step="0.05" value="1" aria-label="Time offset in ns"></label>
+    <label class="bd-sl"><span>reset delay T<sub>rst</sub> <b data-v="tr"></b></span><input type="range" data-k="tr" min="0.1" max="2" step="0.05" value="0.5" aria-label="Reset delay in ns"></label>
+  </div>
+  <div class="bd-scope tall"><canvas data-c="w" aria-hidden="true"></canvas><span class="bd-tag">one 20 ns reference period</span></div>
+  <div class="bd-read" aria-live="polite"><span>UP width <b data-o="up">–</b></span><span>DN width <b data-o="dn">–</b></span><span>net charge per cycle <b data-o="q">–</b></span><span>V<sub>ctrl</sub> step on C<sub>1</sub> <b data-o="dv">–</b></span><span>average current <b data-o="ia">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdPfd'); if (!root || !window.BD) return;
+  var T = 20, ICP = 200e-6, C1 = 52.6e-12;
+  var S = BD.bind(root, { dt: { fmt: function (x) { return (x > 0 ? '+' : x < 0 ? '−' : '') + Math.abs(x).toFixed(2) + ' ns'; } }, tr: { fmt: function (x) { return x.toFixed(2) + ' ns'; } } }, function () { draw(); });
+  var q = function (s) { return root.querySelector(s); };
+  function draw() {
+    var dt = S.dt, tr = S.tr, tRef = 3, tDiv = 3 + dt, first = Math.min(tRef, tDiv), last = Math.max(tRef, tDiv), rst = last + tr;
+    var upW = rst - tRef, dnW = rst - tDiv;
+    var d = BD.setup(q('[data-c="w"]')), f = BD.frame(d, { x: [0, 12], y: [0, 9], xt: [[0, '0'], [3, '3'], [6, '6'], [9, '9'], [12, '12 ns']], yt: [], pad: { l: 64, t: 18 } });
+    var g = d.g, rows = [['REF', 7.6, function (t) { return t >= tRef && t < tRef + T / 2; }, '#ffffff'], ['DIV', 5.6, function (t) { return t >= tDiv && t < tDiv + T / 2; }, '#cfe4fa'],
+      ['UP', 3.6, function (t) { return t >= tRef && t < rst; }, BD.C.green], ['DN', 1.6, function (t) { return t >= tDiv && t < rst; }, BD.C.red]];
+    rows.forEach(function (r) { var xs = [], ys = []; for (var i = 0; i <= 1200; i++) { var t = 12 * i / 1200; xs.push(t); ys.push(r[1] + (r[2](t) ? 1.2 : 0)); }
+      BD.line(f, xs, ys, r[3], 1.8); g.fillStyle = r[3]; g.textAlign = 'right'; g.fillText(r[0], f.p.l - 8, f.Y(r[1] + 0.6) + 3); g.textAlign = 'left'; });
+    g.fillStyle = 'rgba(224,184,90,.18)'; g.fillRect(f.X(first), f.Y(9), f.X(last) - f.X(first), f.Y(0) - f.Y(9));
+    g.fillStyle = 'rgba(170,205,240,.12)'; g.fillRect(f.X(last), f.Y(9), f.X(rst) - f.X(last), f.Y(0) - f.Y(9));
+    g.fillStyle = BD.C.gold; g.fillText('|Δt|', f.X(first) + 2, f.Y(8.9) + 10); g.fillStyle = BD.C.axis; g.fillText('both on: T_rst', f.X(last) + 2, f.Y(0.2));
+    var qn = ICP * (upW - dnW) * 1e-9, dv = qn / C1, ia = qn / (T * 1e-9);
+    q('[data-o="up"]').textContent = upW.toFixed(2) + ' ns';
+    q('[data-o="dn"]').textContent = dnW.toFixed(2) + ' ns';
+    q('[data-o="q"]').textContent = (qn * 1e15).toFixed(0) + ' fC';
+    q('[data-o="dv"]').textContent = (dv * 1e3).toFixed(2) + ' mV';
+    q('[data-o="ia"]').textContent = (ia * 1e6).toFixed(1) + ' µA';
+    q('[data-o="cap"]').innerHTML = 'The first edge to arrive sets its flip-flop; when the second arrives both are on, and after the reset delay the AND gate clears them. ' +
+      'So UP and DN differ in width by exactly Δt, and the charge pump delivers I<sub>CP</sub>·Δt per cycle: a linear phase detector, with gain I<sub>CP</sub>/2π per radian on average. ' +
+      'T<sub>rst</sub> makes both pulses at least that wide, which avoids a dead zone around lock; a mismatch between the UP and DN currents during that overlap becomes a static phase offset and reference spurs.';
+  }
+  BD.observe(root, draw);
+})();
+</script>
