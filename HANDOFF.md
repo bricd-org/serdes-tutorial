@@ -189,7 +189,8 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 59. `jbudget` · Jitter budget: each DJ/RJ term → TJ 58.6 ps, 0.71 UI eye. After fig:ch11-budget. todo
 
 **Ch 12 · PLL**
-60. `pfd` · PFD/CP waveforms: phase offset → UP/DN pulses, dead zone with T_rst. After fig:ch12-pfd. todo
+60. `pfd` · PFD/CP waveforms: phase offset → UP/DN pulses, dead zone with T_rst. After fig:ch12-pfd. **done**
+    (Ex 12.1 values: 1 ns → 200 fC, 3.8 mV on C1, 10 µA average)
 61. ★ `pllloop` · Loop designer: I_CP, R, C1, C2, K_VCO, N → open-loop Bode, PM (60° at 1 MHz), closed-loop
     peaking, step response (ζ 0.5 → 30 % overshoot). After fig:ch12-loop. **done** (Ex 12.1 exactly: 1.00 MHz,
     60.0°, 1.56 MHz, 1.7 dB, f_n 537 kHz, ζ 1.00; Ex 12.2 preset 3.00 MHz, 4.69 MHz; time-domain step response)
@@ -280,7 +281,7 @@ noise, jitter) → stat eye and margin, the whole book on one panel. todo
 
 ### Next steps
 
-State at the end of 17 Nov (second window): 44 placements; was 32 (31 includes incl. `labmap`), every chapter 1–16 covered, all merged
+State at the end of 17 Nov (second window): 45 placements; was 32 (31 includes incl. `labmap`), every chapter 1–16 covered, all merged
 into `main` (deployed). Each `done` entry above lists the book numbers it reproduces.
 
 1. Remaining ★ demos: `stateye` (Ch 4, needs a jitter-aware statistical eye in SL), `ctlebode` (Ch 7 degenerated
