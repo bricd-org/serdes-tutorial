@@ -1,0 +1,39 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdLeeson" role="group" aria-label="Interactive demo: Leeson's phase-noise model of an LC VCO">
+  <div class="bd-head"><span>// try it · Leeson's model</span><span>2.5 GHz tank, 4 nH (Worked Example 12.3)</span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>tank Q <b data-v="q"></b></span><input type="range" data-k="q" min="5" max="40" step="0.1" value="16.8" aria-label="Tank quality factor"></label>
+    <label class="bd-sl"><span>tank amplitude (peak) <b data-v="v"></b></span><input type="range" data-k="v" min="0.02" max="1.2" step="0.01" value="0.6" aria-label="Tank amplitude in volts"></label>
+    <label class="bd-sl"><span>noise factor F <b data-v="f"></b></span><input type="range" data-k="f" min="1" max="10" step="0.1" value="2" aria-label="Noise factor"></label>
+    <label class="bd-sl"><span>1/f³ corner <b data-v="c3"></b></span><input type="range" data-k="c3" min="3" max="7" step="0.05" value="5" aria-label="Flicker corner, log scale"></label>
+  </div>
+  <div class="bd-scope tall"><canvas data-c="p" aria-hidden="true"></canvas><span class="bd-tag">ℒ(Δf), dBc/Hz; the dot is the quoted −100.8 dBc/Hz at 1 MHz</span></div>
+  <div class="bd-read" aria-live="polite"><span>R<sub>p</sub> = Qω<sub>0</sub>L <b data-o="rp">–</b></span><span>P<sub>sig</sub> = V²/2R<sub>p</sub> <b data-o="ps">–</b></span><span>ℒ(1 MHz) <b data-o="l1">–</b></span><span>excess to match −100.8 <b data-o="ex">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdLeeson'); if (!root || !window.BD) return;
+  var F0 = 2.5e9, LT = 4e-9, KT = 1.38e-23 * 300;
+  var S = BD.bind(root, { q: { fmt: function (x) { return x.toFixed(1); } }, v: { fmt: function (x) { return (x * 1e3).toFixed(0) + ' mV'; } }, f: { fmt: function (x) { return x.toFixed(1); } },
+    c3: { map: function (v) { return Math.pow(10, v); }, fmt: function (x) { return BD.eng(x) + 'Hz'; } } }, function () { draw(); });
+  var q = function (s) { return root.querySelector(s); };
+  function draw() {
+    var Q = S.q, rp = Q * 2 * Math.PI * F0 * LT, ps = S.v * S.v / (2 * rp), c3 = S.c3;
+    var L = function (df) { return 10 * Math.log10(2 * S.f * KT / ps * (1 + Math.pow(F0 / (2 * Q * df), 2)) * (1 + c3 / df)); };
+    var d = BD.setup(q('[data-c="p"]')), fr = BD.frame(d, { x: [1e3, 1e8], y: [-170, -40], xlog: true, xt: [[1e3, '1k'], [1e4, '10k'], [1e5, '100k'], [1e6, '1M'], [1e7, '10M'], [1e8, '100 MHz']],
+      yt: [[-160, '−160'], [-140, '−140'], [-120, '−120'], [-100, '−100'], [-80, '−80'], [-60, '−60']], pad: { l: 46, t: 22 } });
+    var xs = [], ys = []; for (var i = 0; i <= 250; i++) { var df = 1e3 * Math.pow(1e5, i / 250); xs.push(df); ys.push(L(df)); }
+    BD.vline(fr, F0 / (2 * Q), 'rgba(170,205,240,.35)', [2, 3], 'f0/2Q'); BD.line(fr, xs, ys, BD.C.blue, 2.2);
+    BD.dot(fr, 1e6, -100.8, BD.C.red, 5); BD.dot(fr, 1e6, L(1e6), BD.C.gold, 4.5);
+    var l1 = L(1e6);
+    q('[data-o="rp"]').textContent = (rp / 1e3).toFixed(2) + ' kΩ';
+    q('[data-o="ps"]').textContent = (ps * 1e6).toFixed(0) + ' µW';
+    q('[data-o="l1"]').textContent = l1.toFixed(1) + ' dBc/Hz';
+    var ex = q('[data-o="ex"]'); ex.textContent = (-100.8 - l1).toFixed(1) + ' dB'; ex.className = -100.8 - l1 > 3 ? 'bad' : 'ok';
+    q('[data-o="cap"]').innerHTML = 'Leeson: thermal noise 2FkT/P<sub>sig</sub>, shaped by the tank as (f<sub>0</sub>/2QΔf)² inside its half-bandwidth f<sub>0</sub>/2Q = ' + (F0 / (2 * Q) / 1e6).toFixed(0) + ' MHz, and by flicker below the 1/f³ corner. ' +
+      'For the team\'s tank (Q 16.8, 0.6 V) it predicts about −122 dBc/Hz at 1 MHz; the quoted −100.8 would need ' + (-100.8 - l1).toFixed(0) + ' dB of excess noise. Pin down which number is the free-running VCO before freezing the PLL bandwidth.';
+  }
+  BD.observe(root, draw);
+})();
+</script>

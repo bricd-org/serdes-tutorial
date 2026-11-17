@@ -202,6 +202,8 @@ The Phase-Locked Loop</h1>
 <img src="{% endraw %}{{ '/assets/figs/ch12_leeson.svg' | relative_url }}{% raw %}" style="width:753px" alt="Leeson’s model says the team’s tank should be about 21 dB quieter than the quoted number." loading="lazy" />
 <figcaption><span class="capnum">Figure 12.8.</span> <strong>Leeson’s model says the team’s tank should be about 21 dB quieter than the quoted number.</strong> (a) Leeson’s model for the 2.5 GHz tank (<span class="math inline">\(Q = 16.8\)</span>, 0.6 V peak, <span class="math inline">\(F = 2\)</span>): <span class="math inline">\(-122\)</span> dBc/Hz at 1 MHz. Matching <span class="math inline">\(-100.8\)</span> dBc/Hz would need 22 dB of excess noise (dashed). (b) <span class="math inline">\(\mathcal{L}\)</span>(1 MHz) against tank amplitude: even 50 mV of swing would beat the quoted value.</figcaption>
 </figure>
+<!-- demo:leeson -->{% endraw %}{% include demos/leeson.html %}{% raw %}<!-- /demo -->
+
 <div class="tbox tbox-pitfall">
 <div class="tbox-title">
 <p>Is <span class="math inline">\(-100.8\)</span> dBc/Hz the VCO, or the PLL?</p>

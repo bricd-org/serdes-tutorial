@@ -1,0 +1,38 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdTie" role="group" aria-label="Interactive demo: TIE, period jitter and cycle-to-cycle jitter from clock edges">
+  <div class="bd-head"><span>// try it · three jitter numbers</span>
+    <span class="bd-seg" role="group" aria-label="Clock"><button type="button" data-c="book" aria-pressed="true">Ex 11.1 (6 edges)</button><button type="button" data-c="locked" aria-pressed="false">locked clock</button><button type="button" data-c="free" aria-pressed="false">free-running</button></span></div>
+  <div class="bd-scope tall"><canvas data-c="t" aria-hidden="true"></canvas><span class="bd-tag">TIE (blue), period deviation (gold), cycle-to-cycle (teal), ps, against edge number; T = 400 ps</span></div>
+  <div class="bd-read" aria-live="polite"><span>TIE pp <b data-o="pp">–</b></span><span>TIE rms <b data-o="ti">–</b></span><span>period jitter rms <b data-o="pj">–</b></span><span>cycle-to-cycle rms <b data-o="cc">–</b></span></div>
+  <div class="bd-controls"><button type="button" class="bd-btn" data-b="new">new random clock</button></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdTie'); if (!root || !window.BD) return;
+  var T = 400, mode = 'book', seed = 3, q = function (s) { return root.querySelector(s); };
+  BD.seg(root, 'c', function (v) { mode = v; draw(); });
+  q('[data-b="new"]').addEventListener('click', function () { seed++; if (mode === 'book') mode = 'locked'; root.querySelectorAll('[data-c]').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-c') === mode ? 'true' : 'false'); }); draw(); });
+  var rms = function (a) { var m = a.reduce(function (s, v) { return s + v; }, 0) / a.length; return Math.sqrt(a.reduce(function (s, v) { return s + (v - m) * (v - m); }, 0) / a.length); };
+  function draw() {
+    var tie;
+    if (mode === 'book') tie = [0, 1.0, -0.5, 1.5, 0, 0.8];
+    else { var r = BD.rng(seed * 101), g = function () { var u = 1 - r(), v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }; tie = []; var w = 0;
+      for (var n = 0; n < 60; n++) { if (mode === 'locked') tie.push(0.7 * g()); else { w += 0.5 * g(); tie.push(w); } } }
+    var per = [], cc = []; for (var i = 1; i < tie.length; i++) per.push(tie[i] - tie[i - 1]); for (i = 1; i < per.length; i++) cc.push(per[i] - per[i - 1]);
+    var all = tie.concat(per, cc), lim = Math.max(2, Math.max.apply(null, all.map(Math.abs)) * 1.15), N = tie.length;
+    var d = BD.setup(q('[data-c="t"]')), f = BD.frame(d, { x: [-0.3, N - 0.7], y: [-lim, lim], xt: [[0, '0'], [Math.round((N - 1) / 2), String(Math.round((N - 1) / 2))], [N - 1, String(N - 1)]], yt: [[-lim * 0.8, (-lim * 0.8).toFixed(1)], [0, '0'], [lim * 0.8, (lim * 0.8).toFixed(1) + ' ps']], pad: { l: 50, t: 22 } });
+    BD.hline(f, 0, 'rgba(255,255,255,.3)', [2, 3]);
+    var idx = function (a, o) { return a.map(function (v, k) { return k + o; }); };
+    BD.line(f, idx(tie, 0), tie, BD.C.blue, 2); BD.line(f, idx(per, 0.5), per, BD.C.gold, 1.6); BD.line(f, idx(cc, 1), cc, BD.C.teal, 1.4);
+    if (N < 10) { tie.forEach(function (v, k) { BD.dot(f, k, v, BD.C.blue, 4); }); per.forEach(function (v, k) { BD.dot(f, k + 0.5, v, BD.C.gold, 3.5); }); cc.forEach(function (v, k) { BD.dot(f, k + 1, v, BD.C.teal, 3); }); }
+    var pp = Math.max.apply(null, tie) - Math.min.apply(null, tie);
+    q('[data-o="pp"]').textContent = pp.toFixed(2) + ' ps'; q('[data-o="ti"]').textContent = rms(tie).toFixed(2) + ' ps';
+    q('[data-o="pj"]').textContent = rms(per).toFixed(2) + ' ps'; q('[data-o="cc"]').textContent = rms(cc).toFixed(2) + ' ps';
+    q('[data-o="cap"]').innerHTML = mode === 'free'
+      ? 'A free-running oscillator\'s TIE is a random walk: each period error adds to the last, so the TIE grows without bound while the period jitter stays small. Only a PLL or CDR keeps it bounded.'
+      : 'TIE is each edge\'s offset from the ideal clock; period jitter is the change in TIE from one edge to the next; cycle-to-cycle is the change in period. For a locked clock J<sub>cc</sub> > J<sub>per</sub> > TIE: a long period is usually followed by a short one. Always say which measure a number is.';
+  }
+  BD.observe(root, draw);
+})();
+</script>

@@ -182,7 +182,8 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
     **done inside `margin`** (also placed there: V_sens = 14.1 + 5 + 0.9 = 20 mV)
 
 **Ch 11 · Jitter**
-54. `tie` · TIE, period and cycle-to-cycle jitter from edges (Ex 11.1): drag six edges. After fig:ch11-tie. todo
+54. `tie` · TIE, period and cycle-to-cycle jitter from edges (Ex 11.1): drag six edges. After fig:ch11-tie. **done**
+    (Ex 11.1: 2.00 pp / 0.69 / 1.42 / 3.00 ps; plus locked and free-running random clocks; edges not draggable)
 55. `slope` · Noise to jitter: σ_v and slew → σ_t (0.4 → 0.1 V_ppd = 4×). After fig:ch11-slope. **done**
     (3.14 mV/ps at 0.4 V_ppd; 300 noisy edges measured against σ_v/SR)
 56. ★ `dualdirac` · RJ ⊗ DJ convolution and the dual-Dirac fit: DCD, ISI, RJ sliders → PDF on log axis, TJ(BER)
@@ -206,7 +207,8 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
     VCO −100.8 dBc/Hz·(1 MHz/f)², floor −110: 1.73/1.27/1.03/1.00/1.13 ps at 0.5/1/2/3/6 MHz vs book
     1.91/1.34/1.06/1.01/1.14; 3 MHz split 0.69/0.72 ps (book 0.71/0.72); the 0.5 MHz gap suggests the book's
     VCO model has more close-in noise; integration-limit slider included, so `pnjitter` can reuse this)
-63. `leeson` · Leeson's model: Q, amplitude, F → L(1 MHz) (−122 dBc/Hz vs quoted −100.8). After fig:ch12-leeson. todo
+63. `leeson` · Leeson's model: Q, amplitude, F → L(1 MHz) (−122 dBc/Hz vs quoted −100.8). After fig:ch12-leeson. **done**
+    (R_p 1.06 kΩ, P_sig = V²/2R_p, −122.3 dBc/Hz, 21.5 dB excess)
 64. `ppf` · Polyphase filter: RC spread and frequency → I/Q amplitude and phase error, 1 vs 2 stages. After fig:ch12-poly. todo
 65. `lock` · PLL acquisition animation: phase/frequency step, V_ctrl settling. todo
 
@@ -289,9 +291,15 @@ noise, jitter) → stat eye and margin, the whole book on one panel. todo
 
 ### Next steps
 
-State on 17 Nov (third window): 54 placements; was 32 (31 includes incl. `labmap`), every chapter 1–16 covered, all merged
+State on 17 Nov (third window): 56 placements; was 32 (31 includes incl. `labmap`), every chapter 1–16 covered, all merged
 into `main` (deployed). Each `done` entry above lists the book numbers it reproduces.
 
+0. Values for the rest are already extracted in this pass: Ex 8.2 tap-1 budget (clk-Q 25–35, tap 10, 3τ = 60 with
+   250 Ω·80 fF, setup 20, margin 20 → 135–145 ps; unrolled fits 100 ps), Ex 9.4 tap currents (I_T 20 mA, 32 cells of
+   0.625 mA; −6 dB → 15/5 mA), Ex 11.3 budget (DJ 8+6+6+20 = 40 ps, RJ √(1.0²+0.7²+0.5²) = 1.32 ps, TJ 58.6 ps),
+   Ex 14.3 power (CML 77 mA × 2.5 V = 192 mW + 25 mW = 216 mW, 43.2 pJ/b; SST −44 mW; 0.8 V_ppd −10 mW; Purdue
+   219 pJ/b), Ex 3.1 (t_r 50 ps → t_r·v/6 = 1.25 mm, 6.67 ps/mm, 334 nH/m, 133 pF/m). Build `tap1`, `ffecurr`,
+   `jbudget` (needs Table 11.1 row labels), `power`, `tline` from these.
 1. Remaining ★ demos: `stateye` (Ch 4, needs a jitter-aware statistical eye in SL), `ctlebode` (Ch 7 degenerated
    pair g_m/R_S/C_S/R_D/C_L → 14 dB ideal, 10.9 dB realized), `term` (Ch 9), `dfe` step-through with error
    propagation (Ch 8).
