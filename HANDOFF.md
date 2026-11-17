@@ -196,11 +196,16 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 66. `alex` · Alexander PD: drag the clock phase across a transition → early/late votes. After fig:ch13-alex. todo
 67. ★ `bbgain` · Bang-bang gain linearized by jitter: σ_j slider → smoothed sign, slope √(2/π)/σ_j. After fig:ch13-bbchar.
     **done** (edge histogram split early/late, erf characteristic, tangent, linear range)
-68. ★ `jtol` · Jitter tolerance vs mask: K_P, K_I, latency → JTOL curve over the mask (dips at 1–2 MHz). After fig:ch13-jtol. todo
+68. ★ `jtol` · Jitter tolerance vs mask: K_P, K_I, latency → JTOL curve over the mask (dips at 1–2 MHz). After fig:ch13-jtol.
+    **done** (Eq 13.4 estimate TM + 2S/ω, S = 2.44e6 UI/s at K_P 1/8, mask, first-order linear CDR, and the book's
+    simulated points 3.0/1.08/0.51/0.32 UI as gold dots; a real JTOL sweep by simulation is still todo)
 69. ★ `pi` · Phase interpolator: linear vs sin/cos weights, bits → phasor, INL (±4.1° vs ±0.55°). After fig:ch13-pi.
     **done** (18.43° at α = 1/4, ±4.07° = 4.52 ps linear, ±0.55° with 6-bit sin/cos; phasor drawing not yet eyeballed)
 70. ★ `cdrsim` · Live PI-CDR: ppm offset, K_P, K_P/K_I, step count → PI code wrap, phase error, lock time
-    (+200 ppm locks in 0.2 s). After fig:ch13-sim. todo
+    (+200 ppm locks in 0.2 s). After fig:ch13-sim. **done** (Section 13.6 model: 8-vote majority, P+I, D = 1, RJ
+    1.32 ps, ±10 ps DDJ, start 74 ps off: lock 0.15 µs (book 0.19), 2.5 ps rms (book 2.5–2.6), integral 202 ppm;
+    integer K_P 10.1 ps rms (book 10.7); no-integral preset slips above the 488 ppm slew limit). Note: in the
+    extracted book text the µ of µs is lost in places ("0.2 s" means 0.2 µs).
 
 **Ch 14 · Architecture**
 71. `clockplan` · Clock plan explorer: line rate → every clock in Fig 14.2 (2.5 GHz, 1.25 GHz, 625 MHz, 312.5 MHz). After fig:ch14-clock. todo
@@ -246,6 +251,7 @@ noise, jitter) → stat eye and margin, the whole book on one panel. todo
   Fixed `ffe` logging a start-up error (slider set before its helper was defined). Lesson: in every demo, define
   helpers before any `dispatchEvent` at start-up, and keep bit-history offsets ≥ the longest cursor span.
 - 17 Nov (later): `latch` (Ch 10), `pllloop` and `pllnoise` (Ch 12): 22 demos live.
+- 17 Nov (later): `jtol` and `cdrsim` (Ch 13): 24 demos live.
 - Lab 5 check: SL's ideal-DFE eye gives 60 → 108/129/~142/~152 mV for 1–4 taps vs the book's 60 → 110.7/129.7/
   143.2/153.6 (serdespy's DFE samples at a fixed phase; SL searches the phase in 2-sample steps).
 - Visual check while the browser pane is hidden: screenshots fail, so a page snippet POSTs the canvases to a

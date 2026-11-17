@@ -1,0 +1,41 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdJtol" role="group" aria-label="Interactive demo: jitter tolerance of a bang-bang CDR against the mask">
+  <div class="bd-head"><span>// try it · jitter tolerance</span><span>mask: 2 UI<sub>pp</sub> at 0.5 MHz → 0.2 UI at 4.9 MHz → flat</span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>proportional step K<sub>P</sub> (625 MHz loop) <b data-v="kp"></b></span><input type="range" data-k="kp" min="-5" max="0" step="1" value="-3" aria-label="Proportional step, log2 of LSB"></label>
+    <label class="bd-sl"><span>timing margin TM left by RJ + DJ <b data-v="tm"></b></span><input type="range" data-k="tm" min="0.05" max="0.6" step="0.01" value="0.32" aria-label="Timing margin in UI"></label>
+    <label class="bd-sl"><span>linear-CDR bandwidth (for comparison) <b data-v="bw"></b></span><input type="range" data-k="bw" min="0.5" max="20" step="0.1" value="4" aria-label="Linear CDR bandwidth in MHz"></label>
+  </div>
+  <div class="bd-scope tall"><canvas data-c="j" aria-hidden="true"></canvas><span class="bd-tag">JTOL, UI<sub>pp</sub>: mask (white), BB estimate TM + 2S/ω (teal), linear CDR (dotted), book's simulation (gold dots)</span></div>
+  <div class="bd-read" aria-live="polite"><span>slew S = K<sub>P</sub>·LSB/T<sub>upd</sub> <b data-o="s">–</b></span><span>needed at 0.5 MHz <b data-o="need">–</b></span><span>worst margin of the estimate <b data-o="m">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdJtol'); if (!root || !window.BD) return;
+  var LSB = 6.25e-12, UI = 200e-12, TU = 1.6e-9, SIM = [[0.5, 3.0], [1, 1.08], [2, 0.51], [50, 0.32]];
+  var S = BD.bind(root, { kp: { map: function (v) { return Math.pow(2, v); }, fmt: function (x) { return (x >= 1 ? '1' : '1/' + Math.round(1 / x)) + ' LSB'; } },
+    tm: { fmt: function (x) { return x.toFixed(2) + ' UI'; } }, bw: { fmt: function (x) { return x.toFixed(1) + ' MHz'; } } }, function () { draw(); });
+  var q = function (s) { return root.querySelector(s); };
+  function mask(fM) { return fM <= 0.5 ? 2 : fM <= 4.9 ? Math.max(0.2, 2 * 0.5 / fM) : 0.2; }
+  function draw() {
+    var Sl = S.kp * LSB / UI / TU, tm = S.tm, fs = [], bb = [], lin = [], mk = [], worst = 1e9, wf = 0;
+    for (var i = 0; i <= 300; i++) { var fM = 0.1 * Math.pow(1000, i / 300), w = 2 * Math.PI * fM * 1e6, x = fM / S.bw;
+      var linv = tm / Math.max(Math.sqrt(x * x / (1 + x * x)), 1e-6);      // first-order linear CDR: |1 - H| = x/√(1 + x²)
+      var b = tm + 2 * Sl / w; fs.push(fM); bb.push(b); lin.push(linv); mk.push(mask(fM));
+      if (fM >= 0.5 && fM <= 50) { var mg = 20 * Math.log10(b / mask(fM)); if (mg < worst) { worst = mg; wf = fM; } } }
+    var d = BD.setup(q('[data-c="j"]')), f = BD.frame(d, { x: [0.1, 100], y: [0.1, 20], xlog: true, ylog: true, xt: [[0.1, '0.1'], [1, '1'], [10, '10'], [100, '100 MHz']],
+      yt: [[0.1, '0.1'], [0.2, '0.2'], [0.5, '0.5'], [1, '1'], [2, '2'], [5, '5'], [10, '10 UI']], pad: { l: 46, t: 24 } });
+    BD.line(f, fs, mk, '#ffffff', 2); BD.line(f, fs, lin, 'rgba(170,205,240,.5)', 1.4, [2, 3]); BD.line(f, fs, bb, BD.C.teal, 2.2);
+    if (S.kp === 1 / 8) SIM.forEach(function (p) { BD.dot(f, p[0], p[1], BD.C.gold, 4.5); });
+    BD.dot(f, wf, bb[Math.round(Math.log(wf / 0.1) / Math.log(1000) * 300)], worst >= 0 ? BD.C.green : BD.C.red, 3.5);
+    q('[data-o="s"]').textContent = (Sl / 1e6).toFixed(2) + '×10⁶ UI/s';
+    q('[data-o="need"]').textContent = '≳ ' + (Math.PI * 0.5e6 * (2 - tm) / 1e6).toFixed(2) + '×10⁶ UI/s';
+    var m = q('[data-o="m"]'); m.textContent = (worst >= 0 ? '+' : '−') + Math.abs(worst).toFixed(1) + ' dB at ' + wf.toFixed(1) + ' MHz'; m.className = worst >= 0 ? 'ok' : 'bad';
+    q('[data-o="cap"]').innerHTML = 'A bang-bang CDR can only move its clock by one proportional step per update, a slew S. Sinusoidal jitter of amplitude A at frequency f needs a slew of πfA, so below the corner JTOL follows 2S/ω at −20 dB/decade, on top of the margin TM that the stress leaves. ' +
+      (worst >= 0 ? 'This K<sub>P</sub> clears the mask on the estimate. ' : '<b style="color:#f39a7c">The estimate dips below the mask</b>: a larger K<sub>P</sub> raises S, at the cost of more dither. ') +
+      (S.kp === 1 / 8 ? 'The gold dots are the book\'s behavioural simulation of the baseline (3.0, 1.08, 0.51 and 0.32 UI): the integral path adds tolerance at low frequency, while latency and dither cost it near the corner, so the real loop is marginal at 2 MHz. Check JTOL by simulation, not by the estimate alone.' : '');
+  }
+  BD.observe(root, draw);
+})();
+</script>

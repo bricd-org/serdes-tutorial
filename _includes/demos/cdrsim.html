@@ -1,0 +1,86 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdCdrSim" role="group" aria-label="Interactive demo: behavioural simulation of the Open-SERDES PI-based bang-bang CDR">
+  <div class="bd-head"><span>// try it · PI-CDR locking</span>
+    <span class="bd-seg" role="group" aria-label="Presets"><button type="button" data-p="base" aria-pressed="true">baseline</button><button type="button" data-p="int" aria-pressed="false">integer K<sub>P</sub> = 1 LSB</button><button type="button" data-p="noint" aria-pressed="false">no integral path</button></span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>TX−RX frequency offset <b data-v="ppm"></b></span><input type="range" data-k="ppm" min="-500" max="500" step="10" value="200" aria-label="Frequency offset in ppm"></label>
+    <label class="bd-sl"><span>proportional step K<sub>P</sub> <b data-v="kp"></b></span><input type="range" data-k="kp" min="-5" max="0" step="1" value="-3" aria-label="Proportional step, log2 of LSB"></label>
+    <label class="bd-sl"><span>K<sub>P</sub>/K<sub>I</sub> <b data-v="ki"></b></span><input type="range" data-k="ki" min="4" max="11" step="1" value="7" aria-label="Ratio of proportional to integral gain, log2"></label>
+    <label class="bd-sl"><span>loop latency D <b data-v="d"></b></span><input type="range" data-k="d" min="0" max="6" step="1" value="1" aria-label="Loop latency in updates"></label>
+  </div>
+  <div class="bd-scope"><canvas data-c="c" aria-hidden="true"></canvas><span class="bd-tag">PI code (blue) over the code the data phase needs (gold)</span></div>
+  <div class="bd-row">
+    <div class="bd-scope short"><canvas data-c="e" aria-hidden="true"></canvas><span class="bd-tag">clock − data phase, ps</span></div>
+    <div class="bd-scope short"><canvas data-c="f" aria-hidden="true"></canvas><span class="bd-tag">integral register, ppm</span></div>
+  </div>
+  <div class="bd-read" aria-live="polite"><span>locked after <b data-o="lk">–</b></span><span>tracking error <b data-o="rms">–</b></span><span>wander pp <b data-o="pp">–</b></span><span>integral register <b data-o="fr">–</b></span><span>slew limit of K<sub>P</sub> <b data-o="sl">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdCdrSim'); if (!root || !window.BD) return;
+  var UI = 200, LSB = 6.25, TU = 1.6e-9, NUPD = 2500, RJ = 1.32, DDJ = 10, P0 = 0.37 * UI;   // ps, s
+  var S = BD.bind(root, {
+    ppm: { fmt: function (x) { return (x > 0 ? '+' : x < 0 ? '−' : '') + Math.abs(x) + ' ppm'; } },
+    kp: { map: function (v) { return Math.pow(2, v); }, fmt: function (x) { return (x >= 1 ? '1' : '1/' + Math.round(1 / x)) + ' LSB (' + (x * LSB).toFixed(2) + ' ps)'; } },
+    ki: { map: function (v) { return Math.pow(2, v); }, fmt: function (x) { return x.toFixed(0); } },
+    d: { fmt: function (x) { return x + (x === 1 ? ' update' : ' updates') + ' extra'; } }
+  }, function () { syncP(); draw(); });
+  var q = function (s) { return root.querySelector(s); };
+  var PRE = { base: [-3, 7, 1], int: [0, 7, 1], noint: [-3, 30, 1] };
+  function syncP() { root.querySelectorAll('[data-p]').forEach(function (b) { var p = PRE[b.getAttribute('data-p')];
+    var ki = q('[data-k="ki"]').value; b.setAttribute('aria-pressed', +q('[data-k="kp"]').value === p[0] && (p[1] === 30 ? noInt : (+ki === p[1] && !noInt)) && +q('[data-k="d"]').value === p[2] ? 'true' : 'false'); }); }
+  var noInt = false;
+  root.querySelectorAll('[data-p]').forEach(function (b) { b.addEventListener('click', function () { var p = PRE[b.getAttribute('data-p')];
+    noInt = p[1] === 30; q('[data-k="kp"]').value = p[0]; if (!noInt) q('[data-k="ki"]').value = p[1]; q('[data-k="d"]').value = p[2];
+    ['kp', 'ki', 'd'].forEach(function (k) { q('[data-k="' + k + '"]').dispatchEvent(new Event('input')); });
+    noInt = p[1] === 30; syncP(); draw(); }); });
+  q('[data-k="ki"]').addEventListener('input', function () { noInt = false; });
+  function sim() {
+    var rnd = BD.rng(2024), gs = function () { var u = 1 - rnd(), v = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+    var kp = S.kp, ki = noInt ? 0 : kp / S.ki, D = S.d, drift = S.ppm * 1e-6 * TU * 1e12;             // ps per update
+    var f = 0, acc = 0, pd = P0, q2 = [], out = { t: [], code: [], need: [], e: [], f: [] };
+    for (var n = 0; n < NUPD; n++) {
+      var clk = Math.round(acc) * LSB, e = clk - pd, sum = 0;
+      for (var b = 0; b < 8; b++) if (rnd() < 0.5) { var j = RJ * gs() + DDJ * (rnd() * 2 - 1); sum += (e + j) > 0 ? -1 : 1; }   // edge after the transition: clock late
+      q2.push(sum > 0 ? 1 : sum < 0 ? -1 : 0);
+      var v = q2.length > D + 1 ? q2.shift() : 0;
+      f += ki * v; acc += kp * v + f; pd += drift;
+      out.t.push(n * TU * 1e6); out.code.push(((Math.round(acc) % 64) + 64) % 64); out.need.push((((pd / LSB) % 64) + 64) % 64);
+      out.e.push(e); out.f.push(f * LSB / (TU * 1e12) * 1e6);
+    }
+    return out;
+  }
+  function draw() {
+    var r = sim(), n = r.t.length, lock = null;
+    for (var i = 0; i < n; i++) if (Math.abs(r.e[i]) < LSB) { lock = i; break; }
+    var tail = r.e.slice(Math.floor(n * 0.5)), mean = tail.reduce(function (a, v) { return a + v; }, 0) / tail.length;
+    var rms = Math.sqrt(tail.reduce(function (a, v) { return a + (v - mean) * (v - mean); }, 0) / tail.length), srt = tail.slice().sort(function (a, b) { return a - b; });
+    var pp = srt[srt.length - 1] - srt[0], T = r.t[n - 1];
+    var xt = [0, 1, 2, 3, 4].map(function (v) { return [v, v + (v === 4 ? ' µs' : '')]; });
+    var d = BD.setup(q('[data-c="c"]')), f = BD.frame(d, { x: [0, T], y: [-2, 66], xt: xt, yt: [[0, '0'], [16, '16'], [32, '32'], [48, '48'], [64, '64']], pad: { l: 36, t: 24 } });
+    var g = d.g; f.clipIn();
+    [[r.need, BD.C.gold, 2.6], [r.code, BD.C.blue, 1.4]].forEach(function (L) { g.strokeStyle = L[1]; g.lineWidth = L[2]; g.beginPath();
+      for (var k = 0; k < n; k++) { var x = f.X(r.t[k]), y = f.Y(L[0][k]); if (k && Math.abs(L[0][k] - L[0][k - 1]) > 32) g.moveTo(x, y); else if (k) g.lineTo(x, y); else g.moveTo(x, y); } g.stroke(); });
+    f.clipOut();
+    var de = BD.setup(q('[data-c="e"]')), elim = Math.max(30, Math.min(100, Math.max.apply(null, r.e.map(Math.abs)) * 1.05));
+    var fe = BD.frame(de, { x: [0, T], y: [-elim, elim], xt: xt, yt: [[-elim, '−' + elim.toFixed(0)], [0, '0'], [elim, elim.toFixed(0)]], pad: { l: 40, t: 20, b: 22 } });
+    BD.hline(fe, 0, 'rgba(255,255,255,.3)', [2, 3]); BD.line(fe, r.t, r.e, BD.C.teal, 1.2);
+    if (lock !== null) BD.vline(fe, r.t[lock], 'rgba(127,224,160,.7)', [3, 3]);
+    var df = BD.setup(q('[data-c="f"]')), fl = Math.max(100, Math.abs(S.ppm) * 1.4);
+    var ff = BD.frame(df, { x: [0, T], y: [-fl, fl], xt: xt, yt: [[-fl, '−' + fl.toFixed(0)], [0, '0'], [fl, fl.toFixed(0)]], pad: { l: 40, t: 20, b: 22 } });
+    BD.hline(ff, S.ppm, 'rgba(224,184,90,.7)', [5, 4]); BD.line(ff, r.t, r.f, BD.C.gold, 1.6);
+    var slew = S.kp * LSB / (TU * 1e12) * 1e6;
+    q('[data-o="lk"]').textContent = lock === null ? 'not locked' : (r.t[lock]).toFixed(2) + ' µs';
+    var re = q('[data-o="rms"]'); re.textContent = rms.toFixed(1) + ' ps rms'; re.className = rms < 4 ? 'ok' : 'bad';
+    var pe = q('[data-o="pp"]'); pe.textContent = pp.toFixed(0) + ' ps'; pe.className = pp <= 20 ? 'ok' : 'bad';
+    q('[data-o="fr"]').textContent = noInt ? 'off' : r.f[n - 1].toFixed(0) + ' ppm';
+    q('[data-o="sl"]').textContent = slew.toFixed(0) + ' ppm';
+    q('[data-o="cap"]').innerHTML = (Math.abs(S.ppm) > slew && noInt ? '<b style="color:#f39a7c">The offset is beyond what the proportional path can slew</b>, so without the integral register the clock falls behind and slips. '
+      : noInt ? 'Without the integral path the proportional votes must chase the drift all the time, so the loop sits off-centre by a steady phase error and dithers harder. '
+      : 'The proportional path pulls the clock onto the data, then the integral register learns the frequency offset and the PI rotates continuously, wrapping every ' + (Math.abs(S.ppm) > 0 ? (2 * UI / (Math.abs(S.ppm) * 1e-6) * UI * 1e-12 * 1e6 / UI).toFixed(1) + ' µs' : '–') + '. ') +
+      (S.kp >= 1 ? 'An integer step of a whole 6.25 ps LSB makes the dither several times larger.' : 'The dither is set by the proportional step and the latency: about 2 × slew × latency.');
+  }
+  BD.observe(root, draw);
+})();
+</script>

@@ -38,7 +38,9 @@ DEMOS = [
     (CH + "12-clock-generation-the-phase-locked-loop.html", "pllloop", "after:fig:ch12-loop"),
     (CH + "12-clock-generation-the-phase-locked-loop.html", "pllnoise", "after:fig:ch12-noise"),
     (CH + "13-clock-and-data-recovery.html", "bbgain", "after:fig:ch13-bbchar"),
+    (CH + "13-clock-and-data-recovery.html", "jtol", "after:fig:ch13-jtol"),
     (CH + "13-clock-and-data-recovery.html", "pi", "after:fig:ch13-pi"),
+    (CH + "13-clock-and-data-recovery.html", "cdrsim", "after:fig:ch13-sim"),
 ]
 
 BLOCK = re.compile(r"\n?<!-- demo:[\w-]+ -->.*?<!-- /demo -->\n?", re.S)
