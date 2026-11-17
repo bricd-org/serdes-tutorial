@@ -106,7 +106,8 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 24. `stateye` · Statistical eye: noise σ, RJ, DJ sliders → BER contours 1e−3…1e−12, eye height/width at 1e−12
     (119 mV, 0.59 UI). After fig:ch4-stateye. todo
 25. `waterfall` · Margin budget waterfall: drag each impairment (residual ISI, noise, offset, jitter, crosstalk)
-    → linear vs RSS margin (76 vs 89 mV). After fig:ch4-waterfall. todo
+    → linear vs RSS margin (76 vs 89 mV). After fig:ch4-waterfall. **done as `margin`** (76.4 mV linear at the book
+    values; 82.3 mV with Ex 10.3's 1.08 mV; statistical 89 mV quoted, not recomputed)
 26. `pam4` · NRZ or PAM4: line length → loss at 2.5 and 1.25 GHz, Δ vs 9.54 dB, crossover 1.37 m (23.8 dB).
     After fig:ch4-pam4. **done** (REF Δ 7.0 dB, NRZ by 2.6 dB, crossover 1.37 m / 23.8 dB)
 
@@ -177,7 +178,8 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
     4-sampler receivers (24 % untrimmed). After fig:ch10-offset. **done** (spec ±5.1 mV: 70 % / 24 % raw, ~100 %
     trimmed; LSB 2·3σ/32 = 0.92 mV as in Fig 10.9)
 52. `calloop` · Calibration loop animation: counter steps the DAC until toggling (LSB 0.91 mV). After fig:ch10-cal. todo
-53. `sens` · Sampler sensitivity budget (Ex 10.3): noise, offset, hysteresis → minimum input. End of sec:ch10-noise. todo
+53. `sens` · Sampler sensitivity budget (Ex 10.3): noise, offset, hysteresis → minimum input. End of sec:ch10-noise.
+    **done inside `margin`** (also placed there: V_sens = 14.1 + 5 + 0.9 = 20 mV)
 
 **Ch 11 · Jitter**
 54. `tie` · TIE, period and cycle-to-cycle jitter from edges (Ex 11.1): drag six edges. After fig:ch11-tie. todo
@@ -287,7 +289,7 @@ noise, jitter) → stat eye and margin, the whole book on one panel. todo
 
 ### Next steps
 
-State on 17 Nov (third window): 52 placements; was 32 (31 includes incl. `labmap`), every chapter 1–16 covered, all merged
+State on 17 Nov (third window): 54 placements; was 32 (31 includes incl. `labmap`), every chapter 1–16 covered, all merged
 into `main` (deployed). Each `done` entry above lists the book numbers it reproduces.
 
 1. Remaining ★ demos: `stateye` (Ch 4, needs a jitter-aware statistical eye in SL), `ctlebode` (Ch 7 degenerated
