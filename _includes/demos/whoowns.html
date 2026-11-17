@@ -1,0 +1,61 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdWhoOwns" role="group" aria-label="Interactive demo: which equalizer removes which part of the pulse">
+  <div class="bd-head"><span>// try it · who removes which cursor</span><span>REF channel</span></div>
+  <div class="bd-controls" style="margin:0 2px 10px">
+    <button type="button" class="bd-toggle" data-t="pre" aria-pressed="false">TX pre-tap (c<sub>−1</sub> = −0.08)</button>
+    <button type="button" class="bd-toggle" data-t="post" aria-pressed="false">TX post-tap (c<sub>1</sub> = −0.20)</button>
+    <button type="button" class="bd-toggle" data-t="ctle" aria-pressed="false">CTLE 8 dB</button>
+    <button type="button" class="bd-toggle" data-t="dfe" aria-pressed="false">2-tap DFE</button>
+  </div>
+  <div class="bd-scope tall"><canvas data-c="p" aria-hidden="true"></canvas><span class="bd-tag">pulse and cursors (×A): pre-cursor red, first post-cursors blue, tail teal; DFE-cancelled cursors hollow</span></div>
+  <div class="bd-read" aria-live="polite"><span>main A·p<sub>0</sub> <b data-o="m">–</b></span><span>pre A·|p<sub>−1</sub>| <b data-o="pre">–</b></span><span>first posts A(|p<sub>1</sub>|+|p<sub>2</sub>|) <b data-o="post">–</b></span><span>tail A·Σ|p<sub>k≥3</sub>| <b data-o="tail">–</b></span><span>PDA eye <b data-o="eh">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdWhoOwns'); if (!root || !window.BD || !window.SL) return;
+  var A = 0.5, H = SL.channel(), on = { pre: false, post: false, ctle: false, dfe: false }, cache = {};
+  var q = function (s) { return root.querySelector(s); };
+  root.querySelectorAll('[data-t]').forEach(function (b) { BD.toggle(b, function (v) { on[b.getAttribute('data-t')] = v; draw(); }); });
+  var mv = function (v) { return (v < 0 ? '−' : '') + Math.abs(v * 1e3).toFixed(0) + ' mV'; };
+  function pulse() {
+    var key = (on.ctle ? 1 : 0) + '' + (on.pre ? 1 : 0) + (on.post ? 1 : 0);
+    if (cache[key]) return cache[key];
+    var p = SL.pulseOf(on.ctle ? SL.mul(H, SL.ctle(8)) : H), cm = on.pre ? -0.08 : 0, cp = on.post ? -0.2 : 0;
+    if (on.pre || on.post) p = SL.ffe(p, [cm, 1 - Math.abs(cm) - Math.abs(cp), cp], 1);
+    return (cache[key] = p);
+  }
+  function draw() {
+    var p = pulse(), c = SL.cursors(p, 2, 60), i0 = c.idx0;
+    var vals = c.v.map(function (v, i) { return on.dfe && c.k[i] >= 1 && c.k[i] <= 2 ? 0 : v; });
+    var d = BD.setup(q('[data-c="p"]')), top = Math.max(0.1, A * c.v[2] * 1.15);
+    var f = BD.frame(d, { x: [-3, 15], y: [-0.03, top], xt: [[-2, '−2'], [0, '0'], [2, '2'], [4, '4'], [6, '6'], [8, '8'], [10, '10'], [12, '12'], [14, '14 UI']],
+      yt: [[0, '0'], [0.05, '50'], [0.1, '100'], [0.15, '150 mV']].filter(function (v) { return v[0] <= top; }), pad: { l: 50, t: 24 } });
+    var g = d.g, tx = [], pv = []; for (var n = i0 - 3 * SL.SPS; n <= i0 + 15 * SL.SPS; n += 3) { tx.push((n - i0) / SL.SPS); pv.push(A * p[n]); }
+    g.fillStyle = 'rgba(240,138,106,.07)'; g.fillRect(f.X(-2.5), f.p.t, f.X(-0.5) - f.X(-2.5), d.h - f.p.t - f.p.b);
+    g.fillStyle = 'rgba(127,184,240,.07)'; g.fillRect(f.X(0.5), f.p.t, f.X(2.5) - f.X(0.5), d.h - f.p.t - f.p.b);
+    g.fillStyle = 'rgba(127,208,184,.06)'; g.fillRect(f.X(2.5), f.p.t, f.X(15) - f.X(2.5), d.h - f.p.t - f.p.b);
+    g.font = '9.5px "IBM Plex Mono", monospace'; g.fillStyle = 'rgba(240,138,106,.8)'; g.fillText('TX pre-tap / CTLE', f.X(-2.4), f.p.t + 12);
+    g.fillStyle = 'rgba(127,184,240,.9)'; g.fillText('DFE', f.X(1.1), f.p.t + 12); g.fillStyle = 'rgba(127,208,184,.85)'; g.fillText('CTLE / TX post-tap', f.X(3.2), f.p.t + 12);
+    BD.line(f, tx, pv, 'rgba(170,205,240,.5)', 1.4); BD.hline(f, 0, 'rgba(255,255,255,.25)', [2, 3]);
+    c.k.forEach(function (k, i) { if (k > 15) return; var v = A * c.v[i], col = k < 0 ? BD.C.red : k === 0 ? BD.C.gold : k <= 2 ? BD.C.blue : BD.C.teal, x = f.X(k);
+      var cancelled = on.dfe && k >= 1 && k <= 2;
+      g.strokeStyle = col; g.lineWidth = k === 0 ? 2 : 1.4; g.setLineDash(cancelled ? [3, 3] : []); g.beginPath(); g.moveTo(x, f.Y(0)); g.lineTo(x, f.Y(v)); g.stroke(); g.setLineDash([]);
+      g.beginPath(); g.arc(x, f.Y(v), k === 0 ? 4.5 : 3.5, 0, 7); if (cancelled) { g.lineWidth = 1.5; g.stroke(); } else { g.fillStyle = col; g.fill(); } });
+    var get = function (k) { return vals[c.k.indexOf(k)] || 0; }, tail = 0; c.k.forEach(function (k, i) { if (k >= 3) tail += Math.abs(vals[i]); });
+    var eh = SL.pda({ k: c.k, v: vals });
+    q('[data-o="m"]').textContent = mv(A * get(0));
+    q('[data-o="pre"]').textContent = mv(A * (Math.abs(get(-1)) + Math.abs(get(-2))));
+    q('[data-o="post"]').textContent = mv(A * (Math.abs(get(1)) + Math.abs(get(2))));
+    q('[data-o="tail"]').textContent = mv(A * tail);
+    var e = q('[data-o="eh"]'); e.textContent = mv(eh); e.className = eh > 0 ? 'ok' : 'bad';
+    var any = on.pre || on.post || on.ctle || on.dfe;
+    q('[data-o="cap"]').innerHTML = !any ? 'Unequalized REF: one pre-cursor, two big post-cursors and a long tail that alone outweighs the main cursor. Switch the equalizers on one by one.'
+      : (on.dfe && !on.ctle && !on.post ? 'The DFE cancels p<sub>1</sub> and p<sub>2</sub> without adding noise, but the long tail beyond them is still there: removing it with DFE taps would take dozens of taps. ' : '') +
+        (on.ctle || on.post ? 'The CTLE and the TX post-tap flatten the long tail, at the cost of main cursor. ' : '') +
+        (on.pre ? 'The pre-tap removes the pre-cursor, which no feedback can reach. ' : (any ? 'The pre-cursor is left: only linear equalization (TX pre-tap or CTLE) can remove it. ' : '')) +
+        (on.ctle && on.dfe ? 'Together the CTLE (tail) and the DFE (first posts) do what neither can do alone; that is the Open-SERDES partition.' : '');
+  }
+  BD.observe(root, draw);
+})();
+</script>

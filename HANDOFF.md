@@ -61,7 +61,8 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 7. `onepole` · Bandwidth ↔ rise time: f3dB slider; Bode and step response; 10–90 % = 0.35/f3dB (140 ps = 0.7 UI
    at 2.5 GHz). After fig:ch2-onepole. **done** (140 ps = 0.70 UI, −3.0 dB at f_N, 913 mV worst eye)
 8. ★ `superpos` · Build the waveform from pulses: edit a bit pattern by clicking; each bit's shifted pulse drawn,
-   sum shown with sample dots (334 mV vs 156 mV for the 10 dB line). After fig:ch2-superposition. todo
+   sum shown with sample dots (334 mV vs 156 mV for the 10 dB line). After fig:ch2-superposition. **done** (14
+   clickable bits, 10 dB line or REF; the book's 334/156 mV come from its own pattern, not reproduced exactly)
 9. ★ `isieye` · One-pole ISI and the eye: τ slider (0.1–1.5 UI) → pulse, cursors, PRBS7 eye, measured opening vs
    2A(1 − 2e^(−Tb/τ)) (987/729/265 mV at τ = 0.2/0.5/1 UI). After fig:ch2-isi-tau. **done** (`isieye`)
 10. `eyefold` · Fold the waveform: animate 2-UI windows dropping onto the eye; persistence slider. After
@@ -77,7 +78,8 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 14. `skin` · Skin depth and R(f): frequency slider; δ vs thickness; R_DC 7.7 Ω/m → 46 Ω/m at 2.5 GHz. After
     fig:ch3-skin. todo
 15. ★ `lossbuild` · Build the channel loss: sliders for k_R, tanδ, ε_r, length, pad C → conductor (√f) and
-    dielectric (f) loss in dB/in and total |S21| (REF −17.4 dB; 0.44 dB/in). Uses SL. After fig:ch3-loss. todo
+    dielectric (f) loss in dB/in and total |S21| (REF −17.4 dB; 0.44 dB/in). Uses SL. After fig:ch3-loss. **done**
+    (REF 0.438 dB/in; presets smooth 5-mil stripline k_R 29 → 0.332, low-loss tanδ 0.0045 → 0.153, as Fig 3.4)
 16. ★ `bounce` · Lattice diagram: R_S, Z0, R_L sliders → animated bounce diagram and load voltage (25/50/100 Ω:
     0.889, 0.790, 0.8 V). After fig:ch3-bounce. **done** (0.667 launched, 0.889 first step, 0.800 final)
 17. `padrl` · Pad C and return loss: C_p and bondwire L → |S11| vs f, 10 dB line, echo in the pulse response
@@ -110,7 +112,8 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 28. `cable` · Cable model: loss slider → zero-phase pulse, main cursor, PDA half-eye; eye closes ~14 dB.
     After fig:ch5-cable. todo
 29. ★ `whoowns` · Who removes which cursor: toggle TX pre-tap, CTLE, DFE taps on the REF pulse; colour-coded
-    pre/post/tail ownership; PDA eye after each. After fig:ch5-anatomy. todo
+    pre/post/tail ownership; PDA eye after each. After fig:ch5-anatomy. **done** (toggles c−1 −0.08, c1 −0.20,
+    CTLE 8 dB, 2-tap DFE; PDA over 63 cursors: −242 → 31 (DFE) → 78 (CTLE+DFE) → 83 mV (+pre-tap))
 
 **Ch 6 · TX FFE**
 30. ★ `ffe` · FFE playground: c−1, c0, c1 sliders under Σ|c| = 1 → TX waveform, pulse after REF, cursors, PDA
@@ -175,7 +178,7 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 57. ★ `bathtub` · Bathtub builder: DJδδ, σ_RJ → eye width at 1e−12 (0.71/0.59/0.45 UI at 1.32/3/5 ps). After
     fig:ch11-bathtub. **done** (TJ 58.6 ps; 0.71/0.59/0.45 UI at σ 1.32/3/5 ps, DJδδ 40 ps)
 58. ★ `pnjitter` · Phase noise to jitter: drag the PN profile and integration limits → rms jitter (1.01 ps from
-    10 kHz, 0.61 ps above …). After fig:ch11-pn. todo
+    10 kHz, 0.61 ps above …). After fig:ch11-pn. **done by reusing `pllnoise`** (it has the integration-limit slider)
 59. `jbudget` · Jitter budget: each DJ/RJ term → TJ 58.6 ps, 0.71 UI eye. After fig:ch11-budget. todo
 
 **Ch 12 · PLL**
@@ -252,6 +255,8 @@ noise, jitter) → stat eye and margin, the whole book on one panel. todo
   helpers before any `dispatchEvent` at start-up, and keep bit-history offsets ≥ the longest cursor span.
 - 17 Nov (later): `latch` (Ch 10), `pllloop` and `pllnoise` (Ch 12): 22 demos live.
 - 17 Nov (later): `jtol` and `cdrsim` (Ch 13): 24 demos live.
+- 17 Nov (later): `superpos` (Ch 2), `lossbuild` (Ch 3), `whoowns` (Ch 5), and `pllnoise` reused in Ch 11:
+  27 demo placements (26 distinct demos) live.
 - Lab 5 check: SL's ideal-DFE eye gives 60 → 108/129/~142/~152 mV for 1–4 taps vs the book's 60 → 110.7/129.7/
   143.2/153.6 (serdespy's DFE samples at a fixed phase; SL searches the phase in 2-sample steps).
 - Visual check while the browser pane is hidden: screenshots fail, so a page snippet POSTs the canvases to a

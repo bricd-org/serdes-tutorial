@@ -1,0 +1,52 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdLossBuild" role="group" aria-label="Interactive demo: conductor and dielectric loss of the channel">
+  <div class="bd-head"><span>// try it · where the loss comes from</span>
+    <span class="bd-seg" role="group" aria-label="Presets"><button type="button" data-pre="60,0.02" aria-pressed="true">REF model</button><button type="button" data-pre="29,0.02" aria-pressed="false">smooth 5-mil stripline</button><button type="button" data-pre="29,0.0045" aria-pressed="false">low-loss laminate</button></span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>skin-effect R at 1 GHz, k<sub>R</sub> <b data-v="kr"></b></span><input type="range" data-k="kr" min="10" max="120" step="1" value="60" aria-label="Skin effect resistance at 1 GHz"></label>
+    <label class="bd-sl"><span>loss tangent tan δ <b data-v="td"></b></span><input type="range" data-k="td" min="0.001" max="0.03" step="0.0005" value="0.02" aria-label="Loss tangent"></label>
+    <label class="bd-sl"><span>line length <b data-v="len"></b></span><input type="range" data-k="len" min="0.1" max="2" step="0.01" value="1" aria-label="Line length in metres"></label>
+  </div>
+  <div class="bd-row">
+    <div class="bd-scope"><canvas data-c="a" aria-hidden="true"></canvas><span class="bd-tag">loss per inch: conductor (√f), dielectric (f), total</span></div>
+    <div class="bd-scope"><canvas data-c="s" aria-hidden="true"></canvas><span class="bd-tag">|S<sub>21</sub>| of the whole line with pads, dB</span></div>
+  </div>
+  <div class="bd-read" aria-live="polite"><span>at f<sub>N</sub>: conductor <b data-o="c">–</b></span><span>dielectric <b data-o="d">–</b></span><span>total <b data-o="t">–</b></span><span>|S<sub>21</sub>(f<sub>N</sub>)| <b data-o="s">–</b></span><span>length for 10 dB <b data-o="l10">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdLossBuild'); if (!root || !window.BD || !window.SL) return;
+  var IN = 39.37;
+  var S = BD.bind(root, { kr: { fmt: function (x) { return x.toFixed(0) + ' Ω/m'; } }, td: { fmt: function (x) { return x.toFixed(4); } }, len: { fmt: function (x) { return x.toFixed(2) + ' m'; } } }, function () { sync(); draw(); });
+  var q = function (s) { return root.querySelector(s); };
+  function sync() { root.querySelectorAll('[data-pre]').forEach(function (b) { var t = b.getAttribute('data-pre').split(',').map(Number); b.setAttribute('aria-pressed', Math.abs(t[0] - S.kr) < 0.5 && Math.abs(t[1] - S.td) < 0.0003 ? 'true' : 'false'); }); }
+  root.querySelectorAll('[data-pre]').forEach(function (b) { b.addEventListener('click', function () { var t = b.getAttribute('data-pre').split(',');
+    q('[data-k="kr"]').value = t[0]; q('[data-k="td"]').value = t[1]; q('[data-k="kr"]').dispatchEvent(new Event('input')); q('[data-k="td"]').dispatchEvent(new Event('input')); }); });
+  var db = function (H, k) { return 10 * Math.log10(H.re[k] * H.re[k] + H.im[k] * H.im[k]); };
+  function draw() {
+    // per-inch loss from 1 m lines without pads: conductor only (tanδ→0), dielectric only (R→0), and both
+    var Hc = SL.channel({ length: 1, kr: S.kr, tand: 1e-6, cpad: 0 }), Hd = SL.channel({ length: 1, kr: 0.001, rdc: 0.001, tand: S.td, cpad: 0 }), Ht = SL.channel({ length: 1, kr: S.kr, tand: S.td, cpad: 0 });
+    var H = SL.channel({ length: S.len, kr: S.kr, tand: S.td });
+    var xs = [], c = [], dd = [], t = [], s21 = [];
+    for (var i = 1; i <= 200; i++) { var f = 0.05e9 * i, k = Math.round(f / SL.DF); xs.push(f / 1e9); c.push(-db(Hc, k) / IN); dd.push(-db(Hd, k) / IN); t.push(-db(Ht, k) / IN); s21.push(db(H, k)); }
+    var kN = Math.round(2.5e9 / SL.DF), cn = -db(Hc, kN) / IN, dn = -db(Hd, kN) / IN, tn = -db(Ht, kN) / IN, sn = db(H, kN);
+    var top = Math.max(1, Math.max.apply(null, t) * 1.1), d = BD.setup(q('[data-c="a"]')), fa = BD.frame(d, { x: [0, 10], y: [0, top], xt: [[0, '0'], [2.5, 'f_N'], [5, '5'], [7.5, '7.5'], [10, '10 GHz']],
+      yt: [[0, '0'], [0.5, '0.5'], [1, '1'], [1.5, '1.5'], [2, '2 dB/in']].filter(function (v) { return v[0] <= top; }), pad: { l: 50, t: 24 } });
+    BD.line(fa, xs, c, BD.C.gold, 1.6, [5, 4]); BD.line(fa, xs, dd, BD.C.teal, 1.6, [2, 3]); BD.line(fa, xs, t, BD.C.blue, 2.2);
+    BD.vline(fa, 2.5, 'rgba(255,255,255,.3)', [2, 3]); BD.dot(fa, 2.5, tn, BD.C.blue, 4);
+    var ds = BD.setup(q('[data-c="s"]')), fs = BD.frame(ds, { x: [0, 10], y: [-60, 2], xt: [[0, '0'], [2.5, 'f_N'], [5, '5'], [7.5, '7.5'], [10, '10 GHz']],
+      yt: [[0, '0'], [-20, '−20'], [-40, '−40'], [-60, '−60 dB']], pad: { l: 46, t: 24 } });
+    BD.line(fs, xs, s21, BD.C.blue, 2); BD.dot(fs, 2.5, sn, BD.C.gold, 4.5);
+    q('[data-o="c"]').textContent = cn.toFixed(3) + ' dB/in';
+    q('[data-o="d"]').textContent = dn.toFixed(3) + ' dB/in';
+    q('[data-o="t"]').textContent = tn.toFixed(3) + ' dB/in';
+    q('[data-o="s"]').textContent = sn.toFixed(1) + ' dB';
+    q('[data-o="l10"]').textContent = (10 / tn / IN * 100).toFixed(0) + ' cm';
+    q('[data-o="cap"]').innerHTML = 'Conductor loss grows as √f (the skin effect squeezes the current into a thinner layer), dielectric loss as f (every cycle the laminate absorbs a fixed fraction of the energy). ' +
+      (dn > cn ? 'Here the dielectric dominates at f<sub>N</sub>, so a lower-loss laminate buys more than smoother copper.' : 'Here the conductor dominates at f<sub>N</sub>: rougher or narrower copper costs more than the laminate.') +
+      ' The total at f<sub>N</sub> sets the equalization budget: REF loses ' + tn.toFixed(2) + ' dB per inch, ' + (-sn).toFixed(1) + ' dB over ' + S.len.toFixed(2) + ' m.';
+  }
+  BD.observe(root, draw);
+})();
+</script>
