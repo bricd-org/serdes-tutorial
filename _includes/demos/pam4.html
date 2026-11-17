@@ -1,0 +1,46 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdPam4" role="group" aria-label="Interactive demo: when PAM4 beats NRZ on the REF-type line">
+  <div class="bd-head"><span>// try it · NRZ or PAM4?</span>
+    <span class="bd-seg" role="group" aria-label="Length presets"><button type="button" data-len="1" aria-pressed="true">REF, 1 m</button><button type="button" data-len="1.37" aria-pressed="false">1.37 m</button><button type="button" data-len="2" aria-pressed="false">2 m</button></span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>line length <b data-v="len"></b></span><input type="range" data-k="len" min="0.2" max="3" step="0.01" value="1" aria-label="Line length in metres"></label>
+  </div>
+  <div class="bd-scope tall"><canvas data-c="l" aria-hidden="true"></canvas><span class="bd-tag">loss at 2.5 GHz (NRZ f<sub>N</sub>, blue) and 1.25 GHz (PAM4 f<sub>N</sub>, teal); their difference Δ (gold) against the 9.54 dB PAM4 penalty</span></div>
+  <div class="bd-read" aria-live="polite"><span>loss at 2.5 GHz <b data-o="a">–</b></span><span>at 1.25 GHz <b data-o="b">–</b></span><span>Δ <b data-o="d">–</b></span><span>verdict <b data-o="v">–</b></span><span>crossover <b data-o="x">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdPam4'); if (!root || !window.BD || !window.SL) return;
+  var PEN = 20 * Math.log10(3), Ls = [], A25 = [], A12 = [], done = false, li = 0;
+  for (var x = 0.2; x <= 3.0001; x += 0.1) Ls.push(+x.toFixed(2));
+  var S = BD.bind(root, { len: { fmt: function (x) { return x.toFixed(2) + ' m'; } } }, function () { draw(); });
+  var q = function (s) { return root.querySelector(s); }, sl = q('[data-k="len"]');
+  BD.seg(root, 'len', function (v) { sl.value = v; sl.dispatchEvent(new Event('input')); });
+  var lossAt = function (L) { var H = SL.channel({ length: L }); return [-SL.magDb(H, 2.5e9), -SL.magDb(H, 1.25e9)]; };
+  function cross() { for (var i = 1; i < Ls.length; i++) { var d0 = A25[i - 1] - A12[i - 1], d1 = A25[i] - A12[i];
+    if (d0 < PEN && d1 >= PEN) { var r = (PEN - d0) / (d1 - d0); return [Ls[i - 1] + 0.1 * r, A25[i - 1] + (A25[i] - A25[i - 1]) * r]; } } return null; }
+  function draw() {
+    var L = S.len, cur = lossAt(L), dlt = cur[0] - cur[1];
+    root.querySelectorAll('[data-len]').forEach(function (b) { b.setAttribute('aria-pressed', Math.abs(parseFloat(b.getAttribute('data-len')) - L) < 0.006 ? 'true' : 'false'); });
+    var d = BD.setup(q('[data-c="l"]')), f = BD.frame(d, { x: [0.2, 3], y: [0, 50], xt: [[0.5, '0.5'], [1, '1'], [1.5, '1.5'], [2, '2'], [2.5, '2.5'], [3, '3 m']],
+      yt: [[0, '0'], [10, '10'], [20, '20'], [30, '30'], [40, '40'], [50, '50 dB']], pad: { l: 46, t: 24 } });
+    BD.hline(f, PEN, 'rgba(224,184,90,.6)', [5, 4], '9.54 dB');
+    if (A25.length > 1) { var n = A25.length; BD.line(f, Ls.slice(0, n), A25, BD.C.blue, 2); BD.line(f, Ls.slice(0, n), A12, BD.C.teal, 2);
+      BD.line(f, Ls.slice(0, n), A25.map(function (v, i) { return v - A12[i]; }), BD.C.gold, 2); }
+    var c = done ? cross() : null;
+    if (c) { d.g.fillStyle = 'rgba(127,224,160,.07)'; d.g.fillRect(f.X(c[0]), f.p.t, f.X(3) - f.X(c[0]), d.h - f.p.t - f.p.b); BD.vline(f, c[0], 'rgba(127,224,160,.6)', [3, 3], 'PAM4 wins'); }
+    BD.vline(f, L, 'rgba(255,255,255,.4)', [2, 3]); BD.dot(f, L, cur[0], BD.C.blue, 4); BD.dot(f, L, cur[1], BD.C.teal, 4); BD.dot(f, L, dlt, BD.C.gold, 4.5);
+    q('[data-o="a"]').textContent = cur[0].toFixed(1) + ' dB';
+    q('[data-o="b"]').textContent = cur[1].toFixed(1) + ' dB';
+    q('[data-o="d"]').textContent = dlt.toFixed(1) + ' dB';
+    var v = q('[data-o="v"]'); v.textContent = dlt > PEN ? 'PAM4 by ' + (dlt - PEN).toFixed(1) + ' dB' : 'NRZ by ' + (PEN - dlt).toFixed(1) + ' dB'; v.className = dlt > PEN ? 'bad' : 'ok';
+    q('[data-o="x"]').textContent = c ? c[0].toFixed(2) + ' m (' + c[1].toFixed(1) + ' dB at 2.5 GHz)' : '…';
+    q('[data-o="cap"]').innerHTML = 'PAM4 sends two bits per symbol, so its Nyquist frequency halves to 1.25 GHz, where the line loses less. But its three eyes share the swing: each is a third as tall, a 9.54 dB penalty. ' +
+      'PAM4 wins only where the extra loss between 1.25 and 2.5 GHz exceeds 9.54 dB. ' + (dlt < PEN ? 'Here Δ is ' + dlt.toFixed(1) + ' dB, so NRZ is the better choice, as it is for Open-SERDES.' : 'At this length Δ exceeds the penalty: PAM4 opens the bigger eye, if its linearity and three-threshold receiver are affordable.');
+  }
+  BD.observe(root, draw);
+  (function chunk() { for (var j = 0; j < 3 && li < Ls.length; j++, li++) { var r = lossAt(Ls[li]); A25.push(r[0]); A12.push(r[1]); }
+    if (li < Ls.length) setTimeout(chunk, 0); else { done = true; draw(); } })();
+})();
+</script>

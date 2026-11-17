@@ -69,6 +69,8 @@ permalink: "/chapters/06-transmit-ffe/"
 <img src="{% endraw %}{{ '/assets/figs/ch06_ffefreq.svg' | relative_url }}{% raw %}" style="width:753px" alt="A TX FFE pulls the low frequencies down; it never lifts f_\mathrm{N}." loading="lazy" />
 <figcaption><span class="capnum">Figure 6.3.</span> <strong>A TX FFE pulls the low frequencies down; it never lifts <span class="math inline">\(f_\mathrm{N}\)</span>.</strong> (a) <a href="#eq:ffe-resp">Equation (6.4)</a> for 0, 3.5, 6 and 9.5 dB of de-emphasis. The response peaks at <span class="math inline">\(f_\mathrm{N}\)</span> and is periodic in <span class="math inline">\(f_\mathrm{b}\)</span>. (b) REF channel times FFE. Each setting removes as many dB of the low-frequency excess as its de-emphasis, so the cascade gets flatter but stays at <span class="math inline">\(-17.4\)</span> dB at <span class="math inline">\(f_\mathrm{N}\)</span>.</figcaption>
 </figure>
+<!-- demo:ffefreq -->{% endraw %}{% include demos/ffefreq.html %}{% raw %}<!-- /demo -->
+
 <h2 id="sec:ch6-solve"><span class="secnum">6.3</span>Solving for the taps</h2>
 <h5 id="zero-forcing">Zero forcing</h5>
 <p>Choose the three taps so that the equalized pulse has <span class="math inline">\(q_{-1}=0\)</span>, <span class="math inline">\(q_0=1\)</span> and <span class="math inline">\(q_1=0\)</span>. Writing <a href="#eq:ch6-conv">Equation (6.2)</a> for <span class="math inline">\(k=-1,0,1\)</span> gives three linear equations in three unknowns. Each row is one cursor of the equalized pulse, and each column is the pulse shifted by one tap:</p>
