@@ -1,0 +1,37 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdZfNoise" role="group" aria-label="Interactive demo: an inverse equalizer amplifies noise">
+  <div class="bd-head"><span>// try it · the price of inverting the channel</span>
+    <span class="bd-seg" role="group" aria-label="Band presets"><button type="button" data-b="1" aria-pressed="true">to f<sub>N</sub></button><button type="button" data-b="2" aria-pressed="false">to 2f<sub>N</sub></button></span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>equalize (and integrate noise) up to B <b data-v="b"></b></span><input type="range" data-k="b" min="0.2" max="2" step="0.01" value="1" aria-label="Band edge as a multiple of the Nyquist frequency"></label>
+  </div>
+  <div class="bd-scope tall"><canvas data-c="h" aria-hidden="true"></canvas><span class="bd-tag">REF |H| (blue), the inverse 1/|H| (gold), and the noise band (shaded), dB</span></div>
+  <div class="bd-read" aria-live="polite"><span>inverse gain at B <b data-o="g">–</b></span><span>noise enhancement (1/B)∫|H|<sup>−2</sup>df <b data-o="n">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdZfNoise'); if (!root || !window.BD || !window.SL) return;
+  var H = SL.channel(), FN = 2.5e9;
+  var S = BD.bind(root, { b: { fmt: function (x) { return x.toFixed(2) + ' f_N (' + (x * 2.5).toFixed(2) + ' GHz)'; } } }, function () { draw(); });
+  var q = function (s) { return root.querySelector(s); }, sl = q('[data-k="b"]');
+  BD.seg(root, 'b', function (v) { sl.value = v; sl.dispatchEvent(new Event('input')); });
+  var m2 = function (k) { return H.re[k] * H.re[k] + H.im[k] * H.im[k]; };
+  function draw() {
+    var B = S.b * FN, kB = Math.round(B / SL.DF), acc = 0;
+    root.querySelectorAll('[data-b]').forEach(function (b) { b.setAttribute('aria-pressed', Math.abs(parseFloat(b.getAttribute('data-b')) - S.b) < 0.005 ? 'true' : 'false'); });
+    for (var k = 0; k < kB; k++) acc += (1 / m2(k) + 1 / m2(k + 1)) / 2;
+    var enh = 10 * Math.log10(acc / kB), gB = -10 * Math.log10(m2(kB));
+    var d = BD.setup(q('[data-c="h"]')), f = BD.frame(d, { x: [0, 5.5], y: [-45, 45], xt: [[0, '0'], [1.25, '1.25'], [2.5, 'f_N'], [5, '2f_N']], yt: [[-40, '−40'], [-20, '−20'], [0, '0'], [20, '20'], [40, '40 dB']], pad: { l: 44, t: 22 } });
+    d.g.fillStyle = 'rgba(224,184,90,.10)'; d.g.fillRect(f.X(0), f.p.t, f.X(B / 1e9) - f.X(0), d.h - f.p.t - f.p.b);
+    var xs = [], a = [], b = []; for (var i = 0; i <= 220; i++) { var fr = 0.025e9 * i, kk = Math.round(fr / SL.DF); xs.push(fr / 1e9); a.push(10 * Math.log10(m2(kk))); b.push(fr <= B ? -10 * Math.log10(m2(kk)) : NaN); }
+    BD.hline(f, 0, 'rgba(255,255,255,.3)', [2, 3]); BD.line(f, xs, a, BD.C.blue, 2); BD.line(f, xs, b, BD.C.gold, 2);
+    BD.hline(f, enh, 'rgba(240,138,106,.7)', [5, 4], 'noise +' + enh.toFixed(1) + ' dB');
+    q('[data-o="g"]').textContent = '+' + gB.toFixed(1) + ' dB';
+    var ne = q('[data-o="n"]'); ne.textContent = enh.toFixed(1) + ' dB'; ne.className = enh < 15 ? 'ok' : 'bad';
+    q('[data-o="cap"]').innerHTML = 'A zero-forcing inverse makes REF × 1/H flat, so the ISI disappears, but white noise at its input is multiplied by |1/H|², which keeps rising with frequency. ' +
+      'Averaged over the band, the noise grows by ' + enh.toFixed(1) + ' dB. Extending the inverse from f<sub>N</sub> to 2f<sub>N</sub> costs about another 10 dB of noise for almost no gain in eye: practical equalizers stop near f<sub>N</sub> and limit their boost, or, like the DFE, avoid linear filtering altogether.';
+  }
+  BD.observe(root, draw);
+})();
+</script>
