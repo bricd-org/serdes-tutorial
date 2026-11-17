@@ -95,7 +95,8 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
     truncation slider (13 cursors hides 90 mV; −126 mV worst sample). After fig:ch4-pda. **done** (Σ 0.501 V,
     −161 mV, full tail −255 mV, 94 mV hidden; with 2-tap FFE main 209 mV, PDA 150 mV / 125 mV full)
 23. ★ `isipdf` · ISI distribution by convolution: add cursors one at a time, watch each spike split; noise σ;
-    log y (6 % of 1s below threshold unequalized). After fig:ch4-isipdf. todo
+    log y (6 % of 1s below threshold unequalized). After fig:ch4-isipdf. **done** (6.1 % below, −126 mV worst;
+    FFE: ends at 60 mV at 1e−12 vs PDA 63 mV; spikes drawn while ≤ 32 patterns and no noise)
 24. `stateye` · Statistical eye: noise σ, RJ, DJ sliders → BER contours 1e−3…1e−12, eye height/width at 1e−12
     (119 mV, 0.59 UI). After fig:ch4-stateye. todo
 25. `waterfall` · Margin budget waterfall: drag each impairment (residual ISI, noise, offset, jitter, crosstalk)
@@ -138,7 +139,8 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 39. `tap1` · Tap-1 timing budget: clk-Q, summer settling, setup sliders vs 1 UI and 0.5 UI; unroll toggle
     (140 ps direct). After fig:ch8-timing. todo
 40. ★ `sslms` · Sign-sign LMS live: μ, noise, pre-cursor sliders → taps converge to 91.6/27.6/11.8 mV, wander
-    when p−1 is uncancelled. After fig:ch8-sslms. todo
+    when p−1 is uncancelled. After fig:ch8-sslms. **done** (Worked Ex 8.3 set-up: PRBS13, 4 mV, μ 0.25 mV, start
+    d_lev 50 mV; w1 within 2 mV after 277 UI (book ~310), no decision errors; extra pre-cursor slider shows the wander)
 41. `partition` · Equalizer partition vs loss: pick strategies → PDA eye vs loss (134 mV at REF). After fig:ch8-partition. todo
 
 **Ch 9 · Transmitter**
@@ -167,7 +169,9 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 55. `slope` · Noise to jitter: σ_v and slew → σ_t (0.4 → 0.1 V_ppd = 4×). After fig:ch11-slope. **done**
     (3.14 mV/ps at 0.4 V_ppd; 300 noisy edges measured against σ_v/SR)
 56. ★ `dualdirac` · RJ ⊗ DJ convolution and the dual-Dirac fit: DCD, ISI, RJ sliders → PDF on log axis, TJ(BER)
-    (DJδδ 15.6 ps vs DJpp). After fig:ch11-hist. todo
+    (DJδδ 15.6 ps vs DJpp). After fig:ch11-hist. **done** (DCD/sinusoidal/uniform DJ ⊗ RJ, exact tail sums;
+    fit b = 0.5Q((t−μ)/σ) over 1e−4…1e−12: DCD returns DJpp and σ exactly, sinusoidal 17.5 of 20 ps; does not
+    reproduce the book's 15.6 ps case, whose DCD+ISI mix is not specified)
 57. ★ `bathtub` · Bathtub builder: DJδδ, σ_RJ → eye width at 1e−12 (0.71/0.59/0.45 UI at 1.32/3/5 ps). After
     fig:ch11-bathtub. **done** (TJ 58.6 ps; 0.71/0.59/0.45 UI at σ 1.32/3/5 ps, DJδδ 40 ps)
 58. ★ `pnjitter` · Phase noise to jitter: drag the PN profile and integration limits → rms jitter (1.01 ps from
@@ -186,7 +190,8 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 
 **Ch 13 · CDR**
 66. `alex` · Alexander PD: drag the clock phase across a transition → early/late votes. After fig:ch13-alex. todo
-67. ★ `bbgain` · Bang-bang gain linearized by jitter: σ_j slider → smoothed sign, slope √(2/π)/σ_j. After fig:ch13-bbchar. todo
+67. ★ `bbgain` · Bang-bang gain linearized by jitter: σ_j slider → smoothed sign, slope √(2/π)/σ_j. After fig:ch13-bbchar.
+    **done** (edge histogram split early/late, erf characteristic, tangent, linear range)
 68. ★ `jtol` · Jitter tolerance vs mask: K_P, K_I, latency → JTOL curve over the mask (dips at 1–2 MHz). After fig:ch13-jtol. todo
 69. ★ `pi` · Phase interpolator: linear vs sin/cos weights, bits → phasor, INL (±4.1° vs ±0.55°). After fig:ch13-pi.
     **done** (18.43° at α = 1/4, ±4.07° = 4.52 ps linear, ±0.55° with 6-bit sin/cos; phasor drawing not yet eyeballed)
@@ -233,6 +238,11 @@ noise, jitter) → stat eye and margin, the whole book on one panel. todo
   CTLE (Lab 4); ZF taps the Lab 3 way (`zfTaps`, only the cursors h−npre…h+npost, like sdp.forcing_ffe).
   `eyeScan`/`eyeTraces` treat one PRBS period as periodic (circular convolution), 4 ms per scan.
   Demos on SL: `s21pulse` (Ch 3), `pda` (Ch 4), `ffe` (Ch 6), `ctleref` (Ch 7), `dfe` (Ch 8). 15 demos live.
+- 17 Nov (later): `isipdf` (Ch 4), `sslms` (Ch 8), `dualdirac` (Ch 11), `bbgain` (Ch 13): 19 demos live.
+  Fixed `ffe` logging a start-up error (slider set before its helper was defined). Lesson: in every demo, define
+  helpers before any `dispatchEvent` at start-up, and keep bit-history offsets ≥ the longest cursor span.
+- Lab 5 check: SL's ideal-DFE eye gives 60 → 108/129/~142/~152 mV for 1–4 taps vs the book's 60 → 110.7/129.7/
+  143.2/153.6 (serdespy's DFE samples at a fixed phase; SL searches the phase in 2-sample steps).
 - Visual check while the browser pane is hidden: screenshots fail, so a page snippet POSTs the canvases to a
   local receiver (`python3 -I shotsrv.py <dir>` on 127.0.0.1:4099, kept in the session scratchpad) and the PNG
   is read back. Recreate it if needed: it base64-decodes `name|dataURL` bodies.

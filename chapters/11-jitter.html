@@ -87,6 +87,8 @@ permalink: "/chapters/11-jitter/"
 <img src="{% endraw %}{{ '/assets/figs/ch11_hist.svg' | relative_url }}{% raw %}" style="width:753px" alt="Total jitter is the convolution of RJ and DJ, and its tails are Gaussian" loading="lazy" />
 <figcaption><span class="capnum">Figure 11.4.</span> <strong>Total jitter is the convolution of RJ and DJ, and its tails are Gaussian</strong> (log scale). (a) RJ never ends. (b) DJ, here DCD of <span class="math inline">\(\pm4\)</span> ps convolved with ISI from three earlier bits, stops at <span class="math inline">\(\pm10\)</span> ps. (c) The convolution. The dashed dual-Dirac model is fitted to the tails between BER <span class="math inline">\(10^{-4}\)</span> and <span class="math inline">\(10^{-12}\)</span>; it ignores the centre and returns DJ<span class="math inline">\(_{\delta\delta}\)</span> = 15.6 ps, less than the true 20 ps peak-to-peak.</figcaption>
 </figure>
+<!-- demo:dualdirac -->{% endraw %}{% include demos/dualdirac.html %}{% raw %}<!-- /demo -->
+
 <h2 id="sec:dualdirac"><span class="secnum">11.3</span>The dual-Dirac model and total jitter</h2>
 <p>At <span class="math inline">\(10^{-12}\)</span> only the far tails of the jitter PDF matter. The <strong>dual-Dirac model</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p5:agilentdualdirac">21</a>] keeps the tails and simplifies the rest: all DJ becomes two impulses at <span class="math inline">\(\pm\mathrm{DJ}_{\delta\delta}/2\)</span>, each carrying a Gaussian of rms <span class="math inline">\(\sigma_\mathrm{RJ}\)</span> (<a href="#fig:ch11-bathtub">Figure 11.5</a>a).</p>
 <div class="tbox tbox-derivation">

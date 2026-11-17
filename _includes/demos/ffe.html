@@ -24,8 +24,8 @@
   root.querySelectorAll('[data-pre]').forEach(function (b) { b.addEventListener('click', function () {
     var v = b.getAttribute('data-pre');
     if (v === 'zf2') set(0, z2[1]); else if (v === 'zf3') set(z3[0], z3[2]); else { var t = v.split(','); set(parseFloat(t[0]), parseFloat(t[1])); } }); });
-  set(0, z2[1]);
   var mv = function (v) { return (v < 0 ? '−' : '') + Math.abs(v * 1e3).toFixed(0) + ' mV'; };
+  set(0, z2[1]);
   function draw() {
     var cm = S.cm, cp = S.cp, cc = 1 - Math.abs(cm) - Math.abs(cp), taps = [cm, cc, cp];
     var near = function (a, b) { return Math.abs(a - b) < 0.0015; };
