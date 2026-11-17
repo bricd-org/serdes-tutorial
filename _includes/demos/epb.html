@@ -1,0 +1,30 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdEpb" role="group" aria-label="Interactive demo: energy per bit of a link">
+  <div class="bd-head"><span>// try it · energy per bit</span><span>E<sub>b</sub> = P/f<sub>b</sub>; 1 mW per Gb/s = 1 pJ/b</span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>link power <b data-v="p"></b></span><input type="range" data-k="p" min="0" max="3" step="0.01" value="1.699" aria-label="Power, log scale"></label>
+    <label class="bd-sl"><span>bit rate <b data-v="fb"></b></span><input type="range" data-k="fb" min="0" max="2.3" step="0.01" value="0.699" aria-label="Bit rate, log scale"></label>
+  </div>
+  <div class="bd-scope"><canvas data-c="e" aria-hidden="true"></canvas><span class="bd-tag">power against bit rate, with lines of constant energy per bit</span></div>
+  <div class="bd-read" aria-live="polite"><span>energy per bit <b data-o="e">–</b></span><span>energy per 16-bit word <b data-o="w">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdEpb'); if (!root || !window.BD) return;
+  var S = BD.bind(root, { p: { map: function (v) { return Math.pow(10, v); }, fmt: function (x) { return x.toFixed(x < 10 ? 1 : 0) + ' mW'; } },
+    fb: { map: function (v) { return Math.pow(10, v); }, fmt: function (x) { return x.toFixed(x < 10 ? 2 : 0) + ' Gb/s'; } } }, function () { draw(); });
+  var q = function (s) { return root.querySelector(s); };
+  function draw() {
+    var P = S.p, fb = S.fb, e = P / fb;
+    var d = BD.setup(q('[data-c="e"]')), f = BD.frame(d, { x: [1, 200], y: [1, 1000], xlog: true, ylog: true, xt: [[1, '1'], [10, '10'], [100, '100 Gb/s']], yt: [[1, '1'], [10, '10'], [100, '100'], [1000, '1000 mW']], pad: { l: 52, t: 22 } });
+    [1, 10, 100].forEach(function (pj) { BD.line(f, [1, 200], [pj, pj * 200], 'rgba(224,184,90,.45)', 1.2, [5, 4]); var x = Math.min(200, 1000 / pj) / 1.6; d.g.fillStyle = BD.C.gold; d.g.fillText(pj + ' pJ/b', f.X(x), f.Y(pj * x) - 5); });
+    BD.dot(f, fb, P, BD.C.blue, 5);
+    q('[data-o="e"]').textContent = e.toFixed(e < 10 ? 2 : 1) + ' pJ/b';
+    q('[data-o="w"]').textContent = (16 * e).toFixed(0) + ' pJ';
+    q('[data-o="cap"]').innerHTML = 'Links are compared by energy per bit, not by power: a transceiver burning 50 mW at 5 Gb/s spends 10 pJ on every bit. ' +
+      'Doubling the rate at the same power halves it; doubling the power for the same rate doubles it. Moving along a gold line keeps the efficiency constant.';
+  }
+  BD.observe(root, draw);
+})();
+</script>
