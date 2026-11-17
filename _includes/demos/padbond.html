@@ -1,0 +1,48 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdPadBond" role="group" aria-label="Interactive demo: return loss of a bond wire and a pad capacitance">
+  <div class="bd-head"><span>// try it · bond wire and pad</span>
+    <span class="bd-seg" role="group" aria-label="Nyquist frequency"><button type="button" data-fn="2.5" aria-pressed="true">5 Gb/s (f<sub>N</sub> 2.5 GHz)</button><button type="button" data-fn="5" aria-pressed="false">10 Gb/s (5 GHz)</button></span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>bond-wire length (≈ 1 nH/mm) <b data-v="mm"></b></span><input type="range" data-k="mm" min="0" max="4" step="0.05" value="1" aria-label="Bond wire length in mm"></label>
+    <label class="bd-sl"><span>pad capacitance (pad + ESD + device) <b data-v="cp"></b></span><input type="range" data-k="cp" min="0" max="1.5" step="0.01" value="0.63" aria-label="Pad capacitance in pF"></label>
+  </div>
+  <div class="bd-scope tall"><canvas data-c="r" aria-hidden="true"></canvas><span class="bd-tag">return loss, dB (higher is better): wire alone (gold), pad alone (teal), wire + pad (blue)</span></div>
+  <div class="bd-read" aria-live="polite"><span>at f<sub>N</sub>: wire <b data-o="l">–</b></span><span>pad <b data-o="c">–</b></span><span>both <b data-o="b">–</b></span><span>10 dB limits: wire ≤ <b data-o="lm">–</b></span><span>pad ≤ <b data-o="cm">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdPadBond'); if (!root || !window.BD) return;
+  var Z0 = 50, fN = 2.5e9;
+  var S = BD.bind(root, { mm: { fmt: function (x) { return x.toFixed(2) + ' mm (' + x.toFixed(2) + ' nH)'; } }, cp: { fmt: function (x) { return x.toFixed(2) + ' pF'; } } }, function () { draw(); });
+  BD.seg(root, 'fn', function (v) { fN = parseFloat(v) * 1e9; draw(); });
+  var q = function (s) { return root.querySelector(s); };
+  function rl(f, L, C) {                        // series L, then shunt C, into Z0: Γ = (Zin − Z0)/(Zin + Z0)
+    var w = 2 * Math.PI * f, yc = w * C * Z0, zr = Z0 / (1 + yc * yc), zi = -Z0 * yc / (1 + yc * yc) + w * L;
+    var nr = zr - Z0, dr = zr + Z0, g = Math.hypot(nr, zi) / Math.hypot(dr, zi);
+    return g < 1e-6 ? 60 : Math.min(60, -20 * Math.log10(g));
+  }
+  function draw() {
+    var L = S.mm * 1e-9, C = S.cp * 1e-12, xs = [], a = [], b = [], c = [];
+    for (var i = 1; i <= 200; i++) { var f = 0.05e9 * i; xs.push(f / 1e9); a.push(rl(f, L, 0)); b.push(rl(f, 0, C)); c.push(rl(f, L, C)); }
+    var d = BD.setup(q('[data-c="r"]')), fr = BD.frame(d, { x: [0, 10], y: [0, 40], xt: [[0, '0'], [2.5, '2.5'], [5, '5'], [7.5, '7.5'], [10, '10 GHz']], yt: [[0, '0'], [10, '10'], [20, '20'], [30, '30'], [40, '40 dB']], pad: { l: 44, t: 24 } });
+    d.g.fillStyle = 'rgba(240,138,106,.07)'; d.g.fillRect(fr.p.l, fr.Y(10), d.w - fr.p.l - fr.p.r, fr.Y(0) - fr.Y(10));
+    BD.hline(fr, 10, 'rgba(240,138,106,.6)', [5, 4], '10 dB goal');
+    if (S.mm > 0) BD.line(fr, xs, a, BD.C.gold, 1.6, [5, 4]); if (S.cp > 0) BD.line(fr, xs, b, BD.C.teal, 1.6, [2, 3]); BD.line(fr, xs, c, BD.C.blue, 2.2);
+    BD.vline(fr, fN / 1e9, 'rgba(255,255,255,.35)', [2, 3], 'f_N');
+    var rN = [rl(fN, L, 0), rl(fN, 0, C), rl(fN, L, C)], w = 2 * Math.PI * fN;
+    var fmt = function (v) { return v >= 59.9 ? '> 60 dB' : v.toFixed(1) + ' dB'; };
+    q('[data-o="l"]').textContent = S.mm > 0 ? fmt(rN[0]) : '–';
+    q('[data-o="c"]').textContent = S.cp > 0 ? fmt(rN[1]) : '–';
+    var be = q('[data-o="b"]'); be.textContent = fmt(rN[2]); be.className = rN[2] >= 10 ? 'ok' : 'bad';
+    var x10 = 0.3162 / Math.sqrt(1 - 0.1);      // |S11| = 0.316 → x = 0.333
+    q('[data-o="lm"]').textContent = (x10 * 2 * Z0 / w * 1e9).toFixed(2) + ' mm';
+    q('[data-o="cm"]').textContent = (2 * x10 / (w * Z0) * 1e12).toFixed(2) + ' pF';
+    var zt = C > 0 && L > 0 ? Math.sqrt(L / C) : 0;
+    q('[data-o="cap"]').innerHTML = 'A series bond-wire inductance and a shunt pad capacitance each spoil the match at high frequency: |S<sub>11</sub>| = x/√(1 + x²) with x = ωL/2Z<sub>0</sub>, and x/√(4 + x²) with x = ωZ<sub>0</sub>C. ' +
+      (zt > 40 && zt < 62 ? 'Together, though, L and C form a short artificial line of impedance √(L/C) = ' + zt.toFixed(0) + ' Ω, close to 50 Ω, so the pair matches better than either alone, up to its cut-off.'
+       : 'Keep high-speed bond wires at or below about 1 mm (2.5 GHz) or 0.5 mm (5 GHz), or use flip-chip bumps; a T-coil hides the pad capacitance.');
+  }
+  BD.observe(root, draw);
+})();
+</script>

@@ -86,7 +86,8 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 16. ★ `bounce` · Lattice diagram: R_S, Z0, R_L sliders → animated bounce diagram and load voltage (25/50/100 Ω:
     0.889, 0.790, 0.8 V). After fig:ch3-bounce. **done** (0.667 launched, 0.889 first step, 0.800 final)
 17. `padrl` · Pad C and return loss: C_p and bondwire L → |S11| vs f, 10 dB line, echo in the pulse response
-    (2t_d = 6.7 UI). After fig:ch3-pad. todo
+    (2t_d = 6.7 UI). After fig:ch3-pad. **done as `padbond`** (return loss of wire, pad and both; 0.63 pF → 12.4 dB;
+    the pulse-echo part is not modelled)
 18. `viastub` · Via stub notch: stub length → quarter-wave null f = c/(4L√ε_eff) (6 mm → 6.2 GHz) over the NRZ
     lobe. After fig:ch3-via. **done** (6.2 GHz at 6 mm, ε_eff 4; 5/10/25 Gb/s presets)
 19. `tdr` · TDR explorer: place an L bump and a C dip, rise-time slider (Fig 3.9). After fig:ch3-tdr. todo
@@ -163,7 +164,8 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
     After fig:ch9-current. **done** (Eq 9.3: 20 mA/50 mW vs 6 mW at 1 V_ppd, 16 mA/40 mW vs 4.8 mW at 0.8 V;
     the 1.38× SST de-emphasis penalty is not modelled yet)
 46. `ffecurr` · Tap currents: preset → I−1, I0, I1 summing to 20 mA, output levels. After fig:ch9-ffe. todo
-47. `tcoil` · Pad C and T-coil: C_p → return loss (0.85 pF limit) and pole (10.1 → 14.3 GHz). After fig:ch9-pad. todo
+47. `tcoil` · Pad C and T-coil: C_p → return loss (0.85 pF limit) and pole (10.1 → 14.3 GHz). After fig:ch9-pad. **done**
+    (Eq 9.6 at 0.63 pF: L1 = L2 0.59 nH, M 0.20 nH, C_B 79 fF, 10.1 → 14.3 GHz; T-coil response idealized)
 
 **Ch 10 · Receiver front-end and samplers**
 48. ★ `regen` · Latch regeneration: input ΔV, τ, A_int → exponential output on log axis; decision time
@@ -226,7 +228,8 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 71. `clockplan` · Clock plan explorer: line rate → every clock in Fig 14.2 (2.5 GHz, 1.25 GHz, 625 MHz, 312.5 MHz). After fig:ch14-clock.
     **done** (N = 50 at 5 Gb/s, 100 at 10 Gb/s; flags the CDR loop clock reaching 1.25 GHz and fractional N)
 72. `budget10g` · Design for 10, guarantee 5: rate and length → PDA eye and timing budget (Fig 14.4). After fig:ch14-rate. todo
-73. `bondwire` · Bond-wire length (Ex 14.2): L per mm and C_pad → resonance and return loss. End of sec14.5.3. todo
+73. `bondwire` · Bond-wire length (Ex 14.2): L per mm and C_pad → resonance and return loss. End of sec14.5.3.
+    **done as `padbond`** (1/2.5/3 mm → 16.2/8.7/7.4 dB; 1 mm at 5 GHz 10.5 dB; 2.5 nH + 1 pF artificial line)
 74. `power` · Power budget: currents per block → total power and pJ/bit (Fig 14.8). After fig:ch14-power. todo
 
 **Ch 15 · Flow**
@@ -284,7 +287,7 @@ noise, jitter) → stat eye and margin, the whole book on one panel. todo
 
 ### Next steps
 
-State on 17 Nov (third window): 49 placements; was 32 (31 includes incl. `labmap`), every chapter 1–16 covered, all merged
+State on 17 Nov (third window): 52 placements; was 32 (31 includes incl. `labmap`), every chapter 1–16 covered, all merged
 into `main` (deployed). Each `done` entry above lists the book numbers it reproduces.
 
 1. Remaining ★ demos: `stateye` (Ch 4, needs a jitter-aware statistical eye in SL), `ctlebode` (Ch 7 degenerated

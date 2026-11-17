@@ -164,6 +164,8 @@ permalink: "/chapters/03-the-channel/"
 <img src="{% endraw %}{{ '/assets/figs/ch03_pad.svg' | relative_url }}{% raw %}" style="width:753px" alt="Pad capacitance spoils the termination at high frequency, and the reflections return as echoes." loading="lazy" />
 <figcaption><span class="capnum">Figure 3.6.</span> <strong>Pad capacitance spoils the termination at high frequency, and the reflections return as echoes.</strong> (a) Return loss of a 50 <span class="math inline">\(\Omega\)</span> termination with shunt <span class="math inline">\(C_p\)</span>; a 2.5 nH bondwire (dashed) is as bad as 1 pF. (b) Pulse response of a 10 cm REF-type line. With 1 pF pads, the wave reflected at the RX pad returns from the TX pad and arrives <span class="math inline">\(2t_d = 6.7\)</span> UI after the main cursor. A short, low-loss line does not attenuate this echo.</figcaption>
 </figure>
+<!-- demo:padbond -->{% endraw %}{% include demos/padbond.html %}{% raw %}<!-- /demo -->
+
 <div class="tbox tbox-example">
 <div class="tbox-title">
 <p>Worked Example 3.4 · Bondwire inductance</p>

@@ -387,6 +387,8 @@ permalink: "/chapters/14-the-open-serdes-architecture/"
 </ul>
 <p><strong>Result:</strong> keep the high-speed bond wires at or below about 1 mm, and about 0.5 mm for the 10 Gb/s target. That rule puts the TX and RX pads on the die edge closest to their package pins, and puts those pins in the middle of one package side. If the wires cannot be that short, part of the inductance can be absorbed into the T-coil of <a href="{% endraw %}{{ '/chapters/09-the-transmitter/' | relative_url }}{% raw %}#sec:esd-pad">Section 9.6</a>.</p>
 </div>
+
+<!-- demo:padbond -->{% endraw %}{% include demos/padbond.html %}{% raw %}<!-- /demo -->
 <h2 id="sec:power-budget"><span class="secnum">14.6</span>Power budget</h2>
 <p>A CML gate draws its tail current whatever the data, so a CML-heavy chip has a power budget you can write down before any layout: list the tails, multiply by the supply. CMOS logic burns <span class="math inline">\(\alpha C V^2 f\)</span> instead.</p>
 <div class="tbox tbox-keyeq">

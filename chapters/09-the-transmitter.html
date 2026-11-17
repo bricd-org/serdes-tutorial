@@ -212,6 +212,8 @@ permalink: "/chapters/09-the-transmitter/"
 <img src="{% endraw %}{{ '/assets/figs/ch09_pad.svg' | relative_url }}{% raw %}" style="width:753px" alt="Pad capacitance costs return loss long before it costs bandwidth." loading="lazy" />
 <figcaption><span class="capnum">Figure 9.8.</span> <strong>Pad capacitance costs return loss long before it costs bandwidth.</strong> (a) Return loss at 2.5 GHz versus total pad capacitance. The 0.63 pF example passes the 10 dB line (limit 0.85 pF). A T-coil with 3 Ω of loss per coil holds <span class="math inline">\(\lvert S_{11}\rvert\)</span> near <span class="math inline">\(-25\)</span> dB. (b) Response at the capacitive node of a doubly terminated pad: the T-coil moves the 0.63 pF pole from 10.1 to 14.3 GHz with a maximally flat response.</figcaption>
 </figure>
+<!-- demo:tcoil -->{% endraw %}{% include demos/tcoil.html %}{% raw %}<!-- /demo -->
+
 <h5 id="the-t-coil">The T-coil</h5>
 <p>When the budget does not close, a <strong>bridged T-coil</strong> separates the capacitance from the line [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p4:galal2003">26</a>, <a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p4:kossel2008">27</a>]. Two coupled inductors connect pad and termination, the capacitive load hangs on their center tap, and a small <span class="math inline">\(C_B\)</span> bridges the ends (<a href="#fig:ch9-tcoil">Figure 9.9</a>b). With the right values the inductive and capacitive impedances cancel exactly [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p4:razavi2015tcoil">28</a>].</p>
 <div class="tbox tbox-keyeq">

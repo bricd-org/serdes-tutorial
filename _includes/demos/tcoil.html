@@ -1,0 +1,40 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdTcoil" role="group" aria-label="Interactive demo: sizing a bridged T-coil for the pad capacitance">
+  <div class="bd-head"><span>// try it · pad capacitance and the T-coil</span><span>R = 50 Ω, ζ = 1/√2 (Equation 9.6)</span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>pad capacitance C<sub>p</sub> <b data-v="c"></b></span><input type="range" data-k="c" min="0.1" max="1.5" step="0.01" value="0.63" aria-label="Pad capacitance in pF"></label>
+  </div>
+  <div class="bd-row">
+    <div class="bd-scope"><canvas data-c="r" aria-hidden="true"></canvas><span class="bd-tag">return loss at 2.5 GHz without a T-coil, against C<sub>p</sub></span></div>
+    <div class="bd-scope"><canvas data-c="h" aria-hidden="true"></canvas><span class="bd-tag">response at the pad node: plain RC (teal), ideal T-coil (blue)</span></div>
+  </div>
+  <div class="bd-read" aria-live="polite"><span>return loss, no T-coil <b data-o="rl">–</b></span><span>L<sub>1</sub> = L<sub>2</sub> <b data-o="l">–</b></span><span>M <b data-o="m">–</b></span><span>C<sub>B</sub> <b data-o="cb">–</b></span><span>bandwidth: plain → T-coil <b data-o="bw">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdTcoil'); if (!root || !window.BD) return;
+  var R = 50, k = 1 / 3, w = 2 * Math.PI * 2.5e9;
+  var S = BD.bind(root, { c: { fmt: function (x) { return x.toFixed(2) + ' pF'; } } }, function () { draw(); });
+  var q = function (s) { return root.querySelector(s); };
+  var rlOf = function (C) { var x = w * R * C; return -20 * Math.log10(x / Math.sqrt(4 + x * x)); };
+  function draw() {
+    var C = S.c * 1e-12, L1 = R * R * C / (2 * (1 + k)), M = k * L1, CB = C / 8, fp = 1 / (Math.PI * R * C), ft = Math.SQRT2 * fp;
+    var d = BD.setup(q('[data-c="r"]')), f = BD.frame(d, { x: [0.1, 1.5], y: [0, 30], xt: [[0.25, '0.25'], [0.5, '0.5'], [0.85, '0.85'], [1, '1'], [1.5, '1.5 pF']], yt: [[0, '0'], [10, '10'], [15, '15'], [20, '20'], [30, '30 dB']], pad: { l: 44, t: 22 } });
+    var xs = [], ys = []; for (var i = 0; i <= 140; i++) { var c = 0.1e-12 + 1.4e-12 * i / 140; xs.push(c * 1e12); ys.push(rlOf(c)); }
+    BD.hline(f, 10, 'rgba(240,138,106,.6)', [5, 4], '10 dB'); BD.hline(f, 15, 'rgba(224,184,90,.5)', [2, 3], '15 dB');
+    BD.line(f, xs, ys, BD.C.teal, 2); BD.dot(f, S.c, rlOf(C), rlOf(C) >= 10 ? BD.C.green : BD.C.red, 5);
+    var dh = BD.setup(q('[data-c="h"]')), fh = BD.frame(dh, { x: [0.5, 50], y: [-12, 1], xlog: true, xt: [[1, '1'], [2.5, 'f_N'], [10, '10'], [50, '50 GHz']], yt: [[-9, '−9'], [-6, '−6'], [-3, '−3'], [0, '0 dB']], pad: { l: 40, t: 22 } });
+    var fx = [], a = [], b = []; for (i = 0; i <= 200; i++) { var fr = 0.5e9 * Math.pow(100, i / 200); fx.push(fr / 1e9); a.push(-10 * Math.log10(1 + Math.pow(fr / fp, 2))); b.push(-10 * Math.log10(1 + Math.pow(fr / ft, 4))); }
+    BD.hline(fh, -3, 'rgba(255,255,255,.3)', [2, 3]); BD.line(fh, fx, a, BD.C.teal, 1.8); BD.line(fh, fx, b, BD.C.blue, 2);
+    var rl = q('[data-o="rl"]'); rl.textContent = rlOf(C).toFixed(1) + ' dB'; rl.className = rlOf(C) >= 10 ? 'ok' : 'bad';
+    q('[data-o="l"]').textContent = (L1 * 1e9).toFixed(2) + ' nH';
+    q('[data-o="m"]').textContent = (M * 1e9).toFixed(2) + ' nH';
+    q('[data-o="cb"]').textContent = (CB * 1e15).toFixed(0) + ' fF';
+    q('[data-o="bw"]').textContent = (fp / 1e9).toFixed(1) + ' → ' + (ft / 1e9).toFixed(1) + ' GHz';
+    q('[data-o="cap"]').innerHTML = 'Without help, the pad capacitance costs return loss long before it costs bandwidth: ' + S.c.toFixed(2) + ' pF gives ' + rlOf(C).toFixed(1) + ' dB at 2.5 GHz (10 dB needs C<sub>p</sub> ≤ 0.85 pF, 15 dB ≤ 0.46 pF) while its pole is at ' + (fp / 1e9).toFixed(1) + ' GHz. ' +
+      'A bridged T-coil with L<sub>1</sub> = L<sub>2</sub> = R²C/2(1 + k), k = 1/3 and C<sub>B</sub> = C/8 makes the input look like R at every frequency (ideally; about 25 dB with 3 Ω of coil loss) and raises the pad-node bandwidth by √2 in a doubly terminated pad.';
+  }
+  BD.observe(root, draw);
+})();
+</script>
