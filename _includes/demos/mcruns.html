@@ -1,0 +1,46 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdMcRuns" role="group" aria-label="Interactive demo: how many Monte Carlo runs it takes to know a sigma">
+  <div class="bd-head"><span>// try it · how many Monte Carlo runs?</span><span>sampler offset, true σ = 4.9 mV</span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>runs N <b data-v="n"></b></span><input type="range" data-k="n" min="10" max="1000" step="5" value="200" aria-label="Number of Monte Carlo runs"></label>
+  </div>
+  <div class="bd-row">
+    <div class="bd-scope"><canvas data-c="h" aria-hidden="true"></canvas><span class="bd-tag">one Monte Carlo set: offsets of N samplers</span></div>
+    <div class="bd-scope"><canvas data-c="e" aria-hidden="true"></canvas><span class="bd-tag">σ estimated by 200 repeated sets of N runs</span></div>
+  </div>
+  <div class="bd-read" aria-live="polite"><span>predicted Δσ/σ ≈ 1/√(2N) <b data-o="p">–</b></span><span>σ = <b data-o="s">–</b></span><span>spread over 200 sets <b data-o="m">–</b></span></div>
+  <div class="bd-controls"><button type="button" class="bd-btn" data-b="again">run again</button></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdMcRuns'); if (!root || !window.BD) return;
+  var SIG = 4.9, seed = 1;
+  var S = BD.bind(root, { n: { fmt: function (x) { return String(x); } } }, function () { draw(); });
+  var q = function (s) { return root.querySelector(s); };
+  q('[data-b="again"]').addEventListener('click', function () { seed++; draw(); });
+  function draw() {
+    var N = S.n, rnd = BD.rng(seed * 7919), gs = function () { var u = 1 - rnd(), v = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+    var est = [], first = null;
+    for (var r = 0; r < 200; r++) { var xs = [], m = 0; for (var i = 0; i < N; i++) { var x = SIG * gs(); xs.push(x); m += x; } m /= N;
+      var v = 0; xs.forEach(function (x) { v += (x - m) * (x - m); }); est.push(Math.sqrt(v / (N - 1))); if (!first) first = xs; }
+    var mu = est.reduce(function (a, b) { return a + b; }, 0) / est.length, sd = Math.sqrt(est.reduce(function (a, b) { return a + (b - mu) * (b - mu); }, 0) / est.length);
+    // histogram of the first set
+    var dh = BD.setup(q('[data-c="h"]')), bins = new Array(30).fill(0); first.forEach(function (x) { var b = Math.floor((x + 15) / 1); if (b >= 0 && b < 30) bins[b]++; });
+    var mx = Math.max.apply(null, bins), fh = BD.frame(dh, { x: [-15, 15], y: [0, mx * 1.15], xt: [[-10, '−10'], [-4.9, '−σ'], [0, '0'], [4.9, '+σ'], [10, '10 mV']], yt: [], pad: { l: 14, t: 22 } });
+    dh.g.fillStyle = 'rgba(127,184,240,.7)'; bins.forEach(function (c, b) { var x0 = fh.X(-15 + b), x1 = fh.X(-14 + b); dh.g.fillRect(x0, fh.Y(c), x1 - x0 - 1, fh.Y(0) - fh.Y(c)); });
+    // spread of the estimates
+    var de = BD.setup(q('[data-c="e"]')), eb = new Array(40).fill(0); est.forEach(function (s) { var b = Math.floor((s - 2.9) / 0.1); if (b >= 0 && b < 40) eb[b]++; });
+    var me = Math.max.apply(null, eb), fe = BD.frame(de, { x: [2.9, 6.9], y: [0, me * 1.15], xt: [[3, '3'], [4, '4'], [4.9, '4.9'], [6, '6'], [6.9, '6.9 mV']], yt: [], pad: { l: 14, t: 22 } });
+    de.g.fillStyle = 'rgba(127,208,184,.75)'; eb.forEach(function (c, b) { var x0 = fe.X(2.9 + 0.1 * b), x1 = fe.X(3.0 + 0.1 * b); de.g.fillRect(x0, fe.Y(c), x1 - x0 - 1, fe.Y(0) - fe.Y(c)); });
+    BD.vline(fe, SIG, BD.C.gold, [4, 3]);
+    var pr = 1 / Math.sqrt(2 * N);
+    q('[data-o="p"]').textContent = (100 * pr).toFixed(1) + ' %';
+    q('[data-o="s"]').textContent = SIG.toFixed(1) + ' ± ' + (SIG * pr).toFixed(2) + ' mV';
+    q('[data-o="m"]').textContent = (100 * sd / SIG).toFixed(1) + ' % rms';
+    q('[data-o="cap"]').innerHTML = 'Every Monte Carlo set gives a slightly different σ. The scatter of the estimate falls only as 1/√(2N): fifty runs know σ to about 10 %, two hundred to 5 % (4.9 ± 0.25 mV for the sampler offset). ' +
+      'Halving the uncertainty costs four times the runs, so decide the accuracy you need before you start the simulations.';
+  }
+  BD.observe(root, draw);
+})();
+</script>

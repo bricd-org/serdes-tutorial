@@ -25,6 +25,7 @@ DEMOS = [
     (CH + "02-signals-systems-and-the-language-of-links.html", "superpos", "after:fig:ch2-superposition"),
     (CH + "02-signals-systems-and-the-language-of-links.html", "isieye", "after:fig:ch2-isi-tau"),
     (CH + "02-signals-systems-and-the-language-of-links.html", "berq", "after:fig:ch2-ber"),
+    (CH + "03-the-channel.html", "skin", "after:fig:ch3-skin"),
     (CH + "03-the-channel.html", "lossbuild", "after:fig:ch3-loss"),
     (CH + "03-the-channel.html", "bounce", "after:fig:ch3-bounce"),
     (CH + "03-the-channel.html", "viastub", "after:fig:ch3-via"),
@@ -53,6 +54,7 @@ DEMOS = [
     (CH + "13-clock-and-data-recovery.html", "pi", "after:fig:ch13-pi"),
     (CH + "13-clock-and-data-recovery.html", "cdrsim", "after:fig:ch13-sim"),
     (CH + "14-the-open-serdes-architecture.html", "clockplan", "after:fig:ch14-clock"),
+    (CH + "15-design-and-verification-flow-with-open-tools.html", "mcruns", "end:sec:testbenches"),
     (CH + "15-design-and-verification-flow-with-open-tools.html", "bercount", "end:sec:labtest"),
     (CH + "16-hands-on-labs-with-serdespy.html", "labmap", "end:sec:lab0"),
 ]
