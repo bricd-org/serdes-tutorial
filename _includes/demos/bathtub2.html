@@ -1,0 +1,37 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdBathtub2" role="group" aria-label="Interactive demo: bathtub curve from Gaussian edge jitter">
+  <div class="bd-head"><span>// try it · the bathtub</span>
+    <span class="bd-seg" role="group" aria-label="Jitter presets"><button type="button" data-s="0.02" aria-pressed="true">σ 0.02 UI</button><button type="button" data-s="0.04" aria-pressed="false">0.04 UI</button></span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>rms edge jitter σ <b data-v="s"></b></span><input type="range" data-k="s" min="0.005" max="0.08" step="0.001" value="0.02" aria-label="Edge jitter in UI"></label>
+    <label class="bd-sl"><span>transition density <b data-v="d"></b></span><input type="range" data-k="d" min="0.1" max="1" step="0.05" value="0.5" aria-label="Transition density"></label>
+  </div>
+  <div class="bd-scope"><canvas data-c="b" aria-hidden="true"></canvas><span class="bd-tag">BER against sampling instant within the UI</span></div>
+  <div class="bd-read" aria-live="polite"><span>σ <b data-o="ps">–</b></span><span>opening at 10<sup>−12</sup> <b data-o="o">–</b></span><span>BER at the centre <b data-o="c">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdBathtub2'); if (!root || !window.BD || !window.SL) return;
+  var S = BD.bind(root, { s: { fmt: function (x) { return x.toFixed(3) + ' UI'; } }, d: { fmt: function (x) { return x.toFixed(2); } } }, function () { draw(); });
+  var q = function (s) { return root.querySelector(s); }, sl = q('[data-k="s"]');
+  BD.seg(root, 's', function (v) { sl.value = v; sl.dispatchEvent(new Event('input')); });
+  var Qf = function (x) { return 0.5 * SL.erfc(x / Math.SQRT2); };
+  function draw() {
+    var s = S.s, rho = S.d, ber = function (t) { return rho * (Qf(t / s) + Qf((1 - t) / s)); };
+    root.querySelectorAll('[data-s]').forEach(function (b) { b.setAttribute('aria-pressed', Math.abs(parseFloat(b.getAttribute('data-s')) - s) < 0.0005 ? 'true' : 'false'); });
+    var lo = 0, hi = 0.5; for (var i = 0; i < 60; i++) { var m = (lo + hi) / 2; if (ber(m) > 1e-12) lo = m; else hi = m; }
+    var open = 1 - 2 * hi, d = BD.setup(q('[data-c="b"]')), f = BD.frame(d, { x: [0, 1], y: [1e-16, 1], ylog: true, xt: [[0, '0'], [0.25, '0.25'], [0.5, '0.5'], [0.75, '0.75'], [1, '1 UI']],
+      yt: [[1, '1'], [1e-4, '1e−4'], [1e-8, '1e−8'], [1e-12, '1e−12'], [1e-16, '1e−16']], pad: { l: 46, t: 22 } });
+    var xs = [], ys = []; for (i = 0; i <= 400; i++) { var t = i / 400; xs.push(t); ys.push(Math.max(ber(t), 1e-17)); }
+    if (open > 0) { d.g.fillStyle = 'rgba(127,224,160,.10)'; d.g.fillRect(f.X(hi), f.p.t, f.X(1 - hi) - f.X(hi), d.h - f.p.t - f.p.b); }
+    BD.hline(f, 1e-12, 'rgba(224,184,90,.7)', [5, 4], '1e−12'); BD.line(f, xs, ys, BD.C.blue, 2.2);
+    q('[data-o="ps"]').textContent = (s * 200).toFixed(1) + ' ps at 5 Gb/s';
+    var oe = q('[data-o="o"]'); oe.textContent = open > 0 ? open.toFixed(2) + ' UI' : 'closed'; oe.className = open > 0.6 ? 'ok' : 'bad';
+    var bc = ber(0.5); q('[data-o="c"]').textContent = bc < 1e-30 ? '< 1e−30' : bc.toExponential(1);
+    q('[data-o="cap"]').innerHTML = 'Sampling near a crossing, an edge that jitters past the sampling instant gives an error, so the BER rises steeply towards each edge: a bathtub. Only transitions can cause these errors, so the BER scales with the transition density. ' +
+      'Doubling the jitter from 0.02 to 0.04 UI shrinks the opening at 10<sup>−12</sup> from 0.72 to 0.45 UI: the Gaussian tails are about 7σ wide on each side.';
+  }
+  BD.observe(root, draw);
+})();
+</script>
