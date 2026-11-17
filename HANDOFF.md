@@ -113,7 +113,7 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 27. `zfnoise` · Inverse channel and noise: equalize-to frequency slider → flat product and noise gain
     (12.1 dB to f_N, 22.5 dB to 2f_N). After fig:ch5-inverse. todo
 28. `cable` · Cable model: loss slider → zero-phase pulse, main cursor, PDA half-eye; eye closes ~14 dB.
-    After fig:ch5-cable. todo
+    After fig:ch5-cable. **done** (Eq 5.3/5.4 Lorentzian: 15 dB → k_d l 691 ps, 0.470, 0.153, 0.043, Σ 0.527)
 29. ★ `whoowns` · Who removes which cursor: toggle TX pre-tap, CTLE, DFE taps on the REF pulse; colour-coded
     pre/post/tail ownership; PDA eye after each. After fig:ch5-anatomy. **done** (toggles c−1 −0.08, c1 −0.20,
     CTLE 8 dB, 2-tap DFE; PDA over 63 cursors: −242 → 31 (DFE) → 78 (CTLE+DFE) → 83 mV (+pre-tap))
@@ -133,11 +133,13 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 34. `rlc` · RLC peaking: ζ slider → impedance peak (16.6 dB at ζ = 0.2) and ringing step (2.7×). After fig:ch7-rlc.
     **done** (16.6 dB, 2.74×)
 35. ★ `ctlebode` · Degenerated pair designer: g_m, R_S, C_S, R_D, C_L → zero/poles, ideal vs realized boost at f_N
-    (14 dB ideal, 10.9 dB realized for the Lab 4 values). After fig:ch7-bode. todo
+    (14 dB ideal, 10.9 dB realized for the Lab 4 values). After fig:ch7-bode. **done** (Ex 7.1: 14/10.9 dB; Ex 7.2:
+    DC 7.8, |H(f_N)| 14.8, realized 7.0 dB, peak 4.3 GHz; fixed: 17.1 ideal, 10.0 realized)
 36. ★ `ctleref` · CTLE on REF: peaking slider 0–20 dB → pulse, cursors, PRBS eye; best 14 dB (113 mV),
     over-equalization > 16 dB; shaded 0–12 dB range. Uses SL. After fig:ch7-ref. **done** (14 dB: 113 mV,
     main cursor −7.6 dB vs 0 dB, p1 < 0 above 16 dB; eye-vs-peaking curve)
-37. `ctlefix` · Ideal vs realized boost (Ex 7.2): 10 dB promised, 7.0 dB realized; move f_p1 to 2f_N. After fig:ch7-we6. todo
+37. `ctlefix` · Ideal vs realized boost (Ex 7.2): 10 dB promised, 7.0 dB realized; move f_p1 to 2f_N. After fig:ch7-we6.
+    **covered by `ctlebode`** (presets Ex 7.2 and Ex 7.2 fixed)
 
 **Ch 8 · DFE and adaptation**
 38. ★ `dfe` · DFE step-through: bit by bit, decisions fed back, summer waveform; tap count; error propagation
@@ -282,7 +284,7 @@ noise, jitter) → stat eye and margin, the whole book on one panel. todo
 
 ### Next steps
 
-State at the end of 17 Nov (second window): 47 placements; was 32 (31 includes incl. `labmap`), every chapter 1–16 covered, all merged
+State on 17 Nov (third window): 49 placements; was 32 (31 includes incl. `labmap`), every chapter 1–16 covered, all merged
 into `main` (deployed). Each `done` entry above lists the book numbers it reproduces.
 
 1. Remaining ★ demos: `stateye` (Ch 4, needs a jitter-aware statistical eye in SL), `ctlebode` (Ch 7 degenerated

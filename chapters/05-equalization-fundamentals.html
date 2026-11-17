@@ -72,6 +72,8 @@ permalink: "/chapters/05-equalization-fundamentals/"
 <img src="{% endraw %}{{ '/assets/figs/ch05_cable.svg' | relative_url }}{% raw %}" style="width:753px" alt="A simple cable model ties loss in dB to the pulse." loading="lazy" />
 <figcaption><span class="capnum">Figure 5.2.</span> <strong>A simple cable model ties loss in dB to the pulse.</strong> (a) Pulse responses from <a href="#eq:ch5-cablepulse">Equation (5.3)</a> for 5–20 dB of loss at <span class="math inline">\(f_\mathrm{N}\)</span>. The dots mark the cursors of the 15 dB case. The model has zero phase, so the pre-cursors equal the post-cursors. (b) Main cursor from <a href="#eq:ch5-ymax">Equation (5.4)</a> and PDA half-eye against loss. The tails close the eye at about 14 dB, while the main cursor is still about half its lossless value.</figcaption>
 </figure>
+<!-- demo:cable -->{% endraw %}{% include demos/cable.html %}{% raw %}<!-- /demo -->
+
 <div class="tbox tbox-pitfall">
 <div class="tbox-title">
 <p>A zero-phase model is not a real channel</p>
