@@ -1,0 +1,41 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdTap1" role="group" aria-label="Interactive demo: the DFE tap-1 timing budget">
+  <div class="bd-head"><span>// try it · tap-1 timing</span>
+    <span class="bd-seg" role="group" aria-label="Architecture"><button type="button" data-u="0" aria-pressed="true">direct feedback</button><button type="button" data-u="1" aria-pressed="false">unrolled (speculative)</button></span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>latch clock-to-Q <b data-v="cq"></b></span><input type="range" data-k="cq" min="10" max="60" step="1" value="30" aria-label="Clock to Q in ps"></label>
+    <label class="bd-sl"><span>tap switch / select mux <b data-v="tp"></b></span><input type="range" data-k="tp" min="0" max="40" step="1" value="10" aria-label="Tap switch delay in ps"></label>
+    <label class="bd-sl"><span>summer load R<sub>L</sub> <b data-v="rl"></b></span><input type="range" data-k="rl" min="50" max="600" step="5" value="250" aria-label="Summer load resistance"></label>
+    <label class="bd-sl"><span>summer node C <b data-v="c"></b></span><input type="range" data-k="c" min="20" max="200" step="1" value="80" aria-label="Summer node capacitance in fF"></label>
+    <label class="bd-sl"><span>setup + aperture <b data-v="su"></b></span><input type="range" data-k="su" min="5" max="50" step="1" value="20" aria-label="Setup in ps"></label>
+    <label class="bd-sl"><span>skew and PVT margin <b data-v="mg"></b></span><input type="range" data-k="mg" min="0" max="50" step="1" value="20" aria-label="Margin in ps"></label>
+  </div>
+  <div class="bd-scope short"><canvas data-c="b" aria-hidden="true"></canvas><span class="bd-tag">the tap-1 path against 1 UI (200 ps) and half a UI</span></div>
+  <div class="bd-read" aria-live="polite"><span>summer τ = R<sub>L</sub>C <b data-o="tau">–</b></span><span>total <b data-o="t">–</b></span><span>slack to 1 UI <b data-o="s1">–</b></span><span>to ½ UI <b data-o="s2">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdTap1'); if (!root || !window.BD) return;
+  var un = false, ps = function (x) { return x.toFixed(0) + ' ps'; };
+  var S = BD.bind(root, { cq: { fmt: ps }, tp: { fmt: ps }, rl: { fmt: function (x) { return x.toFixed(0) + ' Ω'; } }, c: { fmt: function (x) { return x.toFixed(0) + ' fF'; } }, su: { fmt: ps }, mg: { fmt: ps } }, function () { draw(); });
+  BD.seg(root, 'u', function (v) { un = v === '1'; draw(); });
+  var q = function (s) { return root.querySelector(s); };
+  function draw() {
+    var tau = S.rl * S.c * 1e-3, st = 3 * tau, parts = [['clk→Q', S.cq, BD.C.blue], [un ? 'mux' : 'tap', S.tp, BD.C.teal]];
+    if (!un) parts.push(['summer 3τ', st, BD.C.gold]); parts.push(['setup', S.su, 'rgba(127,184,240,.6)'], ['margin', S.mg, 'rgba(170,205,240,.35)']);
+    var tot = parts.reduce(function (a, p) { return a + p[1]; }, 0), d = BD.setup(q('[data-c="b"]')), g = d.g, L = 20, R = d.w - 20, X = function (t) { return L + (R - L) * t / 260; }, y = 36, h = 30;
+    var x = 0; parts.forEach(function (p) { g.fillStyle = p[2]; g.fillRect(X(x), y, X(x + p[1]) - X(x) - 1, h); if (X(x + p[1]) - X(x) > 34) { g.fillStyle = '#0c2340'; g.fillText(p[0], X(x) + 4, y + 19); } x += p[1]; });
+    [[200, '1 UI', BD.C.red], [100, '½ UI', BD.C.gold]].forEach(function (m) { g.strokeStyle = m[2]; g.setLineDash([4, 3]); g.beginPath(); g.moveTo(X(m[0]), 18); g.lineTo(X(m[0]), y + h + 12); g.stroke(); g.setLineDash([]); g.fillStyle = m[2]; g.fillText(m[1], X(m[0]) + 4, 26); });
+    g.fillStyle = BD.C.axis; [0, 50, 100, 150, 200, 250].forEach(function (t) { g.fillText(t + (t === 250 ? ' ps' : ''), X(t) - 6, d.h - 8); });
+    q('[data-o="tau"]').textContent = tau.toFixed(0) + ' ps';
+    q('[data-o="t"]').textContent = tot.toFixed(0) + ' ps';
+    var s1 = q('[data-o="s1"]'); s1.textContent = (200 - tot).toFixed(0) + ' ps'; s1.className = tot <= 200 ? 'ok' : 'bad';
+    var s2 = q('[data-o="s2"]'); s2.textContent = (100 - tot).toFixed(0) + ' ps'; s2.className = tot <= 100 ? 'ok' : 'bad';
+    q('[data-o="cap"]').innerHTML = 'Tap 1 must be decided, fed back and settled at the summer before the next sample, one UI later; half rate does not relax this, because the even decision corrects the odd sample. ' +
+      (un ? 'Unrolling precomputes both answers (against +w<sub>1</sub> and −w<sub>1</sub>) and lets the previous decision pick one, so the summer settling leaves the critical path: it fits even half a UI.'
+       : 'With the book\'s illustrative SG13G2 numbers the direct path takes about 140 ps: it meets 1 UI with 55–65 ps to spare, but not the half-UI budget the edge samplers would need. The summer\'s 3τ is the term to attack.');
+  }
+  BD.observe(root, draw);
+})();
+</script>

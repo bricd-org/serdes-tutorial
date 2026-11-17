@@ -1,0 +1,37 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdFfeCurr" role="group" aria-label="Interactive demo: FFE tap currents in a CML driver">
+  <div class="bd-head"><span>// try it · FFE tap currents</span>
+    <span class="bd-seg" role="group" aria-label="Presets"><button type="button" data-p="0,0" aria-pressed="false">0 dB</button><button type="button" data-p="0,-0.166" aria-pressed="false">−3.5 dB</button><button type="button" data-p="0,-0.25" aria-pressed="true">−6 dB</button><button type="button" data-p="0,-0.333" aria-pressed="false">−9.5 dB</button></span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>pre-tap c<sub>−1</sub> <b data-v="cm"></b></span><input type="range" data-k="cm" min="-0.25" max="0" step="0.001" value="0" aria-label="Pre-tap weight"></label>
+    <label class="bd-sl"><span>post-tap c<sub>1</sub> <b data-v="cp"></b></span><input type="range" data-k="cp" min="-0.45" max="0" step="0.001" value="-0.25" aria-label="Post-tap weight"></label>
+  </div>
+  <div class="bd-scope short"><canvas data-c="b" aria-hidden="true"></canvas><span class="bd-tag">I<sub>T</sub> = 20 mA from 32 cells of 0.625 mA, split between the three tap pairs</span></div>
+  <div class="bd-read" aria-live="polite"><span>I<sub>−1</sub>, I<sub>0</sub>, I<sub>1</sub> <b data-o="i">–</b></span><span>cells <b data-o="n">–</b></span><span>transition swing <b data-o="tr">–</b></span><span>repeated-bit swing <b data-o="rp">–</b></span><span>supply <b data-o="p">50 mW</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdFfeCurr'); if (!root || !window.BD) return;
+  var IT = 20, NC = 32, Z0 = 50;
+  var S = BD.bind(root, { cm: { fmt: function (x) { return x.toFixed(3); } }, cp: { fmt: function (x) { return x.toFixed(3); } } }, function () { draw(); });
+  var q = function (s) { return root.querySelector(s); };
+  root.querySelectorAll('[data-p]').forEach(function (b) { b.addEventListener('click', function () { var t = b.getAttribute('data-p').split(',');
+    q('[data-k="cm"]').value = t[0]; q('[data-k="cp"]').value = t[1]; q('[data-k="cm"]').dispatchEvent(new Event('input')); q('[data-k="cp"]').dispatchEvent(new Event('input')); }); });
+  function draw() {
+    var nm = Math.round(Math.abs(S.cm) * NC), np = Math.round(Math.abs(S.cp) * NC), n0 = NC - nm - np, cell = IT / NC;
+    root.querySelectorAll('[data-p]').forEach(function (b) { var t = b.getAttribute('data-p').split(',').map(Number); b.setAttribute('aria-pressed', Math.abs(t[0] - S.cm) < 0.002 && Math.abs(t[1] - S.cp) < 0.002 ? 'true' : 'false'); });
+    var d = BD.setup(q('[data-c="b"]')), g = d.g, L = 20, W = (d.w - 40) / NC, y = 34, h = 34;
+    for (var i = 0; i < NC; i++) { g.fillStyle = i < nm ? BD.C.red : i < nm + n0 ? BD.C.gold : BD.C.teal; g.fillRect(L + i * W + 1, y, W - 2, h); }
+    g.fillStyle = BD.C.axis; g.fillText('pre (inverted)', L, y - 8); g.textAlign = 'center'; g.fillText('main', L + (nm + n0 / 2) * W, y - 8); g.textAlign = 'right'; g.fillText('post (inverted)', d.w - 20, y - 8); g.textAlign = 'left';
+    var c0 = n0 / NC, c1 = np / NC, cm = nm / NC, vt = IT * 1e-3 * Z0 * (c0 + c1 + cm) , vr = IT * 1e-3 * Z0 * Math.abs(c0 - c1 - cm);
+    q('[data-o="i"]').textContent = (nm * cell).toFixed(2) + ', ' + (n0 * cell).toFixed(2) + ', ' + (np * cell).toFixed(2) + ' mA';
+    q('[data-o="n"]').textContent = nm + ' / ' + n0 + ' / ' + np;
+    q('[data-o="tr"]').textContent = vt.toFixed(2) + ' V_ppd';
+    q('[data-o="rp"]').textContent = vr.toFixed(2) + ' V_ppd';
+    q('[data-o="cap"]').innerHTML = 'Each tap is a CML pair steering its own slice of one fixed tail current into the shared 50 Ω loads; the pre and post pairs have their inputs swapped, so their weights are negative. ' +
+      'Because the slices always add up to I<sub>T</sub> = 20 mA, Σ|c| = 1 holds by construction and the supply stays at 50 mW for every preset. −6 dB is exactly 24 + 8 cells (15 and 5 mA): 1.0 V<sub>ppd</sub> on transitions, 0.5 V<sub>ppd</sub> on repeated bits.';
+  }
+  BD.observe(root, draw);
+})();
+</script>

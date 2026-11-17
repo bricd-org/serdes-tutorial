@@ -1,0 +1,36 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdPower" role="group" aria-label="Interactive demo: the Open-SERDES power budget and energy per bit">
+  <div class="bd-head"><span>// try it · power budget</span><span>first-cut estimate of Table 14.3, 5 Gb/s</span></div>
+  <div class="bd-controls" style="margin:0 2px 10px">
+    <button type="button" class="bd-toggle" data-t="sst" aria-pressed="false">SST driver instead of CML</button>
+    <button type="button" class="bd-toggle" data-t="sw" aria-pressed="false">0.8 V<sub>ppd</sub> swing</button>
+  </div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>CML gates removed from the clock paths (≈ 3 mW each) <b data-v="g"></b></span><input type="range" data-k="g" min="0" max="10" step="1" value="0" aria-label="CML gates removed"></label>
+    <label class="bd-sl"><span>CML supply <b data-v="v"></b></span><input type="range" data-k="v" min="2" max="3.3" step="0.05" value="2.5" aria-label="CML supply voltage"></label>
+  </div>
+  <div class="bd-scope short"><canvas data-c="b" aria-hidden="true"></canvas><span class="bd-tag">energy per bit, pJ/b</span></div>
+  <div class="bd-read" aria-live="polite"><span>TX driver <b data-o="d">–</b></span><span>other CML <b data-o="o">–</b></span><span>PLL, CMOS, DACs <b data-o="c">25 mW</b></span><span>total <b data-o="t">–</b></span><span>energy per bit <b data-o="e">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdPower'); if (!root || !window.BD) return;
+  var on = { sst: false, sw: false }, CMOS = 25, OTHER_I = 141.2 / 2.5;                 // mA of the other CML tails at 2.5 V
+  var S = BD.bind(root, { g: { fmt: String }, v: { fmt: function (x) { return x.toFixed(2) + ' V'; } } }, function () { draw(); });
+  root.querySelectorAll('[data-t]').forEach(function (b) { BD.toggle(b, function (v) { on[b.getAttribute('data-t')] = v; draw(); }); });
+  var q = function (s) { return root.querySelector(s); };
+  function draw() {
+    var vpp = on.sw ? 0.8 : 1.0, drv = on.sst ? vpp / 200 * 1.2 * 1e3 : vpp / 50 * S.v * 1e3, oth = Math.max(0, OTHER_I * S.v - 3 * S.g * S.v / 2.5), tot = drv + oth + CMOS, eb = tot / 5;
+    var d = BD.setup(q('[data-c="b"]')), g = d.g, rows = [['this design', eb, BD.C.blue], ['baseline (Ex 14.3)', 43.2, 'rgba(170,205,240,.5)'], ['Purdue OpenSerDes, SKY130', 219, 'rgba(240,138,106,.7)']];
+    var L = 170, R = d.w - 70, X = function (v) { return L + (R - L) * Math.log10(1 + v) / Math.log10(260); };
+    rows.forEach(function (r, i) { var y = 22 + i * 32; g.fillStyle = BD.C.axis; g.textAlign = 'right'; g.fillText(r[0], L - 8, y + 12); g.textAlign = 'left';
+      g.fillStyle = r[2]; g.fillRect(L, y, X(r[1]) - L, 18); g.fillStyle = '#fff'; g.fillText(r[1].toFixed(1) + ' pJ/b', X(r[1]) + 6, y + 13); });
+    q('[data-o="d"]').textContent = drv.toFixed(1) + ' mW'; q('[data-o="o"]').textContent = oth.toFixed(0) + ' mW';
+    q('[data-o="t"]').textContent = tot.toFixed(0) + ' mW'; q('[data-o="e"]').textContent = eb.toFixed(1) + ' pJ/b';
+    q('[data-o="cap"]').innerHTML = 'Almost all the power is static CML current: ' + (oth + (on.sst ? 0 : drv)).toFixed(0) + ' of ' + tot.toFixed(0) + ' mW. The baseline spends 216 mW, 43.2 pJ/b: five times less energy per bit than the all-digital Purdue OpenSerDes, because a few HBT CML gates do what 130 nm CMOS must do with oversampling. ' +
+      'The SST driver is the largest saving (about 44 mW, to 34.4 pJ/b); a lower CML supply saves the most of all, but every V<sub>CE</sub> must still fit under BV<sub>CEO</sub> with the swing on top.';
+  }
+  BD.observe(root, draw);
+})();
+</script>
