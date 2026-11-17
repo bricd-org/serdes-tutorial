@@ -1,0 +1,49 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdRlc" role="group" aria-label="Interactive demo: an inductively peaked load buys boost with ringing">
+  <div class="bd-head"><span>// try it · RLC peaking</span>
+    <span class="bd-seg" role="group" aria-label="Damping presets"><button type="button" data-z="0.2" aria-pressed="true">ζ 0.2</button><button type="button" data-z="0.5" aria-pressed="false">0.5</button><button type="button" data-z="0.707" aria-pressed="false">0.707</button><button type="button" data-z="1" aria-pressed="false">1</button></span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>damping ζ = (R/2)√(C/L) <b data-v="z"></b></span><input type="range" data-k="z" min="0.1" max="1.5" step="0.001" value="0.2" aria-label="Damping factor"></label>
+  </div>
+  <div class="bd-row">
+    <div class="bd-scope"><canvas data-c="m" aria-hidden="true"></canvas><span class="bd-tag">|Z|/R of (R + sL) ∥ 1/sC, dB, against ω/ω<sub>n</sub></span></div>
+    <div class="bd-scope"><canvas data-c="s" aria-hidden="true"></canvas><span class="bd-tag">step response (current step into the load), ÷ final value</span></div>
+  </div>
+  <div class="bd-read" aria-live="polite"><span>peaking at ω<sub>n</sub> <b data-o="p">–</b></span><span>maximum of |Z| <b data-o="mx">–</b></span><span>overshoot <b data-o="os">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdRlc'); if (!root || !window.BD) return;
+  var S = BD.bind(root, { z: { fmt: function (x) { return x.toFixed(3); } } }, function () { draw(); });
+  var q = function (s) { return root.querySelector(s); }, sl = q('[data-k="z"]');
+  BD.seg(root, 'z', function (v) { sl.value = v; sl.dispatchEvent(new Event('input')); });
+  function zmag(w, z) {                 // R = 1, ω_n = 1: L = 1/(2ζ), C = 2ζ
+    var L = 1 / (2 * z), C = 2 * z, nr = 1, ni = w * L, dr = 1 - w * w * L * C, di = w * C;
+    return Math.hypot(nr, ni) / Math.hypot(dr, di);
+  }
+  function draw() {
+    var z = S.z, L = 1 / (2 * z), C = 2 * z;
+    root.querySelectorAll('[data-z]').forEach(function (b) { b.setAttribute('aria-pressed', Math.abs(parseFloat(b.getAttribute('data-z')) - z) < 0.002 ? 'true' : 'false'); });
+    var xs = [], ys = [], mx = 0, wm = 1;
+    for (var i = 0; i <= 300; i++) { var w = 0.05 * Math.pow(400, i / 300), m = zmag(w, z); xs.push(w); ys.push(20 * Math.log10(m)); if (m > mx) { mx = m; wm = w; } }
+    var d = BD.setup(q('[data-c="m"]')), f = BD.frame(d, { x: [0.05, 20], y: [-30, 24], xlog: true, xt: [[0.1, '0.1'], [1, 'ω_n'], [10, '10']], yt: [[-20, '−20'], [0, '0 dB'], [10, '10'], [20, '20']], pad: { l: 44, t: 22 } });
+    BD.hline(f, 0, 'rgba(255,255,255,.3)', [2, 3]); BD.line(f, xs, ys, BD.C.blue, 2); BD.dot(f, 1, 20 * Math.log10(zmag(1, z)), BD.C.gold, 4.5);
+    // step response: C dv/dt = 1 − i, L di/dt = v − R i  (R = 1), final value 1
+    var dt = 0.002, v = 0, il = 0, ts = [], vs = [], pk = 0, T = 30;
+    for (var k = 0; k * dt <= T; k++) { if (k % 25 === 0) { ts.push(k * dt); vs.push(v); } pk = Math.max(pk, v);
+      var dv = (1 - il) / C, di = (v - il) / L; v += dt * dv; il += dt * di; }
+    var ds = BD.setup(q('[data-c="s"]')), top = Math.max(1.4, pk * 1.08), fs = BD.frame(ds, { x: [0, T], y: [0, top], xt: [[0, '0'], [10, '10'], [20, '20'], [30, '30/ω_n']], yt: [[0, '0'], [1, '1'], [2, '2'], [3, '3']].filter(function (t) { return t[0] <= top; }), pad: { l: 36, t: 22 } });
+    BD.hline(fs, 1, 'rgba(255,255,255,.35)', [3, 3]); BD.line(fs, ts, vs, BD.C.teal, 2);
+    var p = 20 * Math.log10(zmag(1, z));
+    q('[data-o="p"]').textContent = p.toFixed(1) + ' dB';
+    q('[data-o="mx"]').textContent = (20 * Math.log10(mx)).toFixed(1) + ' dB at ' + wm.toFixed(2) + ' ω_n';
+    q('[data-o="os"]').textContent = pk.toFixed(2) + '× final';
+    q('[data-o="cap"]').innerHTML = 'An inductor in series with the load resistor makes the load impedance rise with frequency, so the stage gains more at high frequency. ' +
+      (z < 0.4 ? 'With little damping the complex poles give a tall peak, but the step response rings for many periods: ringing is ISI of its own.'
+       : z < 0.8 ? 'Near ζ = 0.7 the response is flat with modest overshoot: shunt peaking used to extend bandwidth rather than to equalize.'
+       : 'Heavy damping removes the ringing and most of the boost.') + ' This is why CTLEs use a zero from source degeneration instead of an LC peak.';
+  }
+  BD.observe(root, draw);
+})();
+</script>

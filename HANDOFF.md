@@ -51,7 +51,7 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 2. `ratechain` · Follow the rates (Ex 1.2): pick serialization ratio and line rate → word clock, PLL, half-rate
    clock, UI, f_N (16 × 312.5 Mb/s → 5 Gb/s, 2.5 GHz, 200 ps). After fig:link-anatomy. todo
 3. `fo4ui` · How many gate delays fit in a UI: bit rate slider; bars for CMOS FO4 (42/55 ps) vs HBT CML (~2 ps,
-   loaded ×several); full/half/quarter rate (Fig 1.6, 9.2). After fig:ch1-speed. todo
+   loaded ×several); full/half/quarter rate (Fig 1.6, 9.2). After fig:ch1-speed. **covered by `fo4rule`**
 4. `epb` · Energy per bit (Key eq 1.x): power and rate sliders, pJ/bit compared with published links. todo
 
 **Ch 2 · Signals and systems**
@@ -128,7 +128,8 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
     After fig:ch6-zf. todo
 
 **Ch 7 · CTLE**
-34. `rlc` · RLC peaking: ζ slider → impedance peak (16.6 dB at ζ = 0.2) and ringing step (2.7×). After fig:ch7-rlc. todo
+34. `rlc` · RLC peaking: ζ slider → impedance peak (16.6 dB at ζ = 0.2) and ringing step (2.7×). After fig:ch7-rlc.
+    **done** (16.6 dB, 2.74×)
 35. ★ `ctlebode` · Degenerated pair designer: g_m, R_S, C_S, R_D, C_L → zero/poles, ideal vs realized boost at f_N
     (14 dB ideal, 10.9 dB realized for the Lab 4 values). After fig:ch7-bode. todo
 36. ★ `ctleref` · CTLE on REF: peaking slider 0–20 dB → pulse, cursors, PRBS eye; best 14 dB (113 mV),
@@ -148,7 +149,9 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 41. `partition` · Equalizer partition vs loss: pick strategies → PDA eye vs loss (134 mV at REF). After fig:ch8-partition. todo
 
 **Ch 9 · Transmitter**
-42. `fo4rule` · 8-FO4 rule: FO4 and serialization ratio → max bit rate bars. After fig:ch9-fo4. todo
+42. `fo4rule` · 8-FO4 rule: FO4 and serialization ratio → max bit rate bars. After fig:ch9-fo4. **done**, also
+    placed in Ch 1 after fig:ch1-speed in place of `fo4ui` (42 ps: 2.98 GHz clock, UI = 4.8 FO4, half-rate +19 %;
+    55 ps: −9 %)
 43. `muxtiming` · Half-rate 2:1 mux timing: clock duty cycle and data skew → output eye, DCD. After fig:ch9-mux. todo
 44. ★ `term` · Termination choices: series/parallel/double, mismatch slider → launched level and echoes.
     After fig:ch9-term. todo

@@ -18,6 +18,7 @@ CH = "chapters/"
 
 DEMOS = [
     (CH + "01-why-serial-links.html", "skew", "after:fig:ch1-parser"),
+    (CH + "01-why-serial-links.html", "fo4rule", "after:fig:ch1-speed"),
     (CH + "02-signals-systems-and-the-language-of-links.html", "nrzpsd", "after:fig:ch2-psd"),
     (CH + "02-signals-systems-and-the-language-of-links.html", "lfsr", "after:fig:ch2-prbs"),
     (CH + "02-signals-systems-and-the-language-of-links.html", "onepole", "after:fig:ch2-onepole"),
@@ -34,10 +35,12 @@ DEMOS = [
     (CH + "05-equalization-fundamentals.html", "whoowns", "after:fig:ch5-anatomy"),
     (CH + "06-transmit-ffe.html", "ffefreq", "after:fig:ch6-ffefreq"),
     (CH + "06-transmit-ffe.html", "ffe", "after:fig:ch6-ref"),
+    (CH + "07-continuous-time-linear-equalizer.html", "rlc", "after:fig:ch7-rlc"),
     (CH + "07-continuous-time-linear-equalizer.html", "ctleref", "after:fig:ch7-ref"),
     (CH + "08-decision-feedback-equalization-and-adaptation.html", "dfe", "after:fig:ch8-cancel"),
     (CH + "08-decision-feedback-equalization-and-adaptation.html", "sslms", "after:fig:ch8-sslms"),
     (CH + "11-jitter.html", "slope", "after:fig:ch11-slope"),
+    (CH + "09-the-transmitter.html", "fo4rule", "after:fig:ch9-fo4"),
     (CH + "09-the-transmitter.html", "cmlsst", "after:fig:ch9-current"),
     (CH + "10-receiver-front-end-and-samplers.html", "latch", "after:fig:ch10-meta"),
     (CH + "11-jitter.html", "dualdirac", "after:fig:ch11-hist"),

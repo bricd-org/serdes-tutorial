@@ -1,0 +1,39 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdFo4" role="group" aria-label="Interactive demo: the 8-FO4 clock rule and the serializer architecture">
+  <div class="bd-head"><span>// try it · how fast can CMOS clock?</span>
+    <span class="bd-seg" role="group" aria-label="FO4 presets"><button type="button" data-fo4="42" aria-pressed="true">FO4 42 ps (typical)</button><button type="button" data-fo4="55" aria-pressed="false">55 ps (slow)</button></span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>FO4 delay <b data-v="fo4"></b></span><input type="range" data-k="fo4" min="10" max="80" step="1" value="42" aria-label="FO4 delay in ps"></label>
+    <label class="bd-sl"><span>target bit rate <b data-v="fb"></b></span><input type="range" data-k="fb" min="1" max="25" step="0.5" value="5" aria-label="Target bit rate in Gb/s"></label>
+  </div>
+  <div class="bd-scope"><canvas data-c="b" aria-hidden="true"></canvas><span class="bd-tag">maximum bit rate with a clock period of at least 8 FO4</span></div>
+  <div class="bd-read" aria-live="polite"><span>max clock 1/(8·FO4) <b data-o="fc">–</b></span><span>UI at target <b data-o="ui">–</b></span><span>UI in FO4 <b data-o="n">–</b></span><span>half-rate margin <b data-o="m">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdFo4'); if (!root || !window.BD) return;
+  var S = BD.bind(root, { fo4: { fmt: function (x) { return x + ' ps'; } }, fb: { fmt: function (x) { return x + ' Gb/s'; } } }, function () { draw(); });
+  var q = function (s) { return root.querySelector(s); }, sl = q('[data-k="fo4"]');
+  BD.seg(root, 'fo4', function (v) { sl.value = v; sl.dispatchEvent(new Event('input')); });
+  function draw() {
+    var fo4 = S.fo4, fc = 1 / (8 * fo4 * 1e-12), arch = [['full rate', 1], ['half rate', 2], ['quarter rate', 4], ['eighth rate', 8]];
+    root.querySelectorAll('[data-fo4]').forEach(function (b) { b.setAttribute('aria-pressed', +b.getAttribute('data-fo4') === fo4 ? 'true' : 'false'); });
+    var top = Math.max(fc * 8 / 1e9, S.fb) * 1.15, d = BD.setup(q('[data-c="b"]')), g = d.g;
+    var f = BD.frame(d, { x: [0, 4], y: [0, top], xt: [], yt: [0, 0.25, 0.5, 0.75, 1].map(function (r) { return [r * top, (r * top).toFixed(r * top < 10 ? 1 : 0) + (r === 1 ? ' Gb/s' : '')]; }), pad: { l: 56, t: 24, b: 30 } });
+    arch.forEach(function (a, i) { var fb = a[1] * fc / 1e9, x0 = f.X(i + 0.2), x1 = f.X(i + 0.8), ok = fb >= S.fb;
+      g.fillStyle = ok ? (a[1] >= 4 ? 'rgba(127,208,184,.55)' : 'rgba(127,224,160,.8)') : 'rgba(240,138,106,.75)'; g.fillRect(x0, f.Y(fb), x1 - x0, f.Y(0) - f.Y(fb));
+      g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText(fb.toFixed(2), (x0 + x1) / 2, f.Y(fb) - 5); g.fillStyle = BD.C.axis; g.fillText(a[0], (x0 + x1) / 2, d.h - 10); });
+    g.textAlign = 'left'; BD.hline(f, S.fb, BD.C.gold, [5, 4], 'target ' + S.fb + ' Gb/s');
+    var half = 2 * fc / 1e9, ui = 1000 / S.fb;
+    q('[data-o="fc"]').textContent = (fc / 1e9).toFixed(2) + ' GHz';
+    q('[data-o="ui"]').textContent = ui.toFixed(0) + ' ps';
+    q('[data-o="n"]').textContent = (ui / fo4).toFixed(1) + ' FO4';
+    var m = q('[data-o="m"]'); m.textContent = ((half / S.fb - 1) * 100).toFixed(0) + ' %'; m.className = half / S.fb > 1.2 ? 'ok' : 'bad';
+    q('[data-o="cap"]').innerHTML = 'A clock tree cannot be distributed reliably much faster than one period per 8 FO4 delays. A half-rate stage uses both clock edges, so it sends two bits per period, and so on. ' +
+      (half < S.fb ? '<b style="color:#f39a7c">Half-rate CMOS cannot reach the target here.</b> ' : half < 1.2 * S.fb ? 'Half-rate CMOS reaches the target with almost no margin, and fails at the slow corner. ' : 'Half-rate CMOS has margin at this FO4. ') +
+      'Quarter and eighth rate pass on paper but need multi-phase clocks and high fan-in output muxes, so Open-SERDES does the last 4:2 and 2:1 in HBT CML instead.';
+  }
+  BD.observe(root, draw);
+})();
+</script>
