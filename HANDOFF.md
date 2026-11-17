@@ -168,7 +168,8 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 50. ★ `meta` · Metastability: regeneration time and stage count → P(error) (4.2e−5 at 140 ps; HBT 110 ps → 1e−12).
     After fig:ch10-meta. **done as `latch`** (4.2e−5; 8.7e−14 with two extra stages; HBT CML 4.2e−16)
 51. `offsetcal` · Offset calibration: Monte Carlo σ = 4.9 mV, DAC bits/range → trimmed spread, yield of
-    4-sampler receivers (24 % untrimmed). After fig:ch10-offset. todo
+    4-sampler receivers (24 % untrimmed). After fig:ch10-offset. **done** (spec ±5.1 mV: 70 % / 24 % raw, ~100 %
+    trimmed; LSB 2·3σ/32 = 0.92 mV as in Fig 10.9)
 52. `calloop` · Calibration loop animation: counter steps the DAC until toggling (LSB 0.91 mV). After fig:ch10-cal. todo
 53. `sens` · Sampler sensitivity budget (Ex 10.3): noise, offset, hysteresis → minimum input. End of sec:ch10-noise. todo
 
@@ -277,7 +278,7 @@ noise, jitter) → stat eye and margin, the whole book on one panel. todo
 
 ### Next steps
 
-State at the end of 17 Nov (second window): 41 placements; was 32 (31 includes incl. `labmap`), every chapter 1–16 covered, all merged
+State at the end of 17 Nov (second window): 42 placements; was 32 (31 includes incl. `labmap`), every chapter 1–16 covered, all merged
 into `main` (deployed). Each `done` entry above lists the book numbers it reproduces.
 
 1. Remaining ★ demos: `stateye` (Ch 4, needs a jitter-aware statistical eye in SL), `ctlebode` (Ch 7 degenerated

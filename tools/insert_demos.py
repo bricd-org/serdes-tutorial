@@ -44,6 +44,7 @@ DEMOS = [
     (CH + "09-the-transmitter.html", "fo4rule", "after:fig:ch9-fo4"),
     (CH + "09-the-transmitter.html", "cmlsst", "after:fig:ch9-current"),
     (CH + "10-receiver-front-end-and-samplers.html", "latch", "after:fig:ch10-meta"),
+    (CH + "10-receiver-front-end-and-samplers.html", "offsetcal", "after:fig:ch10-offset"),
     (CH + "11-jitter.html", "dualdirac", "after:fig:ch11-hist"),
     (CH + "11-jitter.html", "bathtub", "after:fig:ch11-bathtub"),
     (CH + "11-jitter.html", "pllnoise", "after:fig:ch11-pn"),
