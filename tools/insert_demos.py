@@ -32,8 +32,11 @@ DEMOS = [
     (CH + "08-decision-feedback-equalization-and-adaptation.html", "dfe", "after:fig:ch8-cancel"),
     (CH + "08-decision-feedback-equalization-and-adaptation.html", "sslms", "after:fig:ch8-sslms"),
     (CH + "11-jitter.html", "slope", "after:fig:ch11-slope"),
+    (CH + "10-receiver-front-end-and-samplers.html", "latch", "after:fig:ch10-meta"),
     (CH + "11-jitter.html", "dualdirac", "after:fig:ch11-hist"),
     (CH + "11-jitter.html", "bathtub", "after:fig:ch11-bathtub"),
+    (CH + "12-clock-generation-the-phase-locked-loop.html", "pllloop", "after:fig:ch12-loop"),
+    (CH + "12-clock-generation-the-phase-locked-loop.html", "pllnoise", "after:fig:ch12-noise"),
     (CH + "13-clock-and-data-recovery.html", "bbgain", "after:fig:ch13-bbchar"),
     (CH + "13-clock-and-data-recovery.html", "pi", "after:fig:ch13-pi"),
 ]

@@ -1,0 +1,66 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdPllNoise" role="group" aria-label="Interactive demo: PLL bandwidth trades reference noise against VCO noise">
+  <div class="bd-head"><span>// try it · the optimum PLL bandwidth</span>
+    <span class="bd-seg" role="group" aria-label="Bandwidth presets"><button type="button" data-fu="1" aria-pressed="false">f<sub>u</sub> 1 MHz</button><button type="button" data-fu="3" aria-pressed="true">3 MHz</button><button type="button" data-fu="6" aria-pressed="false">6 MHz</button></span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>loop bandwidth f<sub>u</sub> (60° margin) <b data-v="fu"></b></span><input type="range" data-k="fu" min="0" max="100" step="0.01" value="65.66" aria-label="Loop bandwidth"></label>
+    <label class="bd-sl"><span>free-running VCO at 1 MHz <b data-v="vco"></b></span><input type="range" data-k="vco" min="-125" max="-90" step="0.1" value="-100.8" aria-label="VCO phase noise at 1 MHz"></label>
+    <label class="bd-sl"><span>in-band floor (ref, PFD, CP) <b data-v="fl"></b></span><input type="range" data-k="fl" min="-125" max="-100" step="0.5" value="-110" aria-label="In-band phase noise floor"></label>
+    <label class="bd-sl"><span>integrate from <b data-v="f1"></b></span><input type="range" data-k="f1" min="3" max="7" step="0.05" value="4" aria-label="Lower integration limit"></label>
+  </div>
+  <div class="bd-row">
+    <div class="bd-scope"><canvas data-c="p" aria-hidden="true"></canvas><span class="bd-tag">phase noise, dBc/Hz: VCO alone (red), floor (gold), PLL output (blue)</span></div>
+    <div class="bd-scope"><canvas data-c="j" aria-hidden="true"></canvas><span class="bd-tag">rms jitter against f<sub>u</sub></span></div>
+  </div>
+  <div class="bd-read" aria-live="polite"><span>total jitter <b data-o="t">–</b></span><span>from the VCO <b data-o="v">–</b></span><span>from the in-band floor <b data-o="f">–</b></span><span>optimum f<sub>u</sub> <b data-o="o">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdPllNoise'); if (!root || !window.BD) return;
+  var F0 = 2.5e9, FMAX = 1.25e9, KC1 = 13.93;          // 60° margin: f_z = f_u/√13.93, f_p3 = f_u·√13.93 (Equation 12.2)
+  var fuMap = function (v) { return 0.3e6 * Math.pow(10e6 / 0.3e6, v / 100); }, fuInv = function (f) { return 100 * Math.log(f / 0.3e6) / Math.log(10e6 / 0.3e6); };
+  var S = BD.bind(root, { fu: { map: fuMap, fmt: function (x) { return (x / 1e6).toFixed(2) + ' MHz'; } }, vco: { fmt: function (x) { return x.toFixed(1) + ' dBc/Hz'; } },
+    fl: { fmt: function (x) { return x.toFixed(1) + ' dBc/Hz'; } }, f1: { map: function (v) { return Math.pow(10, v); }, fmt: function (x) { return BD.eng(x) + 'Hz'; } } }, function () { draw(); });
+  var q = function (s) { return root.querySelector(s); }, sl = q('[data-k="fu"]');
+  BD.seg(root, 'fu', function (v) { sl.value = fuInv(parseFloat(v) * 1e6); sl.dispatchEvent(new Event('input')); });
+  function H(f, fu) {                                   // closed loop H = G/(1+G), |G(fu)| = 1; returns [|H|², |1-H|²]
+    var a = Math.sqrt(KC1), x = f / fu, K = Math.hypot(1, a) / Math.hypot(1, 1 / a);   // G = (1 + j x a) / (-(x²)(1 + j x/a)) / K
+    var nr = 1, ni = x * a, dr = -x * x, di = -x * x * x / a; dr *= K; di *= K;
+    var gd = dr * dr + di * di, gr = (nr * dr + ni * di) / gd, gi = (ni * dr - nr * di) / gd;
+    var hr = 1 + gr, hi = gi, hd = hr * hr + hi * hi, h2 = (gr * gr + gi * gi) / hd, e2 = 1 / hd;
+    return [h2, e2];
+  }
+  function jitter(fu, vco, fl, f1) {                   // integrate L(f) from f1 to 1.25 GHz on a log grid
+    var Lv = Math.pow(10, vco / 10), Lf = Math.pow(10, fl / 10), sv = 0, sf = 0, n = 400, r = Math.pow(FMAX / f1, 1 / n);
+    for (var i = 0; i < n; i++) { var fa = f1 * Math.pow(r, i), fb = fa * r, fm = Math.sqrt(fa * fb), h = H(fm, fu), df = fb - fa;
+      sv += Lv * Math.pow(1e6 / fm, 2) * h[1] * df; sf += Lf * h[0] * df; }
+    var k = 1 / (2 * Math.PI * F0); return { v: Math.sqrt(2 * sv) * k, f: Math.sqrt(2 * sf) * k, t: Math.sqrt(2 * (sv + sf)) * k };
+  }
+  var ps = function (s) { return (s * 1e12).toFixed(2) + ' ps'; };
+  function draw() {
+    var fu = S.fu, J = jitter(fu, S.vco, S.fl, S.f1);
+    root.querySelectorAll('[data-fu]').forEach(function (b) { b.setAttribute('aria-pressed', Math.abs(parseFloat(b.getAttribute('data-fu')) * 1e6 - fu) / fu < 0.01 ? 'true' : 'false'); });
+    var d = BD.setup(q('[data-c="p"]')), f = BD.frame(d, { x: [1e3, 1e9], y: [-160, -60], xlog: true, xt: [[1e3, '1k'], [1e4, '10k'], [1e5, '100k'], [1e6, '1M'], [1e7, '10M'], [1e8, '100M'], [1e9, '1 GHz']],
+      yt: [[-160, '−160'], [-140, '−140'], [-120, '−120'], [-100, '−100'], [-80, '−80'], [-60, '−60']], pad: { l: 44, t: 24 } });
+    var xs = [], lv = [], lf = [], lo = [];
+    for (var i = 0; i <= 300; i++) { var fr = 1e3 * Math.pow(1e6, i / 300), h = H(fr, fu), v = S.vco + 20 * Math.log10(1e6 / fr);
+      xs.push(fr); lv.push(v); lf.push(S.fl); lo.push(10 * Math.log10(Math.pow(10, v / 10) * h[1] + Math.pow(10, S.fl / 10) * h[0])); }
+    d.g.fillStyle = 'rgba(224,184,90,.08)'; d.g.fillRect(f.X(S.f1), f.p.t, f.X(1e9) - f.X(S.f1), d.h - f.p.t - f.p.b);
+    BD.line(f, xs, lv, 'rgba(240,138,106,.75)', 1.4, [4, 3]); BD.line(f, xs, lf, 'rgba(224,184,90,.75)', 1.4, [4, 3]); BD.line(f, xs, lo, BD.C.blue, 2.2);
+    BD.vline(f, fu, 'rgba(127,224,160,.5)', [2, 3], 'f_u');
+    // jitter vs fu
+    var dj = BD.setup(q('[data-c="j"]')), fx = [], fy = [], best = 1, bfu = 0;
+    for (i = 0; i <= 40; i++) { var u = 0.3e6 * Math.pow(10e6 / 0.3e6, i / 40), jj = jitter(u, S.vco, S.fl, S.f1).t; fx.push(u); fy.push(jj * 1e12); if (jj < best) { best = jj; bfu = u; } }
+    var top = Math.max(2.2, Math.max.apply(null, fy) * 1.05);
+    var fj = BD.frame(dj, { x: [0.3e6, 10e6], y: [0, top], xlog: true, xt: [[0.3e6, '0.3'], [1e6, '1'], [3e6, '3'], [10e6, '10 MHz']], yt: [[0, '0'], [1, '1'], [2, '2 ps']], pad: { l: 40, t: 24 } });
+    BD.line(fj, fx, fy, BD.C.teal, 2); BD.dot(fj, fu, J.t * 1e12, BD.C.gold, 5); BD.dot(fj, bfu, best * 1e12, 'rgba(127,224,160,.9)', 3);
+    q('[data-o="t"]').textContent = ps(J.t); q('[data-o="v"]').textContent = ps(J.v); q('[data-o="f"]').textContent = ps(J.f);
+    q('[data-o="o"]').textContent = (bfu / 1e6).toFixed(1) + ' MHz (' + ps(best) + ')';
+    q('[data-o="cap"]').innerHTML = 'Inside the loop bandwidth the output follows the in-band floor (reference, PFD and charge pump, low-pass filtered); outside it, the free-running VCO (high-pass filtered). ' +
+      (J.v > 1.3 * J.f ? 'Here the VCO dominates: widen the loop.' : J.f > 1.3 * J.v ? 'Here the in-band floor dominates: narrow the loop.' : 'The two are about equal, which is close to the optimum.') +
+      ' The minimum is shallow, so f<sub>u</sub> can be traded for capacitor area or settling time.';
+  }
+  BD.observe(root, draw);
+})();
+</script>

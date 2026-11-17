@@ -1,0 +1,90 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdPllLoop" role="group" aria-label="Interactive demo: charge-pump PLL loop filter designer">
+  <div class="bd-head"><span>// try it · PLL loop designer</span>
+    <span class="bd-seg" role="group" aria-label="Designs"><button type="button" data-d="200,11.3,52.6,4.07" aria-pressed="true">Ex 12.1 · 1 MHz</button><button type="button" data-d="600,11.3,17.5,1.36" aria-pressed="false">Ex 12.2 · 3 MHz</button></span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>charge pump I<sub>CP</sub> <b data-v="icp"></b></span><input type="range" data-k="icp" min="20" max="1000" step="10" value="200" aria-label="Charge-pump current in microamps"></label>
+    <label class="bd-sl"><span>loop resistor R <b data-v="r"></b></span><input type="range" data-k="r" min="0" max="100" step="0.01" value="50" aria-label="Loop filter resistor"></label>
+    <label class="bd-sl"><span>C<sub>1</sub> <b data-v="c1"></b></span><input type="range" data-k="c1" min="0" max="100" step="0.01" value="50" aria-label="Loop filter C1"></label>
+    <label class="bd-sl"><span>C<sub>2</sub> <b data-v="c2"></b></span><input type="range" data-k="c2" min="0" max="100" step="0.01" value="50" aria-label="Loop filter C2"></label>
+  </div>
+  <div class="bd-row">
+    <div class="bd-scope"><canvas data-c="b" aria-hidden="true"></canvas><span class="bd-tag">open loop: |G| (blue, dB) and phase (gold)</span></div>
+    <div class="bd-scope"><canvas data-c="h" aria-hidden="true"></canvas><span class="bd-tag">closed loop |H|/N, dB</span></div>
+  </div>
+  <div class="bd-scope short"><canvas data-c="s" aria-hidden="true"></canvas><span class="bd-tag">output phase after a reference phase step</span></div>
+  <div class="bd-read" aria-live="polite"><span>f<sub>u</sub> <b data-o="fu">–</b></span><span>phase margin <b data-o="pm">–</b></span><span>f<sub>−3dB</sub> <b data-o="bw">–</b></span><span>peaking <b data-o="pk">–</b></span><span>f<sub>n</sub>, ζ (Eq 12.1) <b data-o="fz">–</b></span><span>overshoot <b data-o="os">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdPllLoop'); if (!root || !window.BD) return;
+  var N = 50, KV = 2 * Math.PI * 150e6, LG = function (lo, hi) { return { map: function (v) { return lo * Math.pow(hi / lo, v / 100); }, inv: function (x) { return 100 * Math.log(x / lo) / Math.log(hi / lo); } }; };
+  var mR = LG(1e3, 100e3), m1 = LG(2e-12, 500e-12), m2 = LG(0.1e-12, 50e-12);
+  var S = BD.bind(root, {
+    icp: { map: function (v) { return v * 1e-6; }, fmt: function (x) { return (x * 1e6).toFixed(0) + ' µA'; } },
+    r: { map: mR.map, fmt: function (x) { return (x / 1e3).toFixed(1) + ' kΩ'; } },
+    c1: { map: m1.map, fmt: function (x) { return (x * 1e12).toFixed(1) + ' pF'; } },
+    c2: { map: m2.map, fmt: function (x) { return (x * 1e12).toFixed(2) + ' pF'; } }
+  }, function () { draw(); });
+  var q = function (s) { return root.querySelector(s); };
+  function setD(v) { var t = v.split(',').map(Number); q('[data-k="icp"]').value = t[0]; q('[data-k="r"]').value = mR.inv(t[1] * 1e3); q('[data-k="c1"]').value = m1.inv(t[2] * 1e-12); q('[data-k="c2"]').value = m2.inv(t[3] * 1e-12);
+    ['icp', 'r', 'c1', 'c2'].forEach(function (k) { q('[data-k="' + k + '"]').dispatchEvent(new Event('input')); }); }
+  root.querySelectorAll('[data-d]').forEach(function (b) { b.addEventListener('click', function () { setD(b.getAttribute('data-d')); }); });
+  function G(f) {                                  // open-loop gain (ICP/2π) Z(s) KV/(N s), returns [re, im]
+    var w = 2 * Math.PI * f, R = S.r, C1 = S.c1, C2 = S.c2, Ct = C1 + C2;
+    // Z = (1 + jwRC1) / (jw Ct (1 + jw R C1 C2/Ct))
+    var nr = 1, ni = w * R * C1, dr = -w * w * Ct * R * C1 * C2 / Ct, di = w * Ct;
+    var k = S.icp / (2 * Math.PI) * KV / N, fr = -1 / w, fi = 0;   // 1/(jw) = -j/w
+    var zr = (nr * dr + ni * di) / (dr * dr + di * di), zi = (ni * dr - nr * di) / (dr * dr + di * di);
+    return [k * (zi / w), k * (-zr / w)];        // k Z (-j/w)
+  }
+  function draw() {
+    root.querySelectorAll('[data-d]').forEach(function (b) { var t = b.getAttribute('data-d').split(',').map(Number);
+      b.setAttribute('aria-pressed', Math.abs(S.icp * 1e6 - t[0]) < 1 && Math.abs(S.r / 1e3 - t[1]) / t[1] < 0.01 && Math.abs(S.c1 * 1e12 - t[2]) / t[2] < 0.01 && Math.abs(S.c2 * 1e12 - t[3]) / t[3] < 0.01 ? 'true' : 'false'); });
+    var fs = [], mag = [], ph = [], hm = [], fu = null, pm = null, bw = null, pkv = -1e9, prev = null;
+    for (var i = 0; i <= 400; i++) {
+      var f = 1e4 * Math.pow(1e4, i / 400), g = G(f), m = Math.hypot(g[0], g[1]), p = Math.atan2(g[1], g[0]) * 180 / Math.PI;
+      if (p > 0) p -= 360;
+      var hr = 1 + g[0], hi = g[1], h = m / Math.hypot(hr, hi);
+      fs.push(f / 1e6); mag.push(20 * Math.log10(m)); ph.push(p); hm.push(20 * Math.log10(h)); pkv = Math.max(pkv, 20 * Math.log10(h));
+      if (fu === null && m < 1 && i > 0) { var r1 = Math.log(prev.m) / (Math.log(prev.m) - Math.log(m)); fu = prev.f * Math.pow(f / prev.f, r1); pm = 180 + prev.p + (p - prev.p) * r1; }
+      if (bw === null && 20 * Math.log10(h) < -3 && i > 0) { var hd = 20 * Math.log10(h), r2 = (prev.h + 3) / (prev.h - hd); bw = prev.f * Math.pow(f / prev.f, r2); }
+      prev = { f: f, m: m, p: p, h: 20 * Math.log10(h) };
+    }
+    var d = BD.setup(q('[data-c="b"]')), f1 = BD.frame(d, { x: [0.01, 100], y: [-60, 80], xlog: true, xt: [[0.01, '10k'], [0.1, '100k'], [1, '1M'], [10, '10M'], [100, '100 MHz']],
+      yt: [[-40, '−40'], [0, '0 dB'], [40, '40'], [80, '80']], pad: { l: 40, t: 24, r: 38 } });
+    BD.hline(f1, 0, 'rgba(255,255,255,.3)', [2, 3]); BD.line(f1, fs, mag, BD.C.blue, 2);
+    var phY = function (v) { return -60 + 140 * (v + 180) / 90; };    // −180…−90° mapped on the right
+    BD.line(f1, fs, ph.map(phY), BD.C.gold, 1.6);
+    var g1 = d.g; g1.fillStyle = BD.C.gold; g1.textAlign = 'left'; [[-180, '−180°'], [-135, '−135°'], [-90, '−90°']].forEach(function (t) { g1.fillText(t[1], d.w - 36, f1.Y(phY(t[0])) + 3); });
+    if (fu) { BD.vline(f1, fu / 1e6, 'rgba(127,224,160,.6)', [3, 3]); BD.dot(f1, fu / 1e6, phY(pm - 180), BD.C.green, 4); }
+    var dh = BD.setup(q('[data-c="h"]')), f2 = BD.frame(dh, { x: [0.01, 100], y: [-30, 6], xlog: true, xt: [[0.01, '10k'], [0.1, '100k'], [1, '1M'], [10, '10M'], [100, '100 MHz']],
+      yt: [[-30, '−30'], [-20, '−20'], [-10, '−10'], [-3, '−3'], [0, '0 dB']], pad: { l: 40, t: 24 } });
+    BD.hline(f2, 0, 'rgba(255,255,255,.3)', [2, 3]); BD.line(f2, fs, hm, BD.C.teal, 2); if (bw) BD.vline(f2, bw / 1e6, 'rgba(127,208,184,.6)', [3, 3]);
+    // step response: CP average current, C2 || (R + C1), VCO integrates
+    var R = S.r, C1 = S.c1, C2 = S.c2, Icp = S.icp, dt = Math.min(0.5e-9, R * C2 / 20), T = 6 / (fu || 1e6), n = Math.ceil(T / dt), stride = Math.max(1, Math.floor(n / 600));
+    var vc = 0, vx = 0, po = 0, ts = [], ys = [], mx = 0;
+    for (var k = 0; k < n; k++) {
+      var e = 1 - po / N, ic = Icp / (2 * Math.PI) * e, ir = (vc - vx) / R;
+      vc += dt * (ic - ir) / C2; vx += dt * ir / C1; po += dt * KV * vc;
+      if (k % stride === 0) { ts.push(k * dt * 1e6); ys.push(po / N); } mx = Math.max(mx, po / N);
+    }
+    var ds = BD.setup(q('[data-c="s"]')), f3 = BD.frame(ds, { x: [0, T * 1e6], y: [0, Math.max(1.5, mx * 1.08)], xt: [0, 0.25, 0.5, 0.75, 1].map(function (r) { return [r * T * 1e6, (r * T * 1e6).toFixed(1) + (r === 1 ? ' µs' : '')]; }),
+      yt: [[0, '0'], [1, '1']], pad: { l: 40, t: 20, b: 22 } });
+    BD.hline(f3, 1, 'rgba(255,255,255,.35)', [3, 3]); BD.line(f3, ts, ys, BD.C.blue, 2);
+    var wn = Math.sqrt(Icp * KV / (2 * Math.PI * N * C1)), zeta = R / 2 * Math.sqrt(Icp * KV * C1 / (2 * Math.PI * N));
+    q('[data-o="fu"]').textContent = fu ? (fu / 1e6).toFixed(2) + ' MHz' : '–';
+    var pe = q('[data-o="pm"]'); pe.textContent = pm !== null ? pm.toFixed(1) + '°' : '–'; pe.className = pm > 45 ? 'ok' : 'bad';
+    q('[data-o="bw"]').textContent = bw ? (bw / 1e6).toFixed(2) + ' MHz' : '–';
+    q('[data-o="pk"]').textContent = pkv.toFixed(1) + ' dB';
+    q('[data-o="fz"]').textContent = (wn / 2 / Math.PI / 1e3).toFixed(0) + ' kHz, ' + zeta.toFixed(2);
+    q('[data-o="os"]').textContent = (100 * (mx - 1)).toFixed(0) + ' %';
+    q('[data-o="cap"]').innerHTML = 'The loop is type II: two integrators (the loop filter capacitor and the VCO) give −40 dB/decade, the zero at 1/(2πRC<sub>1</sub>) lifts the phase back towards −90°, and C<sub>2</sub> adds a pole that smooths the control-voltage ripple. ' +
+      (pm < 45 ? '<b style="color:#f39a7c">The phase margin is low:</b> the closed loop peaks and the step response rings. Move the zero down (more R or C<sub>1</sub>) or the C<sub>2</sub> pole up.'
+       : 'The phase peaks midway between the zero and the C<sub>2</sub> pole; putting f<sub>u</sub> there gives the best margin. More I<sub>CP</sub> raises f<sub>u</sub>; R sets the damping.');
+  }
+  setD('200,11.3,52.6,4.07');
+  BD.observe(root, draw);
+})();
+</script>

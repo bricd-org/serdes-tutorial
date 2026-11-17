@@ -150,6 +150,8 @@ permalink: "/chapters/10-receiver-front-end-and-samplers/"
 <img src="{% endraw %}{{ '/assets/figs/ch10_meta.svg' | relative_url }}{% raw %}" style="width:753px" alt="Metastability falls exponentially with regeneration time, and every extra latch stage adds its own exponent." loading="lazy" />
 <figcaption><span class="capnum">Figure 10.7.</span> <strong>Metastability falls exponentially with regeneration time, and every extra latch stage adds its own exponent.</strong> <a href="#eq:ch10-meta">Equation (10.3)</a> with <span class="math inline">\(\Delta V=0.2\)</span> V and <span class="math inline">\(A=3\)</span>. A lone StrongARM leaves <span class="math inline">\(4.2\times10^{-5}\)</span> at the 140 ps of <a href="#we:ch10-meta">Worked Example 10.1</a>; two extra CMOS latches bring it below <span class="math inline">\(10^{-12}\)</span>. The HBT CML latch crosses <span class="math inline">\(10^{-12}\)</span> after about 110 ps.</figcaption>
 </figure>
+<!-- demo:latch -->{% endraw %}{% include demos/latch.html %}{% raw %}<!-- /demo -->
+
 <div class="tbox tbox-insight">
 <div class="tbox-title">
 <p>Edge samplers need extra stages</p>
