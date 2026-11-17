@@ -1,0 +1,46 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdOffsetCal" role="group" aria-label="Interactive demo: sampler offset spread and a trim DAC">
+  <div class="bd-head"><span>// try it · offset calibration</span><span>Monte Carlo of 20 000 samplers, σ = 4.9 mV</span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>trim DAC bits <b data-v="b"></b></span><input type="range" data-k="b" min="2" max="7" step="1" value="5" aria-label="DAC bits"></label>
+    <label class="bd-sl"><span>DAC range ±kσ <b data-v="k"></b></span><input type="range" data-k="k" min="1" max="5" step="0.1" value="3" aria-label="DAC range in sigma"></label>
+    <label class="bd-sl"><span>offset spec ± <b data-v="spec"></b></span><input type="range" data-k="spec" min="0.5" max="10" step="0.1" value="5.1" aria-label="Offset specification in mV"></label>
+  </div>
+  <div class="bd-scope tall"><canvas data-c="h" aria-hidden="true"></canvas><span class="bd-tag">offset distribution: untrimmed (faint), after trimming (gold), log scale</span></div>
+  <div class="bd-read" aria-live="polite"><span>LSB <b data-o="lsb">–</b></span><span>single samplers in spec: raw <b data-o="y1">–</b></span><span>trimmed <b data-o="y1t">–</b></span><span>4-sampler receivers: raw <b data-o="y4">–</b></span><span>trimmed <b data-o="y4t">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdOffsetCal'); if (!root || !window.BD) return;
+  var SIG = 4.9, N = 20000, rnd = BD.rng(4242), off = [];
+  for (var i = 0; i < N; i++) { var u = 1 - rnd(), v = rnd(); off.push(SIG * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v)); }
+  var S = BD.bind(root, { b: { fmt: function (x) { return x + ' bits'; } }, k: { fmt: function (x) { return '±' + x.toFixed(1) + 'σ = ±' + (x * SIG).toFixed(1) + ' mV'; } },
+    spec: { fmt: function (x) { return x.toFixed(1) + ' mV'; } } }, function () { draw(); });
+  var q = function (s) { return root.querySelector(s); };
+  function draw() {
+    var L = Math.pow(2, S.b), R = S.k * SIG, lsb = 2 * R / L, spec = S.spec, res = [], in1 = 0, in1t = 0, in4 = 0, in4t = 0;
+    off.forEach(function (x) { var code = Math.max(0, Math.min(L - 1, Math.floor((x + R) / lsb))), r = x - (-R + (code + 0.5) * lsb); res.push(r);
+      if (Math.abs(x) <= spec) in1++; if (Math.abs(r) <= spec) in1t++; });
+    for (i = 0; i + 3 < N; i += 4) { var a = 1, b = 1; for (var j = 0; j < 4; j++) { if (Math.abs(off[i + j]) > spec) a = 0; if (Math.abs(res[i + j]) > spec) b = 0; } in4 += a; in4t += b; }
+    var d = BD.setup(q('[data-c="h"]')), f = BD.frame(d, { x: [-20, 20], y: [1e-4, 1], ylog: true, xt: [[-20, '−20'], [-10, '−10'], [0, '0'], [10, '10'], [20, '20 mV']],
+      yt: [[1, '1'], [1e-2, '1 %'], [1e-4, '0.01 %']], pad: { l: 50, t: 24 } });
+    var g = d.g; g.fillStyle = 'rgba(127,224,160,.08)'; g.fillRect(f.X(-spec), f.p.t, f.X(spec) - f.X(-spec), d.h - f.p.t - f.p.b);
+    function hist(arr, bw) { var nb = Math.round(40 / bw), h = new Array(nb).fill(0); arr.forEach(function (x) { var k = Math.floor((x + 20) / bw); if (k >= 0 && k < nb) h[k]++; });
+      return h.map(function (c) { return c / arr.length; }); }
+    var bw = 0.5, h0 = hist(off, bw), h1 = hist(res, Math.min(bw, lsb / 2));
+    g.fillStyle = 'rgba(170,205,240,.35)'; h0.forEach(function (c, k) { if (c > 0) { var x0 = f.X(-20 + k * bw), x1 = f.X(-20 + (k + 1) * bw); g.fillRect(x0, f.Y(c), x1 - x0 - 0.5, f.Y(1e-4) - f.Y(c)); } });
+    var bw1 = Math.min(bw, lsb / 2); g.fillStyle = 'rgba(224,184,90,.85)'; h1.forEach(function (c, k) { if (c > 0) { var x0 = f.X(-20 + k * bw1), x1 = f.X(-20 + (k + 1) * bw1); g.fillRect(x0, f.Y(c), Math.max(1, x1 - x0 - 0.5), f.Y(1e-4) - f.Y(c)); } });
+    [-R, R].forEach(function (x) { BD.vline(f, x, 'rgba(240,138,106,.6)', [3, 3]); });
+    var pct = function (x) { return (100 * x).toFixed(x > 0.999 ? 2 : 0) + ' %'; };
+    q('[data-o="lsb"]').textContent = lsb.toFixed(2) + ' mV';
+    q('[data-o="y1"]').textContent = pct(in1 / N); q('[data-o="y1t"]').textContent = pct(in1t / N);
+    var y4 = q('[data-o="y4"]'); y4.textContent = pct(in4 / (N / 4)); y4.className = in4 / (N / 4) > 0.99 ? 'ok' : 'bad';
+    var y4t = q('[data-o="y4t"]'); y4t.textContent = pct(in4t / (N / 4)); y4t.className = in4t / (N / 4) > 0.99 ? 'ok' : 'bad';
+    q('[data-o="cap"]').innerHTML = 'Mismatch spreads the sampler offsets over tens of millivolts, and a receiver needs all four of its samplers in spec at once, so its yield is the single-sampler yield to the fourth power. ' +
+      'A trim DAC that spans ±' + S.k.toFixed(1) + 'σ in ' + L + ' steps leaves at most ±LSB/2 = ±' + (lsb / 2).toFixed(2) + ' mV, except for samplers beyond its range (outside the red lines). ' +
+      (S.k < 2.5 ? 'This range is too small: the tails stay out of spec.' : S.b < 4 ? 'Too few bits: the residual is limited by the coarse LSB.' : 'Five bits over ±3σ (0.91 mV LSB) pull every sampler inside half a millivolt.');
+  }
+  BD.observe(root, draw);
+})();
+</script>
