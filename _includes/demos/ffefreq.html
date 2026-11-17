@@ -1,0 +1,49 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdFfeFreq" role="group" aria-label="Interactive demo: de-emphasis levels and the frequency response of a 2-tap FFE">
+  <div class="bd-head"><span>// try it · de-emphasis</span>
+    <span class="bd-seg" role="group" aria-label="De-emphasis presets"><button type="button" data-de="0" aria-pressed="false">0 dB</button><button type="button" data-de="3.5" aria-pressed="false">−3.5 dB</button><button type="button" data-de="6" aria-pressed="true">−6 dB</button><button type="button" data-de="9.5" aria-pressed="false">−9.5 dB</button></span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>de-emphasis <b data-v="de"></b></span><input type="range" data-k="de" min="0" max="12" step="0.1" value="6" aria-label="De-emphasis in dB"></label>
+  </div>
+  <div class="bd-row">
+    <div class="bd-scope"><canvas data-c="w" aria-hidden="true"></canvas><span class="bd-tag">TX output, ±A = ±500 mV peak</span></div>
+    <div class="bd-scope"><canvas data-c="f" aria-hidden="true"></canvas><span class="bd-tag">FFE (gold), REF (faint), REF × FFE (blue), dB</span></div>
+  </div>
+  <div class="bd-read" aria-live="polite"><span>taps c<sub>0</sub>, c<sub>1</sub> <b data-o="c">–</b></span><span>transition level <b data-o="tr">–</b></span><span>repeated-bit level <b data-o="rp">–</b></span><span>REF × FFE at f<sub>N</sub> <b data-o="n">–</b></span><span>at DC <b data-o="dc">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdFfeFreq'); if (!root || !window.BD || !window.SL) return;
+  var A = 0.5, bits = [1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 1, 0, 0], H = SL.channel();
+  var S = BD.bind(root, { de: { fmt: function (x) { return (x > 0 ? '−' : '') + x.toFixed(1) + ' dB'; } } }, function () { draw(); });
+  var q = function (s) { return root.querySelector(s); }, sl = q('[data-k="de"]');
+  BD.seg(root, 'de', function (v) { sl.value = v; sl.dispatchEvent(new Event('input')); });
+  var mv = function (v) { return (v < 0 ? '−' : '') + Math.abs(v * 1e3).toFixed(0) + ' mV'; };
+  function draw() {
+    var r = Math.pow(10, -S.de / 20), c1 = (r - 1) / 2, c0 = 1 + c1;          // c0 − c1 = 1, (c0 + c1)/(c0 − c1) = 10^(−DE/20)
+    root.querySelectorAll('[data-de]').forEach(function (b) { b.setAttribute('aria-pressed', Math.abs(parseFloat(b.getAttribute('data-de')) - S.de) < 0.05 ? 'true' : 'false'); });
+    var d = BD.setup(q('[data-c="w"]')), f = BD.frame(d, { x: [0, bits.length], y: [-0.6, 0.6], xt: [[0, '0'], [8, '8'], [16, '16'], [24, '24 UI']], yt: [[-0.5, '−500'], [0, '0'], [0.5, '500 mV']], pad: { l: 50, t: 22 } });
+    var xs = [], ys = [];
+    bits.forEach(function (b, n) { var a = 2 * b - 1, ap = n > 0 ? 2 * bits[n - 1] - 1 : a, v = A * (c0 * a + c1 * ap); xs.push(n, n + 1); ys.push(v, v); });
+    BD.line(f, xs, ys.map(function (v, i) { return A * (2 * bits[Math.floor(i / 2)] - 1); }), 'rgba(170,205,240,.3)', 1.2, [4, 3]);
+    BD.line(f, xs, ys, BD.C.gold, 2);
+    BD.hline(f, A * (c0 - c1), 'rgba(127,224,160,.4)', [2, 3]); BD.hline(f, A * (c0 + c1), 'rgba(240,138,106,.5)', [2, 3]);
+    var df = BD.setup(q('[data-c="f"]')), ff = BD.frame(df, { x: [0, 10], y: [-35, 5], xt: [[0, '0'], [2.5, 'f_N'], [5, 'f_b'], [7.5, '7.5'], [10, '10 GHz']],
+      yt: [[0, '0'], [-10, '−10'], [-20, '−20'], [-30, '−30 dB']], pad: { l: 44, t: 22 } });
+    var fx = [], hf = [], hc = [], hr = [];
+    for (var i = 0; i <= 200; i++) { var fr = 0.05e9 * i, ph = 2 * Math.PI * fr * SL.UI, re = c0 + c1 * Math.cos(ph), im = -c1 * Math.sin(ph), g2 = re * re + im * im, k = Math.round(fr / SL.DF);
+      var ch = H.re[k] * H.re[k] + H.im[k] * H.im[k]; fx.push(fr / 1e9); hf.push(10 * Math.log10(g2)); hr.push(10 * Math.log10(ch)); hc.push(10 * Math.log10(g2 * ch)); }
+    BD.line(ff, fx, hr, 'rgba(170,205,240,.35)', 1.4, [4, 3]); BD.line(ff, fx, hf, BD.C.gold, 1.8); BD.line(ff, fx, hc, BD.C.blue, 2);
+    var kN = Math.round(2.5e9 / SL.DF), chN = 10 * Math.log10(H.re[kN] * H.re[kN] + H.im[kN] * H.im[kN]);
+    q('[data-o="c"]').textContent = c0.toFixed(3) + ', ' + (c1 < 0 ? '−' : '') + Math.abs(c1).toFixed(3);
+    q('[data-o="tr"]').textContent = '±' + mv(A * (c0 - c1));
+    q('[data-o="rp"]').textContent = '±' + mv(A * (c0 + c1));
+    q('[data-o="n"]').textContent = (chN + 20 * Math.log10(c0 - c1)).toFixed(1) + ' dB';
+    q('[data-o="dc"]').textContent = (10 * Math.log10(H.re[0] * H.re[0]) + 20 * Math.log10(c0 + c1)).toFixed(1) + ' dB';
+    q('[data-o="cap"]').innerHTML = 'De-emphasis keeps every transition at the full ±500 mV and lowers the repeated bits to ±' + (A * (c0 + c1) * 1e3).toFixed(0) + ' mV. ' +
+      'In frequency, the FFE c<sub>0</sub> + c<sub>1</sub>e<sup>−j2πfT<sub>b</sub></sup> peaks at f<sub>N</sub> and repeats every f<sub>b</sub>: it pulls the low frequencies down by ' + S.de.toFixed(1) + ' dB but never lifts f<sub>N</sub>, so REF × FFE is flatter yet still ' + chN.toFixed(1) + ' dB at Nyquist. A TX FFE trades swing for flatness.';
+  }
+  BD.observe(root, draw);
+})();
+</script>

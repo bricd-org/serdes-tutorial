@@ -105,7 +105,7 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 25. `waterfall` · Margin budget waterfall: drag each impairment (residual ISI, noise, offset, jitter, crosstalk)
     → linear vs RSS margin (76 vs 89 mV). After fig:ch4-waterfall. todo
 26. `pam4` · NRZ or PAM4: line length → loss at 2.5 and 1.25 GHz, Δ vs 9.54 dB, crossover 1.37 m (23.8 dB).
-    After fig:ch4-pam4. todo
+    After fig:ch4-pam4. **done** (REF Δ 7.0 dB, NRZ by 2.6 dB, crossover 1.37 m / 23.8 dB)
 
 **Ch 5 · Equalization fundamentals**
 27. `zfnoise` · Inverse channel and noise: equalize-to frequency slider → flat product and noise gain
@@ -121,9 +121,9 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
     eye (2-tap ZF [0.652, −0.349] → 163 mV open; 3-tap [−0.085, 0.596, −0.319]). After fig:ch6-ref. **done**
     (163 / 145 mV PRBS7 eyes, −78 mV without FFE, presets −3.5/−6 dB; ZF taps solved live the Lab 3 way)
 31. `deemph` · De-emphasis in volts: dB slider → transition/run levels, PCIe presets (−3.5/−6 dB). After
-    fig:ch6-deemph. todo
+    fig:ch6-deemph. **done inside `ffefreq`** (−6 dB: 0.751/−0.249, ±500/±251 mV; −3.5 dB: ±334 mV)
 32. `ffefreq` · FFE frequency response: peaks at f_N, periodic in f_b; cascade with REF stays −17.4 dB at f_N.
-    After fig:ch6-ffefreq. todo
+    After fig:ch6-ffefreq. **done** (cascade −17.4 dB at f_N for every setting)
 33. `zfsolve` · Zero forcing step by step: pick which cursors to force → matrix, taps, new ISI at k = −2/+3.
     After fig:ch6-zf. todo
 

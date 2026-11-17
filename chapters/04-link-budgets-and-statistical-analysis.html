@@ -287,6 +287,8 @@ permalink: "/chapters/04-link-budgets-and-statistical-analysis/"
 <img src="{% endraw %}{{ '/assets/figs/ch04_pam4.png' | relative_url }}{% raw %}" style="width:753px" alt="PAM4 pays 9.54 dB of eye height to halve the Nyquist frequency." loading="lazy" />
 <figcaption><span class="capnum">Figure 4.7.</span> <strong>PAM4 pays 9.54 dB of eye height to halve the Nyquist frequency.</strong> (a, b) Ideal NRZ and PAM4 eyes at the same peak swing: each PAM4 eye is one third as tall. (c) REF-model loss at 2.5 and 1.25 GHz versus length, and their difference <span class="math inline">\(\Delta\)</span>. PAM4 is favored only where <span class="math inline">\(\Delta\)</span> exceeds 9.54 dB, beyond 1.37 m (23.8 dB at 2.5 GHz). REF (gold) is 2.6 dB short of that.</figcaption>
 </figure>
+<!-- demo:pam4 -->{% endraw %}{% include demos/pam4.html %}{% raw %}<!-- /demo -->
+
 <p>The rule is a first-order comparison, and it flatters PAM4. A DFE cancels post-cursors for either format, but whatever ISI is left (pre-cursors, tap errors) weighs three times more against a PAM4 eye. PAM4 also needs three comparators per sampling phase (up to twelve samplers instead of the two data and two edge samplers of our half-rate receiver), reference levels that track the signal amplitude, a linear TX driver and CTLE, and a CDR that copes with several zero-crossing times per transition. It is also three times more sensitive to residual ISI, crosstalk and sampler offset.</p>
 <div class="tbox tbox-specnote">
 <div class="tbox-title">
