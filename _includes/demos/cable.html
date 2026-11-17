@@ -1,0 +1,51 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdCable" role="group" aria-label="Interactive demo: a dielectric-loss cable model ties loss in dB to the pulse">
+  <div class="bd-head"><span>// try it · loss in dB → pulse</span>
+    <span class="bd-seg" role="group" aria-label="Loss presets"><button type="button" data-l="5" aria-pressed="false">5 dB</button><button type="button" data-l="10" aria-pressed="false">10 dB</button><button type="button" data-l="15" aria-pressed="true">15 dB</button><button type="button" data-l="20" aria-pressed="false">20 dB</button></span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>loss at f<sub>N</sub> = 2.5 GHz <b data-v="l"></b></span><input type="range" data-k="l" min="1" max="30" step="0.1" value="15" aria-label="Loss at Nyquist in dB"></label>
+  </div>
+  <div class="bd-row">
+    <div class="bd-scope"><canvas data-c="p" aria-hidden="true"></canvas><span class="bd-tag">zero-phase pulse response (Equation 5.3) and cursors, units of V<sub>0</sub></span></div>
+    <div class="bd-scope"><canvas data-c="e" aria-hidden="true"></canvas><span class="bd-tag">main cursor and PDA half-eye against loss</span></div>
+  </div>
+  <div class="bd-read" aria-live="polite"><span>k<sub>d</sub>l <b data-o="k">–</b></span><span>main y<sub>0</sub> <b data-o="y0">–</b></span><span>y<sub>±1</sub>, y<sub>±2</sub> <b data-o="y1">–</b></span><span>Σ|y<sub>k≠0</sub>| <b data-o="s">–</b></span><span>PDA half-eye <b data-o="h">–</b></span><span>ZF noise enhancement to f<sub>N</sub> <b data-o="n">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdCable'); if (!root || !window.BD) return;
+  var TB = 200, FN = 2.5e-3;                                    // ps, GHz→per ps (2.5 GHz = 2.5e-3 /ps)
+  var S = BD.bind(root, { l: { fmt: function (x) { return x.toFixed(1) + ' dB'; } } }, function () { draw(); });
+  var q = function (s) { return root.querySelector(s); }, sl = q('[data-k="l"]');
+  BD.seg(root, 'l', function (v) { sl.value = v; sl.dispatchEvent(new Event('input')); });
+  function model(loss) { var kd = loss / (8.686 * FN), a = kd / (2 * Math.PI);        // |H| = e^{-k_d l f}  →  Lorentzian h(t) of half-width a
+    var y = function (t) { return (Math.atan((t + TB / 2) / a) - Math.atan((t - TB / 2) / a)) / Math.PI; };
+    var s = 0; for (var k = 1; k <= 100; k++) s += 2 * Math.abs(y(k * TB));
+    return { kd: kd, y: y, y0: y(0), s: s }; }
+  function draw() {
+    var L = S.l, m = model(L);
+    root.querySelectorAll('[data-l]').forEach(function (b) { b.setAttribute('aria-pressed', Math.abs(parseFloat(b.getAttribute('data-l')) - L) < 0.05 ? 'true' : 'false'); });
+    var d = BD.setup(q('[data-c="p"]')), f = BD.frame(d, { x: [-5, 5], y: [-0.03, 1.02], xt: [[-4, '−4'], [-2, '−2'], [0, '0'], [2, '2'], [4, '4 UI']], yt: [[0, '0'], [0.5, '0.5'], [1, '1']], pad: { l: 36, t: 22 } });
+    var xs = [], ys = []; for (var i = 0; i <= 400; i++) { var t = -5 + i / 40; xs.push(t); ys.push(m.y(t * TB)); }
+    BD.line(f, xs, ys, 'rgba(127,184,240,.6)', 1.6);
+    var ck = [], cv = []; for (var k = -5; k <= 5; k++) { ck.push(k); cv.push(m.y(k * TB)); }
+    if (window.SL) SL.drawCursors(f, { k: ck, v: cv });
+    var de = BD.setup(q('[data-c="e"]')), fe = BD.frame(de, { x: [0, 30], y: [-0.6, 1.02], xt: [[0, '0'], [10, '10'], [20, '20'], [30, '30 dB']], yt: [[-0.5, '−0.5'], [0, '0'], [0.5, '0.5'], [1, '1']], pad: { l: 40, t: 22 } });
+    var lx = [], m0 = [], hh = [], cross = null;
+    for (var l = 0.5; l <= 30; l += 0.5) { var mm = model(l); lx.push(l); m0.push(mm.y0); hh.push(mm.y0 - mm.s); if (cross === null && mm.y0 - mm.s < 0) cross = l; }
+    BD.hline(fe, 0, 'rgba(255,255,255,.3)', [2, 3]); BD.line(fe, lx, m0, BD.C.gold, 2); BD.line(fe, lx, hh, BD.C.teal, 2);
+    BD.dot(fe, L, m.y0, BD.C.gold, 4.5); BD.dot(fe, L, m.y0 - m.s, m.y0 > m.s ? BD.C.green : BD.C.red, 4.5);
+    var x = 2 * L / 8.686, enh = 10 * Math.log10((Math.exp(x) - 1) / x);
+    q('[data-o="k"]').textContent = m.kd.toFixed(0) + ' ps';
+    q('[data-o="y0"]').textContent = m.y0.toFixed(3);
+    q('[data-o="y1"]').textContent = m.y(TB).toFixed(3) + ', ' + m.y(2 * TB).toFixed(3);
+    q('[data-o="s"]').textContent = m.s.toFixed(3);
+    var he = q('[data-o="h"]'); he.textContent = (m.y0 - m.s).toFixed(3); he.className = m.y0 > m.s ? 'ok' : 'bad';
+    q('[data-o="n"]').textContent = enh.toFixed(1) + ' dB';
+    q('[data-o="cap"]').innerHTML = 'If the loss is pure dielectric, |H| = e<sup>−k<sub>d</sub>lf</sup> and the pulse has a closed form: a main cursor (2/π)arctan(πT<sub>b</sub>/k<sub>d</sub>l) and symmetric tails. ' +
+      'The main cursor falls slowly with loss, but the tails grow faster: the PDA eye of this model closes near ' + (cross || '–') + ' dB, while the main cursor is still about half the swing. Near 15 dB it is the tails, not the main cursor, that close the eye. (The model has zero phase, so its pre- and post-cursors are equal; a real channel is causal.)';
+  }
+  BD.observe(root, draw);
+})();
+</script>

@@ -85,6 +85,8 @@ permalink: "/chapters/07-continuous-time-linear-equalizer/"
 <img src="{% endraw %}{{ '/assets/figs/ch07_bode.svg' | relative_url }}{% raw %}" style="width:753px" alt="Zero, poles and peaking of the degenerated pair." loading="lazy" />
 <figcaption><span class="capnum">Figure 7.4.</span> <strong>Zero, poles and peaking of the degenerated pair.</strong> (a) <a href="#eq:ctle-tf">Equation (7.3)</a> for the Lab 4 example circuit (<span class="math inline">\(g_\mathrm{m}=20\,\mathrm{mS}\)</span>, <span class="math inline">\(R_S=401\,\Omega\)</span>, <span class="math inline">\(C_S=0.795\,\mathrm{pF}\)</span>, <span class="math inline">\(R_D=50\,\Omega\)</span>, <span class="math inline">\(C_\mathrm{L}=318\,\mathrm{fF}\)</span>), with its asymptotes. The ideal peaking is 14 dB, but the boost at <span class="math inline">\(f_\mathrm{N}\)</span> is only 10.9 dB. (b) The <code>ctle()</code> family from 0 to 12 dB, as used in the REF studies. The legend gives the boost realized at <span class="math inline">\(f_\mathrm{N}\)</span>.</figcaption>
 </figure>
+<!-- demo:ctlebode -->{% endraw %}{% include demos/ctlebode.html %}{% raw %}<!-- /demo -->
+
 <div class="tbox tbox-example">
 <div class="tbox-title">
 <p>Worked Example 7.1 · From a peaking target to component values</p>
