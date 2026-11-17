@@ -1,0 +1,39 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdJBudget" role="group" aria-label="Interactive demo: the Open-SERDES jitter budget">
+  <div class="bd-head"><span>// try it · jitter budget</span><span>Table 11.1, BER 10<sup>−12</sup> (2Q = 14.07)</span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>TX mux DCD + driver DDJ (DJ) <b data-v="d1"></b></span><input type="range" data-k="d1" min="0" max="30" step="0.5" value="8" aria-label="TX deterministic jitter"></label>
+    <label class="bd-sl"><span>channel residual ISI (DJ) <b data-v="d2"></b></span><input type="range" data-k="d2" min="0" max="30" step="0.5" value="6" aria-label="Channel deterministic jitter"></label>
+    <label class="bd-sl"><span>RX clock path: I/Q, duty, PI INL (DJ) <b data-v="d3"></b></span><input type="range" data-k="d3" min="0" max="30" step="0.5" value="6" aria-label="RX clock path deterministic jitter"></label>
+    <label class="bd-sl"><span>CDR: PI step + bang-bang dither (DJ) <b data-v="d4"></b></span><input type="range" data-k="d4" min="0" max="50" step="0.5" value="20" aria-label="CDR deterministic jitter"></label>
+    <label class="bd-sl"><span>TX clock, untracked (RJ) <b data-v="r1"></b></span><input type="range" data-k="r1" min="0" max="4" step="0.05" value="1" aria-label="TX clock random jitter"></label>
+    <label class="bd-sl"><span>RX clock, untracked (RJ) <b data-v="r2"></b></span><input type="range" data-k="r2" min="0" max="4" step="0.05" value="0.7" aria-label="RX clock random jitter"></label>
+    <label class="bd-sl"><span>samplers: aperture and noise (RJ) <b data-v="r3"></b></span><input type="range" data-k="r3" min="0" max="4" step="0.05" value="0.5" aria-label="Sampler random jitter"></label>
+  </div>
+  <div class="bd-scope short"><canvas data-c="b" aria-hidden="true"></canvas><span class="bd-tag">one 200 ps UI: DJ stacked linearly (gold), 2Q·σ<sub>RJ</sub> (blue), eye left (green)</span></div>
+  <div class="bd-read" aria-live="polite"><span>DJ <b data-o="dj">–</b></span><span>σ<sub>RJ</sub> (RSS) <b data-o="rj">–</b></span><span>TJ = DJ + 14.07σ <b data-o="tj">–</b></span><span>eye at 10<sup>−12</sup> <b data-o="eye">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdJBudget'); if (!root || !window.BD) return;
+  var UI = 200, Q2 = 14.07, ps = function (x) { return x.toFixed(x < 10 ? 2 : 1) + ' ps'; };
+  var S = BD.bind(root, { d1: { fmt: ps }, d2: { fmt: ps }, d3: { fmt: ps }, d4: { fmt: ps }, r1: { fmt: function (x) { return x.toFixed(2) + ' ps rms'; } }, r2: { fmt: function (x) { return x.toFixed(2) + ' ps rms'; } }, r3: { fmt: function (x) { return x.toFixed(2) + ' ps rms'; } } }, function () { draw(); });
+  var q = function (s) { return root.querySelector(s); };
+  function draw() {
+    var dj = S.d1 + S.d2 + S.d3 + S.d4, rj = Math.sqrt(S.r1 * S.r1 + S.r2 * S.r2 + S.r3 * S.r3), tj = dj + Q2 * rj, eye = UI - tj;
+    var d = BD.setup(q('[data-c="b"]')), g = d.g, L = 20, R = d.w - 20, X = function (t) { return L + (R - L) * t / UI; }, y = 30, h = 34;
+    var x = 0; [[S.d1, 'TX'], [S.d2, 'ISI'], [S.d3, 'RX clk'], [S.d4, 'CDR']].forEach(function (p, i) { g.fillStyle = i % 2 ? 'rgba(224,184,90,.75)' : 'rgba(224,184,90,.95)'; g.fillRect(X(x), y, Math.max(0, X(x + p[0]) - X(x) - 1), h);
+      if (X(x + p[0]) - X(x) > 26) { g.fillStyle = '#0c2340'; g.fillText(p[1], X(x) + 3, y + 21); } x += p[0]; });
+    g.fillStyle = BD.C.blue; g.fillRect(X(x), y, Math.max(0, X(Math.min(UI, x + Q2 * rj)) - X(x) - 1), h); x += Q2 * rj;
+    if (eye > 0) { g.fillStyle = 'rgba(127,224,160,.55)'; g.fillRect(X(x), y, X(UI) - X(x), h); g.fillStyle = '#0c2340'; g.fillText('eye ' + (eye / UI).toFixed(2) + ' UI', X(x) + 4, y + 21); }
+    g.strokeStyle = BD.C.red; g.setLineDash([4, 3]); g.beginPath(); g.moveTo(X(0.3 * UI), y - 10); g.lineTo(X(0.3 * UI), y + h + 10); g.stroke(); g.setLineDash([]); g.fillStyle = BD.C.red; g.fillText('0.3 UI target', X(0.3 * UI) + 4, y - 14);
+    q('[data-o="dj"]').textContent = ps(dj); q('[data-o="rj"]').textContent = rj.toFixed(2) + ' ps';
+    var te = q('[data-o="tj"]'); te.textContent = ps(tj) + ' = ' + (tj / UI).toFixed(3) + ' UI'; te.className = tj <= 0.3 * UI ? 'ok' : 'bad';
+    q('[data-o="eye"]').textContent = eye > 0 ? ps(eye) : 'closed';
+    q('[data-o="cap"]').innerHTML = 'Deterministic terms add linearly; random terms add in root-sum-square and are then multiplied by 2Q = 14.07, so each picosecond of RJ costs 14 ps of eye. ' +
+      (tj <= 0.3 * UI ? 'The budget closes with ' + (0.3 * UI - tj).toFixed(1) + ' ps to spare (the book: 58.6 ps, 1.4 ps of margin). Tight budgets are normal.' : '<b style="color:#f39a7c">The budget no longer closes.</b> The CDR dither is the largest line, but RJ is the most expensive per picosecond.');
+  }
+  BD.observe(root, draw);
+})();
+</script>
