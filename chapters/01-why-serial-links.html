@@ -112,6 +112,8 @@ permalink: "/chapters/01-why-serial-links/"
 <img src="{% endraw %}{{ '/assets/figs/canva_glance.png' | relative_url }}{% raw %}" style="width:723px" alt="A SerDes link at a glance." loading="lazy" />
 <figcaption><span class="capnum">Figure 1.3.</span> <strong>A SerDes link at a glance.</strong> The transmitter (serializer, FFE driver), the channel (package, PCB, connector) and the receiver (CTLE, DFE, samplers, deserializer), held together by the PLL and the CDR. Keep the four key numbers in mind: 5 Gb/s, a 200 ps UI, a 2.5 GHz Nyquist frequency and a target BER of <span class="math inline">\(10^{-12}\)</span>.</figcaption>
 </figure>
+<!-- demo:epb -->{% endraw %}{% include demos/epb.html %}{% raw %}<!-- /demo -->
+
 <h2 id="sec:ch1-standards"><span class="secnum">1.3</span>Where SerDes are used</h2>
 <p>Serial links connect a CPU to its graphics card (PCIe), a computer to its drives (USB, SATA) and the line cards of a network switch (Ethernet). <a href="#tab:ch1-standards">Table 1.1</a> lists common standards. <strong>GT/s</strong> counts symbols on the wire and Gb/s counts bits; they are equal for NRZ, while PAM4 carries two bits per symbol (<a href="{% endraw %}{{ '/chapters/04-link-budgets-and-statistical-analysis/' | relative_url }}{% raw %}#sec:pam4">Section 4.5</a>). Line rates include coding overhead: 8b/10b sends 10 line bits per 8 data bits, 64b/66b sends 66 per 64.</p>
 <div id="tab:ch1-standards">

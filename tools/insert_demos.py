@@ -19,6 +19,7 @@ CH = "chapters/"
 DEMOS = [
     (CH + "01-why-serial-links.html", "skew", "after:fig:ch1-parser"),
     (CH + "01-why-serial-links.html", "clockplan", "after:fig:link-anatomy"),
+    (CH + "01-why-serial-links.html", "epb", "after:fig:ch1-glance"),
     (CH + "01-why-serial-links.html", "fo4rule", "after:fig:ch1-speed"),
     (CH + "02-signals-systems-and-the-language-of-links.html", "nrzpsd", "after:fig:ch2-psd"),
     (CH + "02-signals-systems-and-the-language-of-links.html", "lfsr", "after:fig:ch2-prbs"),

@@ -53,7 +53,8 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
    also placed there
 3. `fo4ui` · How many gate delays fit in a UI: bit rate slider; bars for CMOS FO4 (42/55 ps) vs HBT CML (~2 ps,
    loaded ×several); full/half/quarter rate (Fig 1.6, 9.2). After fig:ch1-speed. **covered by `fo4rule`**
-4. `epb` · Energy per bit (Key eq 1.x): power and rate sliders, pJ/bit compared with published links. todo
+4. `epb` · Energy per bit (Key eq 1.x): power and rate sliders, pJ/bit compared with published links. **done**
+   after fig:ch1-glance (50 mW at 5 Gb/s = 10.0 pJ/b; iso-pJ/b lines; published-link points not added)
 
 **Ch 2 · Signals and systems**
 5. ★ `nrzpsd` · NRZ spectrum: sinc² PSD, cumulative power; drag a cursor frequency → % power below it
@@ -281,7 +282,7 @@ noise, jitter) → stat eye and margin, the whole book on one panel. todo
 
 ### Next steps
 
-State at the end of 17 Nov (second window): 45 placements; was 32 (31 includes incl. `labmap`), every chapter 1–16 covered, all merged
+State at the end of 17 Nov (second window): 46 placements; was 32 (31 includes incl. `labmap`), every chapter 1–16 covered, all merged
 into `main` (deployed). Each `done` entry above lists the book numbers it reproduces.
 
 1. Remaining ★ demos: `stateye` (Ch 4, needs a jitter-aware statistical eye in SL), `ctlebode` (Ch 7 degenerated
