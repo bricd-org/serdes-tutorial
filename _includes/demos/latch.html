@@ -1,0 +1,58 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdLatch" role="group" aria-label="Interactive demo: latch regeneration and metastability">
+  <div class="bd-head"><span>// try it · regeneration and metastability</span>
+    <span class="bd-seg" role="group" aria-label="Latch type"><button type="button" data-l="sa" aria-pressed="true">StrongARM</button><button type="button" data-l="cml" aria-pressed="false">HBT CML latch</button></span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>input at the sampler v<sub>in</sub> <b data-v="vin"></b></span><input type="range" data-k="vin" min="-6" max="-1" step="0.05" value="-3" aria-label="Input voltage, log scale"></label>
+    <label class="bd-sl"><span>regeneration time T <b data-v="t"></b></span><input type="range" data-k="t" min="40" max="200" step="1" value="140" aria-label="Regeneration time in ps"></label>
+    <label class="bd-sl"><span>extra latch stages behind it <b data-v="ns"></b></span><input type="range" data-k="ns" min="0" max="3" step="1" value="0" aria-label="Extra latch stages"></label>
+  </div>
+  <div class="bd-row">
+    <div class="bd-scope"><canvas data-c="r" aria-hidden="true"></canvas><span class="bd-tag">output difference ΔV(t), log scale</span></div>
+    <div class="bd-scope"><canvas data-c="m" aria-hidden="true"></canvas><span class="bd-tag">P<sub>meta</sub> for an edge sampler against T</span></div>
+  </div>
+  <div class="bd-read" aria-live="polite"><span>τ <b data-o="tau">–</b></span><span>decision time <b data-o="td">–</b></span><span>gain e<sup>T/τ</sup> <b data-o="g">–</b></span><span>P<sub>meta</sub> <b data-o="pm">–</b></span><span>at 2.5 GS/s <b data-o="rate">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdLatch'); if (!root || !window.BD) return;
+  var L = { sa: { t1: 40, A: 3, tau: 13, VL: 0.6, sr: 20 }, cml: { t1: 0, A: 3, tau: 4, VL: 0.2, sr: 0 } }, lt = 'sa', DV = 0.2, ST = { T: 200, tau: 20 };
+  var S = BD.bind(root, { vin: { map: function (v) { return Math.pow(10, v); }, fmt: function (x) { return BD.eng(x) + 'V'; } }, t: { fmt: function (x) { return x + ' ps'; } },
+    ns: { fmt: function (x) { return x === 0 ? 'none' : x + ' × (200 ps, τ 20 ps)'; } } }, function () { draw(); });
+  BD.seg(root, 'l', function (v) { lt = v; draw(); });
+  var q = function (s) { return root.querySelector(s); };
+  var sci = function (v) { var e = Math.floor(Math.log10(v)), m = v / Math.pow(10, e); return m.toFixed(1) + 'e' + (e < 0 ? '−' : '') + Math.abs(e); };
+  function pmeta(T, P, ns) { return Math.min(1, 2 * P.VL / (P.A * DV) * Math.exp(-T / P.tau) * Math.exp(-ns * ST.T / ST.tau)); }
+  function draw() {
+    var P = L[lt], vin = S.vin, T = S.t, ns = S.ns, deadline = P.t1 + T;
+    var td = P.t1 + P.tau * Math.log(P.VL / (P.A * vin));
+    // regeneration curves for this input and its neighbours
+    var d = BD.setup(q('[data-c="r"]')), f = BD.frame(d, { x: [0, 260], y: [1e-6, 1], ylog: true, xt: [[0, '0'], [50, '50'], [100, '100'], [150, '150'], [200, '200'], [250, '250 ps']],
+      yt: [[1e-6, '1 µV'], [1e-3, '1 mV'], [1, '1 V']], pad: { l: 46, t: 24 } });
+    d.g.fillStyle = 'rgba(240,138,106,.08)'; d.g.fillRect(f.X(deadline), f.p.t, f.X(260) - f.X(deadline), d.h - f.p.t - f.p.b);
+    BD.vline(f, deadline, 'rgba(240,138,106,.7)', [4, 3], 'deadline');
+    BD.hline(f, P.VL, 'rgba(255,255,255,.4)', [3, 3], 'V_L');
+    [vin * 10, vin, vin / 10].forEach(function (v, j) { var xs = [], ys = [];
+      for (var t = 0; t <= 260; t += 1) { var y = t < P.t1 ? P.A * v * t / Math.max(P.t1, 1) : P.A * v * Math.exp((t - P.t1) / P.tau); xs.push(t); ys.push(Math.min(y, P.VL * 1.2)); }
+      BD.line(f, xs, ys, j === 1 ? BD.C.blue : 'rgba(127,184,240,.35)', j === 1 ? 2.2 : 1.2); });
+    if (td < 260) BD.dot(f, td, P.VL, td <= deadline ? BD.C.green : BD.C.red, 4.5);
+    // P_meta vs T
+    var dm = BD.setup(q('[data-c="m"]')), fm = BD.frame(dm, { x: [40, 200], y: [1e-20, 1], ylog: true, xt: [[40, '40'], [80, '80'], [120, '120'], [160, '160'], [200, '200 ps']],
+      yt: [[1, '1'], [1e-6, '1e−6'], [1e-12, '1e−12'], [1e-18, '1e−18']], pad: { l: 46, t: 24 } });
+    BD.hline(fm, 1e-12, 'rgba(224,184,90,.7)', [5, 4], 'BER target');
+    for (var k = 0; k <= 3; k++) { var xs2 = [], ys2 = []; for (var TT = 40; TT <= 200; TT += 2) { xs2.push(TT); ys2.push(Math.max(pmeta(TT, P, k), 1e-21)); }
+      BD.line(fm, xs2, ys2, k === ns ? BD.C.teal : 'rgba(127,208,184,.3)', k === ns ? 2.2 : 1.2); }
+    var pm = pmeta(T, P, ns); BD.dot(fm, T, Math.max(pm, 1e-20), pm < 1e-12 ? BD.C.green : BD.C.red, 5);
+    q('[data-o="tau"]').textContent = P.tau + ' ps';
+    var te = q('[data-o="td"]'); te.textContent = td.toFixed(0) + ' ps'; te.className = td <= deadline ? 'ok' : 'bad';
+    q('[data-o="g"]').textContent = sci(Math.exp(T / P.tau));
+    var pe = q('[data-o="pm"]'); pe.textContent = sci(pm); pe.className = pm < 1e-12 ? 'ok' : 'bad';
+    q('[data-o="rate"]').textContent = pm * 2.5e9 >= 1 ? sci(pm * 2.5e9) + ' per s' : 'one per ' + (1 / (pm * 2.5e9) > 3.15e7 ? (1 / (pm * 2.5e9) / 3.15e7).toPrecision(2) + ' years' : (1 / (pm * 2.5e9)).toPrecision(2) + ' s');
+    q('[data-o="cap"]').innerHTML = 'A latch amplifies exponentially, so a ten times smaller input costs only τ·ln 10 = ' + (2.3 * P.tau).toFixed(0) + ' ps more. ' +
+      (lt === 'sa' ? 'A data sampler never sees a tiny input in an open eye, but an edge sampler samples the zero crossing on purpose: with its input spread over ±100 mV, ' + sci(pmeta(140, P, 0)) + ' of its decisions are still undefined after 140 ps. Each extra latch stage multiplies that by its own e<sup>−T/τ</sup> (two stages: ' + sci(pmeta(140, P, 2)) + ').'
+       : 'The HBT CML latch regenerates with τ ≈ 4 ps, so the same 140 ps gives a gain of e<sup>35</sup>: about 4e−16 in the master latch alone.');
+  }
+  BD.observe(root, draw);
+})();
+</script>

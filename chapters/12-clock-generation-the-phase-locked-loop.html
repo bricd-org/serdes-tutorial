@@ -134,6 +134,8 @@ The Phase-Locked Loop</h1>
 <img src="{% endraw %}{{ '/assets/figs/ch12_loop.svg' | relative_url }}{% raw %}" style="width:753px" alt="The designed loop has 60^\circ of phase margin at 1 MHz." loading="lazy" />
 <figcaption><span class="capnum">Figure 12.5.</span> <strong>The designed loop has 60<span class="math inline">\(^\circ\)</span> of phase margin at 1 MHz.</strong> (a) Open-loop gain and phase of <a href="#we:ch12-lf">Worked Example 12.1</a>: the phase is closest to <span class="math inline">\(-180^\circ\)</span> furthest from it at <span class="math inline">\(f_u\)</span>, midway between <span class="math inline">\(f_z\)</span> and <span class="math inline">\(f_{p3}\)</span> on a log scale. (b) The third-order closed loop (navy) against the second-order fit with <span class="math inline">\(\zeta = 1\)</span>: they agree up to the bandwidth, and <span class="math inline">\(C_2\)</span> adds extra roll-off above it.</figcaption>
 </figure>
+<!-- demo:pllloop -->{% endraw %}{% include demos/pllloop.html %}{% raw %}<!-- /demo -->
+
 <h2 id="sec:ch12-noise"><span class="secnum">12.3</span>PLL noise and the optimum bandwidth</h2>
 <p>From <a href="#fig:ch12-linmodel">Figure 12.3</a>, each noise source sees its own transfer function: <span class="math display">\[\mathrm{NTF}_\mathrm{ref} = N\frac{LG}{1+LG}, \quad
   \mathrm{NTF}_\mathrm{CP} = \frac{2\pi}{I_\mathrm{CP}}\,N\frac{LG}{1+LG}, \quad
@@ -146,6 +148,8 @@ The Phase-Locked Loop</h1>
 <img src="{% endraw %}{{ '/assets/figs/ch12_noise.svg' | relative_url }}{% raw %}" style="width:753px" alt="The loop bandwidth trades reference noise against VCO noise." loading="lazy" />
 <figcaption><span class="capnum">Figure 12.6.</span> <strong>The loop bandwidth trades reference noise against VCO noise.</strong> (a) Noise transfer for <span class="math inline">\(f_u\)</span> = 1 and 3 MHz: the reference and CP path is low-pass, the VCO path high-pass. (b) Integrated output jitter (10 kHz to 1.25 GHz) against <span class="math inline">\(f_u\)</span>, for the VCO of <a href="{% endraw %}{{ '/chapters/11-jitter/' | relative_url }}{% raw %}#we:ch11-pn">Worked Example 11.2</a> and a <span class="math inline">\(-110\)</span> dBc/Hz in-band floor. The total is flat near its 3 MHz minimum of 1.01 ps. If the VCO is 22 dB quieter (<a href="#sec:lcvco">Section 12.4</a>), the optimum moves below 0.3 MHz (dotted).</figcaption>
 </figure>
+<!-- demo:pllnoise -->{% endraw %}{% include demos/pllnoise.html %}{% raw %}<!-- /demo -->
+
 <div class="tbox tbox-example">
 <div class="tbox-title">
 <p>Worked Example 12.2 · Choosing the PLL bandwidth</p>

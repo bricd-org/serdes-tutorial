@@ -155,10 +155,10 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 
 **Ch 10 · Receiver front-end and samplers**
 48. ★ `regen` · Latch regeneration: input ΔV, τ, A_int → exponential output on log axis; decision time
-    (t1 40 ps, A 3, τ 13 ps). After fig:ch10-sa. todo
+    (t1 40 ps, A 3, τ 13 ps). **done inside `latch`** (109 ps at 1 mV, 169 ps at 10 µV)
 49. `aperture` · Sampling aperture: StrongARM vs CML weighting functions, centroid shift (23 ps). After fig:ch10-aperture. todo
 50. ★ `meta` · Metastability: regeneration time and stage count → P(error) (4.2e−5 at 140 ps; HBT 110 ps → 1e−12).
-    After fig:ch10-meta. todo
+    After fig:ch10-meta. **done as `latch`** (4.2e−5; 8.7e−14 with two extra stages; HBT CML 4.2e−16)
 51. `offsetcal` · Offset calibration: Monte Carlo σ = 4.9 mV, DAC bits/range → trimmed spread, yield of
     4-sampler receivers (24 % untrimmed). After fig:ch10-offset. todo
 52. `calloop` · Calibration loop animation: counter steps the DAC until toggling (LSB 0.91 mV). After fig:ch10-cal. todo
@@ -181,9 +181,13 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 **Ch 12 · PLL**
 60. `pfd` · PFD/CP waveforms: phase offset → UP/DN pulses, dead zone with T_rst. After fig:ch12-pfd. todo
 61. ★ `pllloop` · Loop designer: I_CP, R, C1, C2, K_VCO, N → open-loop Bode, PM (60° at 1 MHz), closed-loop
-    peaking, step response (ζ 0.5 → 30 % overshoot). After fig:ch12-loop. todo
+    peaking, step response (ζ 0.5 → 30 % overshoot). After fig:ch12-loop. **done** (Ex 12.1 exactly: 1.00 MHz,
+    60.0°, 1.56 MHz, 1.7 dB, f_n 537 kHz, ζ 1.00; Ex 12.2 preset 3.00 MHz, 4.69 MHz; time-domain step response)
 62. ★ `pllnoise` · Optimum bandwidth: f_u slider → ref/CP (low-pass) and VCO (high-pass) contributions,
-    integrated jitter (1.01 ps minimum near 3 MHz). After fig:ch12-noise. todo
+    integrated jitter (1.01 ps minimum near 3 MHz). After fig:ch12-noise. **done** (60° loops of Eq 12.2,
+    VCO −100.8 dBc/Hz·(1 MHz/f)², floor −110: 1.73/1.27/1.03/1.00/1.13 ps at 0.5/1/2/3/6 MHz vs book
+    1.91/1.34/1.06/1.01/1.14; 3 MHz split 0.69/0.72 ps (book 0.71/0.72); the 0.5 MHz gap suggests the book's
+    VCO model has more close-in noise; integration-limit slider included, so `pnjitter` can reuse this)
 63. `leeson` · Leeson's model: Q, amplitude, F → L(1 MHz) (−122 dBc/Hz vs quoted −100.8). After fig:ch12-leeson. todo
 64. `ppf` · Polyphase filter: RC spread and frequency → I/Q amplitude and phase error, 1 vs 2 stages. After fig:ch12-poly. todo
 65. `lock` · PLL acquisition animation: phase/frequency step, V_ctrl settling. todo
@@ -241,6 +245,7 @@ noise, jitter) → stat eye and margin, the whole book on one panel. todo
 - 17 Nov (later): `isipdf` (Ch 4), `sslms` (Ch 8), `dualdirac` (Ch 11), `bbgain` (Ch 13): 19 demos live.
   Fixed `ffe` logging a start-up error (slider set before its helper was defined). Lesson: in every demo, define
   helpers before any `dispatchEvent` at start-up, and keep bit-history offsets ≥ the longest cursor span.
+- 17 Nov (later): `latch` (Ch 10), `pllloop` and `pllnoise` (Ch 12): 22 demos live.
 - Lab 5 check: SL's ideal-DFE eye gives 60 → 108/129/~142/~152 mV for 1–4 taps vs the book's 60 → 110.7/129.7/
   143.2/153.6 (serdespy's DFE samples at a fixed phase; SL searches the phase in 2-sample steps).
 - Visual check while the browser pane is hidden: screenshots fail, so a page snippet POSTs the canvases to a
