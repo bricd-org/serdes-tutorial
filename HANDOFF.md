@@ -49,7 +49,8 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
    shrinks to zero while a serial lane keeps its eye. After fig:ch1-parser. **done** (10 mm → 67 ps: 2.1 % at
    312.5 Mb/s, 33.5 % at 5 Gb/s; 16 lanes)
 2. `ratechain` · Follow the rates (Ex 1.2): pick serialization ratio and line rate → word clock, PLL, half-rate
-   clock, UI, f_N (16 × 312.5 Mb/s → 5 Gb/s, 2.5 GHz, 200 ps). After fig:link-anatomy. todo
+   clock, UI, f_N (16 × 312.5 Mb/s → 5 Gb/s, 2.5 GHz, 200 ps). After fig:link-anatomy. **covered by `clockplan`**,
+   also placed there
 3. `fo4ui` · How many gate delays fit in a UI: bit rate slider; bars for CMOS FO4 (42/55 ps) vs HBT CML (~2 ps,
    loaded ×several); full/half/quarter rate (Fig 1.6, 9.2). After fig:ch1-speed. **covered by `fo4rule`**
 4. `epb` · Energy per bit (Key eq 1.x): power and rate sliders, pJ/bit compared with published links. todo
@@ -202,7 +203,8 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 65. `lock` · PLL acquisition animation: phase/frequency step, V_ctrl settling. todo
 
 **Ch 13 · CDR**
-66. `alex` · Alexander PD: drag the clock phase across a transition → early/late votes. After fig:ch13-alex. todo
+66. `alex` · Alexander PD: drag the clock phase across a transition → early/late votes. After fig:ch13-alex. **done**
+    (S1/S2/S3 truth, no-transition abstain, jitter → 1000-edge vote counts)
 67. ★ `bbgain` · Bang-bang gain linearized by jitter: σ_j slider → smoothed sign, slope √(2/π)/σ_j. After fig:ch13-bbchar.
     **done** (edge histogram split early/late, erf characteristic, tangent, linear range)
 68. ★ `jtol` · Jitter tolerance vs mask: K_P, K_I, latency → JTOL curve over the mask (dips at 1–2 MHz). After fig:ch13-jtol.
@@ -278,7 +280,7 @@ noise, jitter) → stat eye and margin, the whole book on one panel. todo
 
 ### Next steps
 
-State at the end of 17 Nov (second window): 42 placements; was 32 (31 includes incl. `labmap`), every chapter 1–16 covered, all merged
+State at the end of 17 Nov (second window): 44 placements; was 32 (31 includes incl. `labmap`), every chapter 1–16 covered, all merged
 into `main` (deployed). Each `done` entry above lists the book numbers it reproduces.
 
 1. Remaining ★ demos: `stateye` (Ch 4, needs a jitter-aware statistical eye in SL), `ctlebode` (Ch 7 degenerated

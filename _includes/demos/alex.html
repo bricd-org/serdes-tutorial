@@ -1,0 +1,46 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdAlex" role="group" aria-label="Interactive demo: the Alexander bang-bang phase detector">
+  <div class="bd-head"><span>// try it · Alexander phase detector</span>
+    <span class="bd-seg" role="group" aria-label="Transition"><button type="button" data-tr="1" aria-pressed="true">0 → 1</button><button type="button" data-tr="-1" aria-pressed="false">1 → 0</button><button type="button" data-tr="0" aria-pressed="false">no transition</button></span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>clock phase error (edge sample vs transition) <b data-v="ph"></b></span><input type="range" data-k="ph" min="-0.4" max="0.4" step="0.005" value="-0.12" aria-label="Clock phase error in UI"></label>
+    <label class="bd-sl"><span>edge jitter σ <b data-v="sj"></b></span><input type="range" data-k="sj" min="0" max="0.15" step="0.005" value="0" aria-label="Edge jitter in UI"></label>
+  </div>
+  <div class="bd-scope"><canvas data-c="w" aria-hidden="true"></canvas><span class="bd-tag">data around one bit boundary; S1 previous bit, S2 edge, S3 current bit</span></div>
+  <div class="bd-read" aria-live="polite"><span>S1, S2, S3 <b data-o="s">–</b></span><span>decision <b data-o="d">–</b></span><span>votes over 1000 edges: late / early <b data-o="v">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdAlex'); if (!root || !window.BD) return;
+  var tr = 1, rnd = BD.rng(99);
+  var S = BD.bind(root, { ph: { fmt: function (x) { return (x > 0 ? '+' : x < 0 ? '−' : '') + Math.abs(x).toFixed(3) + ' UI' + (x < 0 ? ' (early)' : x > 0 ? ' (late)' : ''); } },
+    sj: { fmt: function (x) { return x.toFixed(3) + ' UI'; } } }, function () { draw(); });
+  BD.seg(root, 'tr', function (v) { tr = parseInt(v, 10); draw(); });
+  var q = function (s) { return root.querySelector(s); };
+  function wave(t, edge) { var a0 = tr === 0 ? 1 : -tr, a1 = tr === 0 ? 1 : tr; return t < edge - 0.15 ? a0 : t > edge + 0.15 ? a1 : a0 + (a1 - a0) * (0.5 + 0.5 * Math.sin(Math.PI * (t - edge) / 0.3)); }
+  function decide(ph, jit) { var edge = -ph + jit, s1 = wave(-0.5, edge) > 0 ? 1 : 0, s2 = wave(0, edge) > 0 ? 1 : 0, s3 = wave(0.5, edge) > 0 ? 1 : 0;
+    return { s: [s1, s2, s3], v: s1 === s3 ? 0 : s2 === s1 ? -1 : 1 }; }    // -1: edge sample before the transition → clock early
+  function draw() {
+    var ph = S.ph, d = BD.setup(q('[data-c="w"]')), f = BD.frame(d, { x: [-1, 1], y: [-1.4, 1.4], xt: [[-0.5, 'S1'], [0, 'S2 (edge)'], [0.5, 'S3'], [-1, '−1 UI'], [1, '+1 UI']], yt: [[-1, '0'], [1, '1']], pad: { l: 30, t: 22 } });
+    var g = d.g, xs = [], ys = [];
+    if (S.sj > 0) { g.strokeStyle = 'rgba(127,184,240,.10)'; for (var k = 0; k < 40; k++) { var jj = S.sj * Math.sqrt(-2 * Math.log(1 - rnd())) * Math.cos(2 * Math.PI * rnd()), px = [], py = [];
+      for (var i = 0; i <= 120; i++) { var t = -1 + i / 60; px.push(t); py.push(wave(t, -ph + jj)); } BD.line(f, px, py, 'rgba(127,184,240,.12)', 1); } }
+    for (i = 0; i <= 240; i++) { var t2 = -1 + i / 120; xs.push(t2); ys.push(wave(t2, -ph)); }
+    BD.hline(f, 0, 'rgba(255,255,255,.3)', [2, 3]); BD.line(f, xs, ys, BD.C.blue, 2.2);
+    if (tr !== 0) BD.vline(f, -ph, 'rgba(240,138,106,.6)', [3, 3], 'transition');
+    var r = decide(ph, 0);
+    [-0.5, 0, 0.5].forEach(function (t, j) { BD.vline(f, t, j === 1 ? BD.C.gold : 'rgba(224,184,90,.45)', [5, 4]); BD.dot(f, t, wave(t, -ph), j === 1 ? BD.C.gold : '#ffffff', 5);
+      g.fillStyle = '#fff'; g.fillText(String(r.s[j]), f.X(t) + 7, f.Y(wave(t, -ph)) - 6); });
+    var late = 0, early = 0;
+    for (k = 0; k < 1000; k++) { var j2 = S.sj > 0 ? S.sj * Math.sqrt(-2 * Math.log(1 - rnd())) * Math.cos(2 * Math.PI * rnd()) : 0, rr = decide(ph, j2); if (rr.v > 0) late++; else if (rr.v < 0) early++; }
+    q('[data-o="s"]').textContent = r.s.join(', ');
+    var de = q('[data-o="d"]'); de.textContent = r.v === 0 ? 'no transition: no vote' : r.v > 0 ? 'clock late → move earlier' : 'clock early → move later';
+    q('[data-o="v"]').textContent = late + ' / ' + early;
+    q('[data-o="cap"]').innerHTML = tr === 0 ? 'Without a transition S1 = S3, and the edge sample carries no timing information: the detector abstains. Long runs therefore starve the CDR, which is why links scramble or encode their data.'
+      : 'With a transition S1 ≠ S3. If the edge sample S2 still equals S1, it was taken before the transition: the clock is early. If it equals S3, the clock is late. ' +
+        (S.sj > 0 ? 'Jitter makes the votes random near lock; averaged over many edges they become proportional to the phase error, the linearized gain of the bang-bang detector.' : 'The output is only a sign, however large the error: a bang-bang detector.');
+  }
+  BD.observe(root, draw);
+})();
+</script>
