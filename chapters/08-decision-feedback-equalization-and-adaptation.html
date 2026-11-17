@@ -131,6 +131,8 @@ and Adaptation</h1>
 <img src="{% endraw %}{{ '/assets/figs/ch08_sslms.svg' | relative_url }}{% raw %}" style="width:753px" alt="Sign-sign LMS finds the taps, unless a pre-cursor is left in." loading="lazy" />
 <figcaption><span class="capnum">Figure 8.5.</span> <strong>Sign-sign LMS finds the taps, unless a pre-cursor is left in.</strong> (a) REF + 8 dB CTLE, 2-tap DFE (<span class="math inline">\(\mu=0.25\,\mathrm{mV}\)</span>, 4 mV noise). The taps and the data level settle within a few hundred UI onto their zero-forcing values (dashed: 91.6, 27.6 and 11.8 mV). (b) The pulse of <a href="#we:ch8-pretap">Worked Example 8.1</a> with a 3-tap DFE (<span class="math inline">\(\mu=2\,\mathrm{mV}\)</span>, 10 mV noise). With its 0.2 pre-cursor removed, <span class="math inline">\(w_2\)</span> stays within 36–62 mV of its 50 mV target. With the pre-cursor left in, it wanders between <span class="math inline">\(-6\)</span> and 92 mV.</figcaption>
 </figure>
+<!-- demo:sslms -->{% endraw %}{% include demos/sslms.html %}{% raw %}<!-- /demo -->
+
 <div class="tbox tbox-pitfall">
 <div class="tbox-title">
 <p>An uncancelled pre-cursor makes SS-LMS wander</p>

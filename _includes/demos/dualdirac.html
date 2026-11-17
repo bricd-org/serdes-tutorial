@@ -1,0 +1,59 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdDualDirac" role="group" aria-label="Interactive demo: total jitter and the dual-Dirac fit">
+  <div class="bd-head"><span>// try it · RJ ⊗ DJ and the dual-Dirac fit</span>
+    <span class="bd-seg" role="group" aria-label="Deterministic jitter shape"><button type="button" data-dj="dcd" aria-pressed="true">DCD</button><button type="button" data-dj="sin" aria-pressed="false">sinusoidal</button><button type="button" data-dj="uni" aria-pressed="false">uniform</button></span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>DJ peak-to-peak <b data-v="dj"></b></span><input type="range" data-k="dj" min="0" max="40" step="0.5" value="20" aria-label="Deterministic jitter peak to peak in ps"></label>
+    <label class="bd-sl"><span>RJ σ <b data-v="rj"></b></span><input type="range" data-k="rj" min="0.5" max="5" step="0.05" value="2" aria-label="Random jitter rms in ps"></label>
+  </div>
+  <div class="bd-scope tall"><canvas data-c="p" aria-hidden="true"></canvas><span class="bd-tag">edge-time PDF, log scale: true (blue), dual-Dirac fit to the tails (gold, dashed)</span></div>
+  <div class="bd-read" aria-live="polite"><span>DJ<sub>pp</sub> <b data-o="pp">–</b></span><span>fitted DJ<sub>δδ</sub> <b data-o="dd">–</b></span><span>fitted σ <b data-o="sg">–</b></span><span>TJ at 10<sup>−12</sup>: true <b data-o="tj">–</b></span><span>dual-Dirac model <b data-o="tm">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdDualDirac'); if (!root || !window.BD || !window.SL) return;
+  var shape = 'dcd', Qf = function (x) { return 0.5 * SL.erfc(x / Math.SQRT2); };
+  function Qinv(b) { var lo = 0, hi = 40; for (var i = 0; i < 70; i++) { var m = (lo + hi) / 2; if (Qf(m) > b) lo = m; else hi = m; } return (lo + hi) / 2; }
+  var S = BD.bind(root, { dj: { fmt: function (x) { return x.toFixed(1) + ' ps'; } }, rj: { fmt: function (x) { return x.toFixed(2) + ' ps rms'; } } }, function () { draw(); });
+  BD.seg(root, 'dj', function (v) { shape = v; draw(); });
+  var q = function (s) { return root.querySelector(s); };
+  function djPoints(pp) {                           // discrete DJ distribution: positions and weights
+    var a = pp / 2, d = [], w = [], M = 400, i;
+    if (pp === 0) return { d: [0], w: [1] };
+    if (shape === 'dcd') return { d: [-a, a], w: [0.5, 0.5] };
+    for (i = 0; i < M; i++) { d.push(shape === 'sin' ? a * Math.sin(2 * Math.PI * (i + 0.5) / M) : -a + pp * (i + 0.5) / M); w.push(1 / M); }
+    return { d: d, w: w };
+  }
+  function draw() {
+    var pp = S.dj, s = S.rj, J = djPoints(pp), n = J.d.length;
+    var right = function (t) { var r = 0; for (var i = 0; i < n; i++) r += J.w[i] * Qf((t - J.d[i]) / s); return r; };
+    var solve = function (b) { var lo = -100, hi = 100; for (var k = 0; k < 60; k++) { var m = (lo + hi) / 2; if (right(m) > b) lo = m; else hi = m; } return (lo + hi) / 2; };
+    // dual-Dirac tail: b = 0.5 Q((t - mu)/sigma), so fit t_R = mu + sigma Qinv(2b) over b = 1e-4 .. 1e-12 (symmetric DJ)
+    var X = [], Y = []; for (var e = 4; e <= 12; e += 0.5) { var b = Math.pow(10, -e); X.push(Qinv(2 * b)); Y.push(solve(b)); }
+    var mx = X.reduce(function (a, v) { return a + v; }, 0) / X.length, my = Y.reduce(function (a, v) { return a + v; }, 0) / Y.length, sxy = 0, sxx = 0;
+    for (var i = 0; i < X.length; i++) { sxy += (X[i] - mx) * (Y[i] - my); sxx += (X[i] - mx) * (X[i] - mx); }
+    var sf = sxy / sxx, mu = my - sf * mx, ddd = 2 * mu, Q12 = Qinv(2e-12), tjT = 2 * solve(1e-12), tjM = ddd + 2 * Q12 * sf;
+    var d = BD.setup(q('[data-c="p"]')), lim = Math.max(30, pp / 2 + 8 * s);
+    var f = BD.frame(d, { x: [-lim, lim], y: [1e-14, 1], ylog: true, xt: [[-20, '−20'], [-10, '−10'], [0, '0'], [10, '10'], [20, '20 ps']],
+      yt: [[1, '1'], [1e-4, '1e−4'], [1e-8, '1e−8'], [1e-12, '1e−12']], pad: { l: 46, t: 24 } });
+    var xs = [], yt = [], ym = [], peak = 0, NP = 500;
+    for (i = 0; i <= NP; i++) { var t = -lim + 2 * lim * i / NP, v = 0; for (var k = 0; k < n; k++) v += J.w[k] * Math.exp(-0.5 * Math.pow((t - J.d[k]) / s, 2)); xs.push(t); yt.push(v); peak = Math.max(peak, v);
+      ym.push(0.5 * Math.exp(-0.5 * Math.pow((t - mu) / sf, 2)) * s / sf + 0.5 * Math.exp(-0.5 * Math.pow((t + mu) / sf, 2)) * s / sf); }
+    yt = yt.map(function (v) { return v / peak; }); ym = ym.map(function (v) { return v / peak; });
+    var g = d.g; g.fillStyle = 'rgba(224,184,90,.08)'; g.fillRect(f.X(-pp / 2), f.p.t, f.X(pp / 2) - f.X(-pp / 2), d.h - f.p.t - f.p.b);
+    BD.line(f, xs, yt, BD.C.blue, 2); BD.line(f, xs, ym, BD.C.gold, 1.6, [5, 4]);
+    [-mu, mu].forEach(function (m) { BD.vline(f, m, 'rgba(224,184,90,.55)', [2, 3]); });
+    q('[data-o="pp"]').textContent = pp.toFixed(1) + ' ps';
+    q('[data-o="dd"]').textContent = ddd.toFixed(1) + ' ps';
+    q('[data-o="sg"]').textContent = sf.toFixed(2) + ' ps (true ' + s.toFixed(2) + ')';
+    q('[data-o="tj"]').textContent = tjT.toFixed(1) + ' ps';
+    q('[data-o="tm"]').textContent = tjM.toFixed(1) + ' ps';
+    q('[data-o="cap"]').innerHTML = (shape === 'dcd'
+      ? 'Duty-cycle distortion really is two Diracs, so the fit returns DJ<sub>δδ</sub> = DJ<sub>pp</sub> and the true σ. '
+      : 'This DJ is not two Diracs, so the Gaussian tails of the fit settle on DJ<sub>δδ</sub> = ' + ddd.toFixed(1) + ' ps, ' + (pp > 0 ? (100 * ddd / pp).toFixed(0) + ' % of the true ' + pp.toFixed(0) + ' ps peak-to-peak, ' : '') + 'and on a σ slightly above the true RJ. ') +
+      'The model is only a tail fit: it extrapolates TJ at 10<sup>−12</sup> well (' + tjM.toFixed(1) + ' vs ' + tjT.toFixed(1) + ' ps), but DJ<sub>δδ</sub> is not DJ<sub>pp</sub>, so never add the two in one budget.';
+  }
+  BD.observe(root, draw);
+})();
+</script>

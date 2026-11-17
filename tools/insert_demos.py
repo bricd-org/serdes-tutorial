@@ -26,11 +26,15 @@ DEMOS = [
     (CH + "03-the-channel.html", "viastub", "after:fig:ch3-via"),
     (CH + "03-the-channel.html", "s21pulse", "after:fig:ref-pulse"),
     (CH + "04-link-budgets-and-statistical-analysis.html", "pda", "after:fig:ch4-pda"),
+    (CH + "04-link-budgets-and-statistical-analysis.html", "isipdf", "after:fig:ch4-isipdf"),
     (CH + "06-transmit-ffe.html", "ffe", "after:fig:ch6-ref"),
     (CH + "07-continuous-time-linear-equalizer.html", "ctleref", "after:fig:ch7-ref"),
     (CH + "08-decision-feedback-equalization-and-adaptation.html", "dfe", "after:fig:ch8-cancel"),
+    (CH + "08-decision-feedback-equalization-and-adaptation.html", "sslms", "after:fig:ch8-sslms"),
     (CH + "11-jitter.html", "slope", "after:fig:ch11-slope"),
+    (CH + "11-jitter.html", "dualdirac", "after:fig:ch11-hist"),
     (CH + "11-jitter.html", "bathtub", "after:fig:ch11-bathtub"),
+    (CH + "13-clock-and-data-recovery.html", "bbgain", "after:fig:ch13-bbchar"),
     (CH + "13-clock-and-data-recovery.html", "pi", "after:fig:ch13-pi"),
 ]
 

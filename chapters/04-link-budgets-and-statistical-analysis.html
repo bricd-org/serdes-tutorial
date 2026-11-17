@@ -109,6 +109,8 @@ permalink: "/chapters/04-link-budgets-and-statistical-analysis/"
 <img src="{% endraw %}{{ '/assets/figs/ch04_isipdf.svg' | relative_url }}{% raw %}" style="width:753px" alt="The ISI distribution is a convolution of two-point distributions." loading="lazy" />
 <figcaption><span class="capnum">Figure 4.4.</span> <strong>The ISI distribution is a convolution of two-point distributions.</strong> (a) REF cursors convolved one at a time: each new cursor splits every spike in two. (b) Distribution of the received sample for a “1”, with all 153 cursors and 1.5 mV rms noise, on a log scale. Without equalization (red), 6% of all “1”s fall below the threshold. With the 2-tap TX FFE (teal), the distribution ends at 61 mV at <span class="math inline">\(10^{-12}\)</span>, just inside the PDA worst case (dashed).</figcaption>
 </figure>
+<!-- demo:isipdf -->{% endraw %}{% include demos/isipdf.html %}{% raw %}<!-- /demo -->
+
 <p>The statistical eye needs a channel that is open, so from here on we use <strong>REF with the 2-tap TX de-emphasis</strong> of Lab 3, <span class="math inline">\(c_0 = 0.652\)</span> and <span class="math inline">\(c_1 = -0.348\)</span> (Sections <a href="{% endraw %}{{ '/chapters/06-transmit-ffe/' | relative_url }}{% raw %}#sec:ffe-taps">6.2</a> and <a href="{% endraw %}{{ '/chapters/16-hands-on-labs-with-serdespy/' | relative_url }}{% raw %}#sec:lab3">16.4</a>). It is the simplest equalizer that opens REF, not the final Open-SERDES design. <a href="#fig:ch4-stateye">Figure 4.5</a> shows its statistical eye with noise and jitter. The code is <code>stat_eye()</code> in <code>figsrc/ch04_stateye.py</code>: a few dozen lines of NumPy that shift and add the two-point PDFs on a 0.05 mV grid.</p>
 <div id="fig:ch4-stateye">
 

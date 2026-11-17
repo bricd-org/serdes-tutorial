@@ -1,0 +1,57 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdBbGain" role="group" aria-label="Interactive demo: jitter linearizes the bang-bang phase detector">
+  <div class="bd-head"><span>// try it · bang-bang detector gain</span>
+    <span class="bd-seg" role="group" aria-label="Jitter presets"><button type="button" data-sj="0.01" aria-pressed="false">σ 0.01 UI</button><button type="button" data-sj="0.03" aria-pressed="true">0.03 UI</button><button type="button" data-sj="0.1" aria-pressed="false">0.1 UI</button></span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>rms jitter on the data edges σ<sub>j</sub> <b data-v="sj"></b></span><input type="range" data-k="sj" min="0.003" max="0.15" step="0.001" value="0.03" aria-label="RMS jitter in UI"></label>
+    <label class="bd-sl"><span>clock phase error φ <b data-v="ph"></b></span><input type="range" data-k="ph" min="-0.25" max="0.25" step="0.001" value="0.02" aria-label="Phase error in UI"></label>
+  </div>
+  <div class="bd-row">
+    <div class="bd-scope"><canvas data-c="e" aria-hidden="true"></canvas><span class="bd-tag">where the data edges fall around the edge sampler</span></div>
+    <div class="bd-scope"><canvas data-c="k" aria-hidden="true"></canvas><span class="bd-tag">average detector output against φ</span></div>
+  </div>
+  <div class="bd-read" aria-live="polite"><span>P(late) − P(early) <b data-o="o">–</b></span><span>K<sub>BB</sub> = √(2/π)/σ<sub>j</sub> <b data-o="k">–</b></span><span>linear range ≈ ±σ<sub>j</sub> <b data-o="lr">–</b></span><span>in ps at 5 Gb/s <b data-o="ps">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdBbGain'); if (!root || !window.BD || !window.SL) return;
+  var S = BD.bind(root, { sj: { fmt: function (x) { return x.toFixed(3) + ' UI'; } }, ph: { fmt: function (x) { return (x >= 0 ? '+' : '−') + Math.abs(x).toFixed(3) + ' UI'; } } }, function () { draw(); });
+  var q = function (s) { return root.querySelector(s); }, sl = q('[data-k="sj"]');
+  BD.seg(root, 'sj', function (v) { sl.value = v; sl.dispatchEvent(new Event('input')); });
+  var erf = function (x) { return 1 - SL.erfc(x); };
+  function draw() {
+    var sj = S.sj, ph = S.ph, out = erf(ph / (Math.SQRT2 * sj)), K = Math.sqrt(2 / Math.PI) / sj;
+    root.querySelectorAll('[data-sj]').forEach(function (b) { b.setAttribute('aria-pressed', Math.abs(parseFloat(b.getAttribute('data-sj')) - sj) < 0.0005 ? 'true' : 'false'); });
+    // edge distribution relative to the edge sampler at 0: the data edge sits at -φ (clock late by φ)
+    var d = BD.setup(q('[data-c="e"]')), f = BD.frame(d, { x: [-0.3, 0.3], y: [0, 1.15], xt: [[-0.2, '−0.2'], [-0.1, '−0.1'], [0, 'edge sampler'], [0.1, '0.1'], [0.2, '0.2 UI']], yt: [], pad: { l: 14, t: 24 } });
+    var g = d.g, xs = [], ys = [];
+    for (var i = 0; i <= 300; i++) { var t = -0.3 + 0.6 * i / 300; xs.push(t); ys.push(Math.exp(-0.5 * Math.pow((t + ph) / sj, 2))); }
+    f.clipIn();
+    [[-1, 'rgba(127,184,240,.45)'], [1, 'rgba(240,138,106,.45)']].forEach(function (side) { g.fillStyle = side[1]; g.beginPath(); g.moveTo(f.X(0), f.Y(0));
+      for (var j = 0; j <= 300; j++) if (xs[j] * side[0] >= 0) g.lineTo(f.X(xs[j]), f.Y(ys[j])); g.lineTo(f.X(0), f.Y(0)); g.fill(); });
+    f.clipOut();
+    BD.line(f, xs, ys, '#ffffff', 1.4);
+    BD.vline(f, 0, BD.C.gold, [4, 3]);
+    g.fillStyle = '#cfe4fa'; g.fillText('edge before the sample: clock late', f.p.l + 6, f.p.t + 12);
+    g.fillStyle = '#f6b9a4'; g.textAlign = 'right'; g.fillText('edge after: clock early', d.w - f.p.r - 6, f.p.t + 12); g.textAlign = 'left';
+    // characteristic
+    var dk = BD.setup(q('[data-c="k"]')), fk = BD.frame(dk, { x: [-0.25, 0.25], y: [-1.15, 1.15], xt: [[-0.2, '−0.2'], [-0.1, '−0.1'], [0, '0'], [0.1, '0.1'], [0.2, '0.2 UI']],
+      yt: [[-1, '−1'], [0, '0'], [1, '+1']], pad: { l: 36, t: 24 } });
+    dk.g.fillStyle = 'rgba(224,184,90,.10)'; dk.g.fillRect(fk.X(-sj), fk.p.t, fk.X(sj) - fk.X(-sj), dk.h - fk.p.t - fk.p.b);
+    BD.line(fk, [-0.25, 0, 0, 0.25], [-1, -1, 1, 1], 'rgba(170,205,240,.4)', 1.4, [4, 3]);
+    var cx = [], cy = []; for (i = 0; i <= 300; i++) { var p2 = -0.25 + 0.5 * i / 300; cx.push(p2); cy.push(erf(p2 / (Math.SQRT2 * sj))); }
+    BD.line(fk, cx, cy, BD.C.blue, 2);
+    BD.line(fk, [-1.2 / K, 1.2 / K], [-1.2, 1.2], BD.C.gold, 1.2, [5, 4]);
+    BD.dot(fk, ph, out, BD.C.gold, 4.5);
+    q('[data-o="o"]').textContent = (out >= 0 ? '+' : '−') + Math.abs(out).toFixed(3);
+    q('[data-o="k"]').textContent = K.toFixed(1) + ' per UI';
+    q('[data-o="lr"]').textContent = '±' + sj.toFixed(3) + ' UI';
+    q('[data-o="ps"]').textContent = '±' + (sj * 200).toFixed(1) + ' ps';
+    q('[data-o="cap"]').innerHTML = 'A bang-bang detector only says early or late. Averaged over many edges, though, jitter smears the sign function into erf(φ/√2σ<sub>j</sub>), which is linear near lock with slope √(2/π)/σ<sub>j</sub>. ' +
+      (sj < 0.015 ? 'With little jitter the gain is huge and the linear range tiny: the loop behaves like a slewing, dithering bang-bang system.'
+       : 'More jitter means less gain: the CDR loop bandwidth falls as the input jitter grows, which is why a bang-bang CDR\'s jitter transfer depends on the jitter amplitude.');
+  }
+  BD.observe(root, draw);
+})();
+</script>

@@ -1,0 +1,68 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdSsLms" role="group" aria-label="Interactive demo: sign-sign LMS adapting a 2-tap DFE">
+  <div class="bd-head"><span>// try it · sign-sign LMS</span><span>REF + 8 dB CTLE, 2-tap DFE, PRBS13</span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>step μ <b data-v="mu"></b></span><input type="range" data-k="mu" min="0.05" max="2" step="0.05" value="0.25" aria-label="Adaptation step in mV"></label>
+    <label class="bd-sl"><span>noise at the slicer <b data-v="sn"></b></span><input type="range" data-k="sn" min="0" max="20" step="0.5" value="4" aria-label="Noise rms in mV"></label>
+    <label class="bd-sl"><span>extra uncancelled pre-cursor A·p<sub>−1</sub> <b data-v="pre"></b></span><input type="range" data-k="pre" min="0" max="60" step="1" value="0" aria-label="Extra pre-cursor in mV"></label>
+  </div>
+  <div class="bd-scope tall"><canvas data-c="t" aria-hidden="true"></canvas><span class="bd-tag">d<sub>lev</sub> (gold), w<sub>1</sub> (blue), w<sub>2</sub> (teal); dashed = zero-forcing values</span></div>
+  <div class="bd-read" aria-live="polite"><span>UI <b data-o="ui">0</b></span><span>d<sub>lev</sub> <b data-o="d">–</b></span><span>w<sub>1</sub> <b data-o="w1">–</b></span><span>w<sub>2</sub> <b data-o="w2">–</b></span><span>w<sub>1</sub> within 2 mV after <b data-o="t1">–</b></span><span>decision errors <b data-o="er">0</b></span></div>
+  <div class="bd-controls"><button type="button" class="bd-toggle" data-t="run" aria-pressed="false">run</button><button type="button" class="bd-btn" data-b="all">jump to 6000 UI</button><button type="button" class="bd-btn" data-b="reset">reset</button></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdSsLms'); if (!root || !window.BD || !window.SL) return;
+  var A = 0.5, NT = 6000, H = SL.channel(), p = SL.pulseOf(SL.mul(H, SL.ctle(8)));
+  // cursors sampled at the pulse peak, as in Worked Example 8.3
+  var c = SL.cursors(p, 2, 60), bits = SL.prbs(13, NT + 80), ZF = [A * c.v[2], A * c.v[3], A * c.v[4]];
+  var st, hist, timer = 0, rnd, noiseS;
+  var S = BD.bind(root, { mu: { fmt: function (x) { return x.toFixed(2) + ' mV'; } }, sn: { fmt: function (x) { return x.toFixed(1) + ' mV rms'; } },
+    pre: { fmt: function (x) { return x.toFixed(0) + ' mV'; } } }, function () { reset(); draw(); });
+  var q = function (s) { return root.querySelector(s); };
+  function gauss() { var u = 1 - rnd(), v = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+  function reset() { rnd = BD.rng(12345); st = { n: 0, d: 0.05, w1: 0, w2: 0, err: 0, t1: null, dh: [] }; hist = { d: [0.05], w1: [0], w2: [0], n: [0] }; }
+  function step(m) {
+    var mu = S.mu * 1e-3, sn = S.sn * 1e-3, pre = S.pre * 1e-3;
+    for (var j = 0; j < m && st.n < NT; j++) {
+      var n = st.n + 64, x = 0;                                    // offset so every cursor has a past bit
+      for (var i = 0; i < c.k.length; i++) { var b = bits[n - c.k[i]]; x += A * (2 * b - 1) * c.v[i]; }
+      x += pre * (2 * bits[n + 1] - 1) + sn * gauss();
+      var a1 = st.dh.length > 0 ? st.dh[st.dh.length - 1] : 1, a2 = st.dh.length > 1 ? st.dh[st.dh.length - 2] : 1;
+      var z = x - st.w1 * a1 - st.w2 * a2, ah = z >= 0 ? 1 : -1, e = z - st.d * ah, se = e >= 0 ? 1 : -1;
+      if (ah !== 2 * bits[n] - 1) { st.err++; st.lastErr = st.n; }
+      st.w1 += mu * se * a1; st.w2 += mu * se * a2; st.d += mu * se * ah;
+      st.dh.push(ah); if (st.dh.length > 4) st.dh.shift();
+      st.n++;
+      if (st.t1 === null && Math.abs(st.w1 - ZF[1]) < 0.002) st.t1 = st.n;
+      if (st.n % 10 === 0) { hist.n.push(st.n); hist.d.push(st.d); hist.w1.push(st.w1); hist.w2.push(st.w2); }
+    }
+  }
+  var tb = q('[data-t="run"]');
+  BD.toggle(tb, function (on) { cancelAnimationFrame(timer); tb.textContent = on ? 'pause' : 'run';
+    if (on) { if (st.n >= NT) reset(); (function loop() { if (!root.isConnected) return; step(40); draw(); if (st.n < NT && tb.getAttribute('aria-pressed') === 'true') timer = requestAnimationFrame(loop);
+      else { tb.setAttribute('aria-pressed', 'false'); tb.textContent = 'run'; } })(); } });
+  q('[data-b="all"]').addEventListener('click', function () { step(NT); draw(); });
+  q('[data-b="reset"]').addEventListener('click', function () { reset(); draw(); });
+  var mv = function (v) { return (v * 1e3).toFixed(1) + ' mV'; };
+  function draw() {
+    var d = BD.setup(q('[data-c="t"]')), f = BD.frame(d, { x: [0, NT], y: [-0.01, 0.11], xt: [[0, '0'], [1000, '1000'], [2000, '2000'], [3000, '3000'], [4000, '4000'], [5000, '5000'], [6000, '6000 UI']],
+      yt: [[0, '0'], [0.025, '25'], [0.05, '50'], [0.075, '75'], [0.1, '100 mV']], pad: { l: 50, t: 24 } });
+    [[ZF[0], BD.C.gold], [ZF[1], BD.C.blue], [ZF[2], BD.C.teal]].forEach(function (z) { BD.hline(f, z[0], z[1], [5, 4]); });
+    BD.line(f, hist.n, hist.d, BD.C.gold, 1.8); BD.line(f, hist.n, hist.w1, BD.C.blue, 1.8); BD.line(f, hist.n, hist.w2, BD.C.teal, 1.8);
+    q('[data-o="ui"]').textContent = st.n;
+    q('[data-o="d"]').textContent = mv(st.d) + ' (ZF ' + (ZF[0] * 1e3).toFixed(1) + ')';
+    q('[data-o="w1"]').textContent = mv(st.w1) + ' (ZF ' + (ZF[1] * 1e3).toFixed(1) + ')';
+    q('[data-o="w2"]').textContent = mv(st.w2) + ' (ZF ' + (ZF[2] * 1e3).toFixed(1) + ')';
+    q('[data-o="t1"]').textContent = st.t1 === null ? '–' : st.t1 + ' UI';
+    var er = q('[data-o="er"]'); er.textContent = st.err; er.className = st.err ? 'bad' : 'ok';
+    q('[data-o="cap"]').innerHTML = st.n === 0
+      ? 'Press run. The receiver knows only the sign of its error e<sub>n</sub> = z<sub>n</sub> − d<sub>lev</sub>â<sub>n</sub>, from one extra comparator. Each UI it nudges every tap by ±μ: up if the error correlates with the decision k bits ago.'
+      : S.pre >= 15
+      ? 'The extra pre-cursor puts ±' + S.pre + ' mV into every error sample. Once the tap errors are smaller than that, sgn(e<sub>n</sub>) is set by the next bit alone, which is uncorrelated with the past decisions: the average update vanishes and the taps random-walk. Cancel the pre-cursor first.'
+      : 'The taps climb by μ per UI until the error sign stops correlating with the past decisions, then dither around the zero-forcing values. A larger μ converges faster but dithers more; sign-sign LMS settles slightly off the ZF values (Worked Example 8.3: 29.8 and 11.5 mV, d<sub>lev</sub> 94.0 mV after 6000 UI) because the error sign also sees the residual tail and noise.';
+  }
+  reset(); BD.observe(root, draw);
+})();
+</script>
