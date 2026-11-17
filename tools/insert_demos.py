@@ -18,6 +18,7 @@ CH = "chapters/"
 
 DEMOS = [
     (CH + "01-why-serial-links.html", "skew", "after:fig:ch1-parser"),
+    (CH + "01-why-serial-links.html", "clockplan", "after:fig:link-anatomy"),
     (CH + "01-why-serial-links.html", "fo4rule", "after:fig:ch1-speed"),
     (CH + "02-signals-systems-and-the-language-of-links.html", "nrzpsd", "after:fig:ch2-psd"),
     (CH + "02-signals-systems-and-the-language-of-links.html", "lfsr", "after:fig:ch2-prbs"),
@@ -50,6 +51,7 @@ DEMOS = [
     (CH + "11-jitter.html", "pllnoise", "after:fig:ch11-pn"),
     (CH + "12-clock-generation-the-phase-locked-loop.html", "pllloop", "after:fig:ch12-loop"),
     (CH + "12-clock-generation-the-phase-locked-loop.html", "pllnoise", "after:fig:ch12-noise"),
+    (CH + "13-clock-and-data-recovery.html", "alex", "after:fig:ch13-alex"),
     (CH + "13-clock-and-data-recovery.html", "bbgain", "after:fig:ch13-bbchar"),
     (CH + "13-clock-and-data-recovery.html", "jtol", "after:fig:ch13-jtol"),
     (CH + "13-clock-and-data-recovery.html", "pi", "after:fig:ch13-pi"),
