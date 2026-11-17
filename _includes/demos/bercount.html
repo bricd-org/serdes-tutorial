@@ -1,0 +1,47 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdBerCount" role="group" aria-label="Interactive demo: how many bits it takes to claim a BER">
+  <div class="bd-head"><span>// try it · bits needed to claim a BER</span>
+    <span class="bd-seg" role="group" aria-label="Confidence presets"><button type="button" data-cl="90" aria-pressed="false">CL 90 %</button><button type="button" data-cl="95" aria-pressed="true">95 %</button><button type="button" data-cl="99" aria-pressed="false">99 %</button></span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>BER to claim <b data-v="ber"></b></span><input type="range" data-k="ber" min="6" max="15" step="1" value="12" aria-label="BER exponent"></label>
+    <label class="bd-sl"><span>confidence level <b data-v="cl"></b></span><input type="range" data-k="cl" min="50" max="99.9" step="0.1" value="95" aria-label="Confidence level in percent"></label>
+    <label class="bd-sl"><span>errors seen during the test <b data-v="k"></b></span><input type="range" data-k="k" min="0" max="10" step="1" value="0" aria-label="Errors seen"></label>
+    <label class="bd-sl"><span>bit rate <b data-v="fb"></b></span><input type="range" data-k="fb" min="1" max="25" step="0.5" value="5" aria-label="Bit rate in Gb/s"></label>
+  </div>
+  <div class="bd-scope"><canvas data-c="n" aria-hidden="true"></canvas><span class="bd-tag">test time against the BER claimed, for 0–3 errors seen</span></div>
+  <div class="bd-read" aria-live="polite"><span>bits needed <b data-o="n">–</b></span><span>× 1/BER <b data-o="x">–</b></span><span>test time <b data-o="t">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdBerCount'); if (!root || !window.BD) return;
+  var S = BD.bind(root, { ber: { map: function (v) { return Math.pow(10, -v); }, fmt: function (x) { return '1e−' + Math.round(-Math.log10(x)); } },
+    cl: { fmt: function (x) { return x.toFixed(1) + ' %'; } }, k: { fmt: function (x) { return String(x); } }, fb: { fmt: function (x) { return x + ' Gb/s'; } } }, function () { draw(); });
+  var q = function (s) { return root.querySelector(s); }, sl = q('[data-k="cl"]');
+  BD.seg(root, 'cl', function (v) { sl.value = v; sl.dispatchEvent(new Event('input')); });
+  function mult(cl, k) {                         // smallest λ = N·BER with P(≤ k errors | λ) ≤ 1 − CL  (Poisson)
+    var target = 1 - cl / 100, lo = 0, hi = 100;
+    var cdf = function (l) { var t = Math.exp(-l), s = t; for (var i = 1; i <= k; i++) { t *= l / i; s += t; } return s; };
+    for (var it = 0; it < 80; it++) { var m = (lo + hi) / 2; if (cdf(m) > target) lo = m; else hi = m; }
+    return (lo + hi) / 2;
+  }
+  function dur(s) { var u = [[86400 * 365, 'years'], [86400, 'days'], [3600, 'h'], [60, 'min'], [1, 's']];
+    for (var i = 0; i < u.length; i++) if (s >= u[i][0]) return (s / u[i][0]).toPrecision(3) + ' ' + u[i][1]; return (s * 1e3).toPrecision(3) + ' ms'; }
+  function draw() {
+    var ber = S.ber, cl = S.cl, k = S.k, fb = S.fb * 1e9, m = mult(cl, k), n = m / ber, t = n / fb;
+    root.querySelectorAll('[data-cl]').forEach(function (b) { b.setAttribute('aria-pressed', Math.abs(parseFloat(b.getAttribute('data-cl')) - cl) < 0.05 ? 'true' : 'false'); });
+    var d = BD.setup(q('[data-c="n"]')), f = BD.frame(d, { x: [1e-15, 1e-6], y: [1e-4, 1e7], xlog: true, ylog: true,
+      xt: [[1e-15, '1e−15'], [1e-12, '1e−12'], [1e-9, '1e−9'], [1e-6, '1e−6']], yt: [[1e-3, '1 ms'], [1, '1 s'], [60, '1 min'], [3600, '1 h'], [86400, '1 day'], [3.15e7 / 12, '1 month']], pad: { l: 54, t: 24 } });
+    for (var kk = 0; kk <= 3; kk++) { var mk = mult(cl, kk), xs = [], ys = []; for (var e = 6; e <= 15; e += 0.25) { var b = Math.pow(10, -e); xs.push(b); ys.push(mk / b / fb); }
+      BD.line(f, xs, ys, kk === k ? BD.C.teal : 'rgba(127,208,184,.3)', kk === k ? 2.2 : 1.2); }
+    BD.dot(f, ber, t, BD.C.gold, 5);
+    q('[data-o="n"]').textContent = n.toExponential(2).replace('e+', ' × 10^');
+    q('[data-o="x"]').textContent = m.toFixed(2);
+    var te = q('[data-o="t"]'); te.textContent = dur(t); te.className = t < 3600 ? 'ok' : 'bad';
+    q('[data-o="cap"]').innerHTML = 'Errors are rare, random events, so a test can only bound the BER. With no errors in N bits, the BER is below −ln(1 − CL)/N at confidence CL: about 3/N at 95 %. ' +
+      (k > 0 ? 'Every error seen raises the bits needed (here ' + m.toFixed(2) + '/BER instead of ' + mult(cl, 0).toFixed(2) + '/BER). ' : '') +
+      'Claiming 10<sup>−12</sup> at 95 % takes 3 × 10<sup>12</sup> error-free bits, ten minutes at 5 Gb/s per setting: that is why the PRBS checker is on chip, and why the bathtub below 10<sup>−6</sup> is extrapolated, not counted.';
+  }
+  BD.observe(root, draw);
+})();
+</script>

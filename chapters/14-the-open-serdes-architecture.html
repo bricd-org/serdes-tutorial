@@ -135,6 +135,8 @@ permalink: "/chapters/14-the-open-serdes-architecture/"
 <img src="{% endraw %}{{ '/assets/figs/tikz/14_arch-1.svg' | relative_url }}{% raw %}" style="width:749px" alt="One 2.5 GHz PLL serves the whole chip; the TX divides it, the RX rotates it." loading="lazy" />
 <figcaption><span class="capnum">Figure 14.2.</span> <strong>One 2.5 GHz PLL serves the whole chip; the TX divides it, the RX rotates it.</strong> Top: the frequency at every node. The TX chain divides by 2, 4 and 8 down to the 312.5 MHz word clock. The RX chain first makes four phases with the polyphase filter, rotates them with the two PIs, and divides the recovered clock for the deserializer and for the CDR loop, which updates every 8 UI at 625 MHz. Bottom: what the four phases do. D0 and D1 sample the eye centers on the two edges of I; E0 and E1 sample the crossings on the edges of Q. One 400 ps clock period carries two bits and contains 64 PI steps.</figcaption>
 </figure>
+<!-- demo:clockplan -->{% endraw %}{% include demos/clockplan.html %}{% raw %}<!-- /demo -->
+
 <div class="tbox tbox-insight">
 <div class="tbox-title">
 <p>What this means for your design</p>

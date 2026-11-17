@@ -46,7 +46,8 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 
 **Ch 1 · Why serial links?**
 1. `skew` · Parallel bus vs serial link (Worked Ex 1.1): bit rate, lane count, skew σ → valid window of a bus
-   shrinks to zero while a serial lane keeps its eye. After fig:ch1-parser. todo
+   shrinks to zero while a serial lane keeps its eye. After fig:ch1-parser. **done** (10 mm → 67 ps: 2.1 % at
+   312.5 Mb/s, 33.5 % at 5 Gb/s; 16 lanes)
 2. `ratechain` · Follow the rates (Ex 1.2): pick serialization ratio and line rate → word clock, PLL, half-rate
    clock, UI, f_N (16 × 312.5 Mb/s → 5 Gb/s, 2.5 GHz, 200 ps). After fig:link-anatomy. todo
 3. `fo4ui` · How many gate delays fit in a UI: bit rate slider; bars for CMOS FO4 (42/55 ps) vs HBT CML (~2 ps,
@@ -152,7 +153,8 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 44. ★ `term` · Termination choices: series/parallel/double, mismatch slider → launched level and echoes.
     After fig:ch9-term. todo
 45. `cmlsst` · CML vs SST current: swing and de-emphasis → supply current and power (4×; 1.38× SST at 6 dB).
-    After fig:ch9-current. todo
+    After fig:ch9-current. **done** (Eq 9.3: 20 mA/50 mW vs 6 mW at 1 V_ppd, 16 mA/40 mW vs 4.8 mW at 0.8 V;
+    the 1.38× SST de-emphasis penalty is not modelled yet)
 46. `ffecurr` · Tap currents: preset → I−1, I0, I1 summing to 20 mA, output levels. After fig:ch9-ffe. todo
 47. `tcoil` · Pad C and T-coil: C_p → return loss (0.85 pF limit) and pole (10.1 → 14.3 GHz). After fig:ch9-pad. todo
 
@@ -211,7 +213,8 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
     extracted book text the µ of µs is lost in places ("0.2 s" means 0.2 µs).
 
 **Ch 14 · Architecture**
-71. `clockplan` · Clock plan explorer: line rate → every clock in Fig 14.2 (2.5 GHz, 1.25 GHz, 625 MHz, 312.5 MHz). After fig:ch14-clock. todo
+71. `clockplan` · Clock plan explorer: line rate → every clock in Fig 14.2 (2.5 GHz, 1.25 GHz, 625 MHz, 312.5 MHz). After fig:ch14-clock.
+    **done** (N = 50 at 5 Gb/s, 100 at 10 Gb/s; flags the CDR loop clock reaching 1.25 GHz and fractional N)
 72. `budget10g` · Design for 10, guarantee 5: rate and length → PDA eye and timing budget (Fig 14.4). After fig:ch14-rate. todo
 73. `bondwire` · Bond-wire length (Ex 14.2): L per mm and C_pad → resonance and return loss. End of sec14.5.3. todo
 74. `power` · Power budget: currents per block → total power and pJ/bit (Fig 14.8). After fig:ch14-power. todo
@@ -219,7 +222,7 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 **Ch 15 · Flow**
 75. `mcruns` · How many Monte Carlo runs (key eq): yield target and confidence → N. End of sec:testbenches. todo
 76. `bercount` · Bits needed to claim a BER: target BER, confidence, errors seen → N bits and test time
-    (3/N rule at 95 %). End of sec:labtest. todo
+    (3/N rule at 95 %). End of sec:labtest. **done** (Poisson bound: 3.00e12 bits, 10 min at 1e−12/95 %; k errors)
 77. `lumped` · Sections for a lumped line model: rise time and t_d → N sections. todo
 
 **Ch 16 · Labs**: the labs run serdespy in Python, so instead of new demos each lab links back to the demo that
@@ -257,6 +260,9 @@ noise, jitter) → stat eye and margin, the whole book on one panel. todo
 - 17 Nov (later): `jtol` and `cdrsim` (Ch 13): 24 demos live.
 - 17 Nov (later): `superpos` (Ch 2), `lossbuild` (Ch 3), `whoowns` (Ch 5), and `pllnoise` reused in Ch 11:
   27 demo placements (26 distinct demos) live.
+- 17 Nov (later): `skew` (Ch 1), `cmlsst` (Ch 9), `clockplan` (Ch 14), `bercount` (Ch 15): every chapter 1–15 now
+  has at least one demo; 31 placements (30 distinct demos). Checked all 15 demo pages at 375 px: no horizontal
+  overflow; PDA panel readable at phone width. Light mode not checked separately (the panels have fixed navy colours).
 - Lab 5 check: SL's ideal-DFE eye gives 60 → 108/129/~142/~152 mV for 1–4 taps vs the book's 60 → 110.7/129.7/
   143.2/153.6 (serdespy's DFE samples at a fixed phase; SL searches the phase in 2-sample steps).
 - Visual check while the browser pane is hidden: screenshots fail, so a page snippet POSTs the canvases to a

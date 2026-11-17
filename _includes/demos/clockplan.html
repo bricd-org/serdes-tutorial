@@ -1,0 +1,43 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdClockPlan" role="group" aria-label="Interactive demo: every clock in the Open-SERDES chip against the line rate">
+  <div class="bd-head"><span>// try it · the clock plan</span>
+    <span class="bd-seg" role="group" aria-label="Line rate presets"><button type="button" data-fb="5" aria-pressed="true">5 Gb/s</button><button type="button" data-fb="8" aria-pressed="false">8 Gb/s</button><button type="button" data-fb="10" aria-pressed="false">10 Gb/s</button></span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>line rate f<sub>b</sub> <b data-v="fb"></b></span><input type="range" data-k="fb" min="1" max="12" step="0.25" value="5" aria-label="Line rate in Gb/s"></label>
+    <label class="bd-sl"><span>reference clock <b data-v="ref"></b></span><input type="range" data-k="ref" min="10" max="200" step="5" value="50" aria-label="Reference clock in MHz"></label>
+  </div>
+  <div class="bd-scope tall"><canvas data-c="c" aria-hidden="true"></canvas><span class="bd-tag">clock frequencies (log scale): HBT CML at ≥ 1.25 GHz (blue), CMOS below (teal)</span></div>
+  <div class="bd-read" aria-live="polite"><span>UI <b data-o="ui">–</b></span><span>f<sub>N</sub> <b data-o="fn">–</b></span><span>PLL divide ratio N <b data-o="n">–</b></span><span>f<sub>ref</sub>/f<sub>u</sub> at a 3 MHz loop <b data-o="r">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdClockPlan'); if (!root || !window.BD) return;
+  var S = BD.bind(root, { fb: { fmt: function (x) { return x.toFixed(2) + ' Gb/s'; } }, ref: { fmt: function (x) { return x + ' MHz'; } } }, function () { draw(); });
+  var q = function (s) { return root.querySelector(s); }, sl = q('[data-k="fb"]');
+  BD.seg(root, 'fb', function (v) { sl.value = v; sl.dispatchEvent(new Event('input')); });
+  var fmt = function (f) { return f >= 1e9 ? (f / 1e9).toFixed(f >= 1e10 ? 1 : 3).replace(/\.?0+$/, '') + ' GHz' : (f / 1e6).toFixed(1).replace(/\.0$/, '') + ' MHz'; };
+  function draw() {
+    var fb = S.fb * 1e9, ref = S.ref * 1e6, pll = fb / 2, N = pll / ref;
+    root.querySelectorAll('[data-fb]').forEach(function (b) { b.setAttribute('aria-pressed', Math.abs(parseFloat(b.getAttribute('data-fb')) - S.fb) < 0.01 ? 'true' : 'false'); });
+    var rows = [['line rate', fb], ['PLL / VCO (½ rate)', pll], ['RX PI phases', pll], ['TX ÷2, 4:2 mux', fb / 4], ['TX ÷4, CDR loop', fb / 8], ['TX ÷8, word clock', fb / 16], ['reference', ref]];
+    var d = BD.setup(q('[data-c="c"]')), f = BD.frame(d, { x: [1e7, 2e10], y: [rows.length + 0.2, -0.8], xlog: true, xt: [[1e7, '10M'], [1e8, '100M'], [1e9, '1G'], [1e10, '10 GHz']], yt: [], pad: { l: 128, t: 24 } });
+    var g = d.g; g.fillStyle = 'rgba(127,184,240,.07)'; g.fillRect(f.X(1.25e9), f.p.t, f.X(2e10) - f.X(1.25e9), d.h - f.p.t - f.p.b);
+    BD.vline(f, 1.25e9, 'rgba(127,184,240,.5)', [3, 3]);
+    rows.forEach(function (r, i) { var y = f.Y(i), cml = r[1] >= 1.25e9 && i > 0 && i < 6;
+      g.fillStyle = BD.C.axis; g.textAlign = 'right'; g.fillText(r[0], f.p.l - 8, y + 3); g.textAlign = 'left';
+      g.strokeStyle = i === 0 ? 'rgba(255,255,255,.35)' : i === 6 ? BD.C.gold : cml ? BD.C.blue : BD.C.teal; g.lineWidth = 6; g.beginPath(); g.moveTo(f.X(1e7), y); g.lineTo(f.X(r[1]), y); g.stroke();
+      g.fillStyle = '#fff'; g.fillText(fmt(r[1]), Math.min(f.X(r[1]) + 6, d.w - 64), y + 3); });
+    q('[data-o="ui"]').textContent = (1e12 / fb).toFixed(1) + ' ps';
+    q('[data-o="fn"]').textContent = fmt(fb / 2);
+    var ne = q('[data-o="n"]'); ne.textContent = Number.isInteger(Math.round(N * 1000) / 1000) ? N.toFixed(0) : N.toFixed(2) + ' (fractional)'; ne.className = Math.abs(N - Math.round(N)) < 1e-6 ? 'ok' : 'bad';
+    q('[data-o="r"]').textContent = (ref / 3e6).toFixed(0);
+    var loop = fb / 8;
+    q('[data-o="cap"]').innerHTML = 'One PLL at half the line rate serves the whole chip: the TX divides it down to the word clock, the RX rotates it with the phase interpolators. ' +
+      (loop >= 1.25e9 ? '<b style="color:#f39a7c">At this rate the CDR loop clock reaches ' + fmt(loop) + '</b>, too fast for the CMOS logic: deserialize further (1:16) before the loop filter, or accept a longer latency. '
+       : 'Everything at 1.25 GHz and above is HBT CML; the CDR loop (' + fmt(loop) + ') and the word clock (' + fmt(fb / 16) + ') stay in CMOS. ') +
+      (Math.abs(N - Math.round(N)) > 1e-6 ? 'The reference does not divide the PLL frequency: an integer-N PLL needs another reference or a fractional-N loop.' : '');
+  }
+  BD.observe(root, draw);
+})();
+</script>

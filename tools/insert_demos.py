@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parent.parent
 CH = "chapters/"
 
 DEMOS = [
+    (CH + "01-why-serial-links.html", "skew", "after:fig:ch1-parser"),
     (CH + "02-signals-systems-and-the-language-of-links.html", "nrzpsd", "after:fig:ch2-psd"),
     (CH + "02-signals-systems-and-the-language-of-links.html", "lfsr", "after:fig:ch2-prbs"),
     (CH + "02-signals-systems-and-the-language-of-links.html", "onepole", "after:fig:ch2-onepole"),
@@ -35,6 +36,7 @@ DEMOS = [
     (CH + "08-decision-feedback-equalization-and-adaptation.html", "dfe", "after:fig:ch8-cancel"),
     (CH + "08-decision-feedback-equalization-and-adaptation.html", "sslms", "after:fig:ch8-sslms"),
     (CH + "11-jitter.html", "slope", "after:fig:ch11-slope"),
+    (CH + "09-the-transmitter.html", "cmlsst", "after:fig:ch9-current"),
     (CH + "10-receiver-front-end-and-samplers.html", "latch", "after:fig:ch10-meta"),
     (CH + "11-jitter.html", "dualdirac", "after:fig:ch11-hist"),
     (CH + "11-jitter.html", "bathtub", "after:fig:ch11-bathtub"),
@@ -45,6 +47,8 @@ DEMOS = [
     (CH + "13-clock-and-data-recovery.html", "jtol", "after:fig:ch13-jtol"),
     (CH + "13-clock-and-data-recovery.html", "pi", "after:fig:ch13-pi"),
     (CH + "13-clock-and-data-recovery.html", "cdrsim", "after:fig:ch13-sim"),
+    (CH + "14-the-open-serdes-architecture.html", "clockplan", "after:fig:ch14-clock"),
+    (CH + "15-design-and-verification-flow-with-open-tools.html", "bercount", "end:sec:labtest"),
 ]
 
 BLOCK = re.compile(r"\n?<!-- demo:[\w-]+ -->.*?<!-- /demo -->\n?", re.S)

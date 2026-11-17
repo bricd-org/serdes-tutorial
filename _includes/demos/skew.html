@@ -1,0 +1,45 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdSkew" role="group" aria-label="Interactive demo: skew closes a parallel bus as the bit rate rises">
+  <div class="bd-head"><span>// try it · parallel bus vs serial link</span>
+    <span class="bd-seg" role="group" aria-label="Bit rate presets"><button type="button" data-fb="0.3125" aria-pressed="false">312.5 Mb/s</button><button type="button" data-fb="5" aria-pressed="true">5 Gb/s</button></span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>bit rate per lane <b data-v="fb"></b></span><input type="range" data-k="fb" min="0" max="100" step="0.01" value="84.95" aria-label="Bit rate per lane"></label>
+    <label class="bd-sl"><span>worst lane-length mismatch <b data-v="mm"></b></span><input type="range" data-k="mm" min="0" max="30" step="0.5" value="10" aria-label="Length mismatch in millimetres"></label>
+  </div>
+  <div class="bd-scope tall"><canvas data-c="t" aria-hidden="true"></canvas><span class="bd-tag">valid window of each lane (one bit time), FR-4 at 6.7 ps/mm</span></div>
+  <div class="bd-read" aria-live="polite"><span>bit time <b data-o="tb">–</b></span><span>skew <b data-o="sk">–</b></span><span>skew / bit time <b data-o="fr">–</b></span><span>window left for all 16 lanes <b data-o="w">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdSkew'); if (!root || !window.BD) return;
+  var map = function (v) { return 0.1 * Math.pow(100, v / 100); }, inv = function (f) { return 100 * Math.log(f / 0.1) / Math.log(100); };
+  var S = BD.bind(root, { fb: { map: map, fmt: function (x) { return x < 1 ? (x * 1000).toFixed(0) + ' Mb/s' : x.toFixed(2) + ' Gb/s'; } }, mm: { fmt: function (x) { return x.toFixed(1) + ' mm'; } } }, function () { draw(); });
+  var q = function (s) { return root.querySelector(s); }, sl = q('[data-k="fb"]');
+  BD.seg(root, 'fb', function (v) { sl.value = inv(parseFloat(v)); sl.dispatchEvent(new Event('input')); });
+  var off = [0, 0.62, 0.15, 0.9, 0.33, 1, 0.48, 0.07, 0.71, 0.27, 0.56, 0.84, 0.4, 0.19, 0.95, 0.66];   // each lane's share of the mismatch
+  function draw() {
+    var tb = 1000 / S.fb, sk = S.mm * 6.7, win = tb - sk;
+    root.querySelectorAll('[data-fb]').forEach(function (b) { b.setAttribute('aria-pressed', Math.abs(parseFloat(b.getAttribute('data-fb')) - S.fb) / S.fb < 0.01 ? 'true' : 'false'); });
+    var span = Math.max(tb, sk) * 1.25, d = BD.setup(q('[data-c="t"]')), g = d.g, L = 76, R = d.w - 14, Tp = 24, rowH = (d.h - Tp - 34) / 17;
+    var X = function (t) { return L + (R - L) * t / span; };
+    g.fillStyle = BD.C.axis; g.textAlign = 'right';
+    for (var i = 0; i < 16; i++) { var y = Tp + i * rowH, s0 = off[i] * sk;
+      g.fillStyle = 'rgba(127,184,240,.55)'; g.fillRect(X(s0), y + 1, X(s0 + tb) - X(s0), rowH - 3);
+      if (i % 3 === 0) { g.fillStyle = BD.C.axis; g.fillText('lane ' + i, L - 6, y + rowH / 2 + 3); } }
+    if (win > 0) { g.fillStyle = 'rgba(127,224,160,.22)'; g.fillRect(X(sk), Tp, X(tb) - X(sk), 16 * rowH); g.strokeStyle = BD.C.green; g.lineWidth = 1.4; g.strokeRect(X(sk), Tp, X(tb) - X(sk), 16 * rowH); }
+    var ys = Tp + 16 * rowH + 6; g.fillStyle = 'rgba(224,184,90,.75)'; g.fillRect(X(0), ys, X(tb) - X(0), rowH - 2);
+    g.fillStyle = BD.C.gold; g.fillText('serial', L - 6, ys + rowH / 2 + 3);
+    g.textAlign = 'center'; g.fillStyle = BD.C.axis; [0, 0.25, 0.5, 0.75, 1].forEach(function (r) { var t = r * span; g.fillText(t >= 1000 ? (t / 1000).toFixed(1) + ' ns' : t.toFixed(0) + ' ps', X(t), d.h - 6); });
+    g.textAlign = 'left';
+    q('[data-o="tb"]').textContent = tb >= 1000 ? (tb / 1000).toFixed(2) + ' ns' : tb.toFixed(0) + ' ps';
+    q('[data-o="sk"]').textContent = sk.toFixed(0) + ' ps';
+    var fr = q('[data-o="fr"]'); fr.textContent = (100 * sk / tb).toFixed(1) + ' %'; fr.className = sk / tb < 0.1 ? 'ok' : 'bad';
+    q('[data-o="w"]').textContent = win > 0 ? win.toFixed(0) + ' ps' : 'none';
+    q('[data-o="cap"]').innerHTML = 'A bus can only sample where every lane is valid at once (green). ' +
+      (sk / tb < 0.05 ? 'At this rate the skew is a small fraction of the bit time, so a forwarded clock works.' : sk < tb ? 'The skew now eats ' + (100 * sk / tb).toFixed(0) + ' % of the bit, before any jitter or noise.' : '<b style="color:#f39a7c">The skew exceeds the bit time: no common window is left.</b>') +
+      ' A serial link (gold) has one lane and recovers its clock from its own data, so skew between lanes cannot close it.';
+  }
+  BD.observe(root, draw);
+})();
+</script>
