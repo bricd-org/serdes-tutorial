@@ -113,7 +113,7 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 
 **Ch 5 · Equalization fundamentals**
 27. `zfnoise` · Inverse channel and noise: equalize-to frequency slider → flat product and noise gain
-    (12.1 dB to f_N, 22.5 dB to 2f_N). After fig:ch5-inverse. todo
+    (12.1 dB to f_N, 22.5 dB to 2f_N). After fig:ch5-inverse. **done** (Eq 5.1 on REF: 12.1 / 22.4 dB)
 28. `cable` · Cable model: loss slider → zero-phase pulse, main cursor, PDA half-eye; eye closes ~14 dB.
     After fig:ch5-cable. **done** (Eq 5.3/5.4 Lorentzian: 15 dB → k_d l 691 ps, 0.470, 0.153, 0.043, Σ 0.527)
 29. ★ `whoowns` · Who removes which cursor: toggle TX pre-tap, CTLE, DFE taps on the REF pulse; colour-coded
@@ -294,7 +294,7 @@ noise, jitter) → stat eye and margin, the whole book on one panel. todo
 
 ### Next steps
 
-State on 17 Nov (third window): 62 placements; was 32 (31 includes incl. `labmap`), every chapter 1–16 covered, all merged
+State on 17 Nov (third window): 63 placements; was 32 (31 includes incl. `labmap`), every chapter 1–16 covered, all merged
 into `main` (deployed). Each `done` entry above lists the book numbers it reproduces.
 
 0. Values for the rest are already extracted in this pass: Ex 8.2 tap-1 budget (clk-Q 25–35, tap 10, 3τ = 60 with

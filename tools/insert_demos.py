@@ -39,6 +39,7 @@ DEMOS = [
     (CH + "04-link-budgets-and-statistical-analysis.html", "isipdf", "after:fig:ch4-isipdf"),
     (CH + "04-link-budgets-and-statistical-analysis.html", "margin", "after:fig:ch4-waterfall"),
     (CH + "04-link-budgets-and-statistical-analysis.html", "pam4", "after:fig:ch4-pam4"),
+    (CH + "05-equalization-fundamentals.html", "zfnoise", "after:fig:ch5-inverse"),
     (CH + "05-equalization-fundamentals.html", "cable", "after:fig:ch5-cable"),
     (CH + "05-equalization-fundamentals.html", "whoowns", "after:fig:ch5-anatomy"),
     (CH + "06-transmit-ffe.html", "ffefreq", "after:fig:ch6-ffefreq"),
