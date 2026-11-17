@@ -32,6 +32,8 @@ permalink: "/chapters/11-jitter/"
 <img src="{% endraw %}{{ '/assets/figs/ch11_tie.png' | relative_url }}{% raw %}" style="width:753px" alt="Jitter is measured against an ideal clock, and it accumulates." loading="lazy" />
 <figcaption><span class="capnum">Figure 11.1.</span> <strong>Jitter is measured against an ideal clock, and it accumulates.</strong> (a) TIE<span class="math inline">\(_n\)</span> is the offset of each edge from <span class="math inline">\(nT\)</span>; the period <span class="math inline">\(T_n\)</span> differs from <span class="math inline">\(T\)</span> by the period jitter. (b) TIE of the team’s 2.5 GHz LC VCO (73 fs rms period jitter, <a href="#we:ch11-pn">Worked Example 11.2</a>). Free-running, the TIE is a random walk that grows as <span class="math inline">\(\kappa\sqrt{t}\)</span> and passes 10 ps within 8 s. Locked in a 3 MHz PLL it stays near 0.6 ps rms.</figcaption>
 </figure>
+<!-- demo:tie -->{% endraw %}{% include demos/tie.html %}{% raw %}<!-- /demo -->
+
 <p><a href="#fig:ch11-tie">Figure 11.1</a>(b) shows the difference. A free-running oscillator has no memory of where its edges should be, so its TIE random-walks. A phase-locked loop (<a href="{% endraw %}{{ '/chapters/12-clock-generation-the-phase-locked-loop/' | relative_url }}{% raw %}#ch:pll">Chapter 12</a>) compares its edges with a clean reference and keeps the TIE bounded. The CDR (<a href="{% endraw %}{{ '/chapters/13-clock-and-data-recovery/' | relative_url }}{% raw %}">Chapter 13</a>) does the same for the data: it tracks slow jitter and leaves only the fast part to close the eye.</p>
 <div class="tbox tbox-example">
 <div class="tbox-title">
