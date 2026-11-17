@@ -1,0 +1,52 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdMargin" role="group" aria-label="Interactive demo: the voltage margin budget at the sampler">
+  <div class="bd-head"><span>// try it · margin budget</span>
+    <span class="bd-seg" role="group" aria-label="Noise presets"><button type="button" data-n="1.5" aria-pressed="true">system budget σ<sub>n</sub> 1.5 mV</button><button type="button" data-n="1.08" aria-pressed="false">circuit estimate 1.08 mV (Ex 10.3)</button></span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>input-referred noise σ<sub>n</sub> <b data-v="sn"></b></span><input type="range" data-k="sn" min="0.5" max="4" step="0.01" value="1.5" aria-label="Noise in mV rms"></label>
+    <label class="bd-sl"><span>jitter cost ΔV<sub>jitter</sub> <b data-v="vj"></b></span><input type="range" data-k="vj" min="0" max="20" step="0.5" value="3.5" aria-label="Jitter cost in mV"></label>
+    <label class="bd-sl"><span>offset after calibration V<sub>os</sub> <b data-v="vos"></b></span><input type="range" data-k="vos" min="0" max="15" step="0.5" value="5" aria-label="Offset in mV"></label>
+    <label class="bd-sl"><span>sampler noise σ<sub>s</sub> (in V<sub>sens</sub>) <b data-v="ss"></b></span><input type="range" data-k="ss" min="0.2" max="3" step="0.01" value="1" aria-label="Sampler noise in mV rms"></label>
+    <label class="bd-sl"><span>sampler minimum input V<sub>min</sub> <b data-v="vm"></b></span><input type="range" data-k="vm" min="0" max="20" step="0.5" value="5" aria-label="Sampler minimum input in mV"></label>
+  </div>
+  <div class="bd-row">
+    <div class="bd-scope short"><canvas data-c="a" aria-hidden="true"></canvas><span class="bd-tag">swing lost to the channel and the de-emphasis</span></div>
+    <div class="bd-scope short"><canvas data-c="b" aria-hidden="true"></canvas><span class="bd-tag">zoom: from the 209 mV main cursor to the margin</span></div>
+  </div>
+  <div class="bd-read" aria-live="polite"><span>2Qσ<sub>n</sub> <b data-o="nz">–</b></span><span>V<sub>sens</sub> = 2Qσ<sub>s</sub> + V<sub>min</sub> + 2·0.46 mV <b data-o="vs">–</b></span><span>margin M <b data-o="m">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdMargin'); if (!root || !window.BD) return;
+  var Q2 = 14.07, EH = 131, RES = 0.46;
+  var mvf = function (x) { return x.toFixed(x < 10 ? 2 : 1) + ' mV'; };
+  var S = BD.bind(root, { sn: { fmt: mvf }, vj: { fmt: mvf }, vos: { fmt: mvf }, ss: { fmt: mvf }, vm: { fmt: mvf } }, function () { draw(); });
+  var q = function (s) { return root.querySelector(s); }, sl = q('[data-k="sn"]');
+  BD.seg(root, 'n', function (v) { sl.value = v; sl.dispatchEvent(new Event('input')); });
+  function bars(d, f, items) { var g = d.g, n = items.length, bw = (d.w - f.p.l - f.p.r) / n * 0.62;
+    items.forEach(function (it, i) { var x = f.p.l + (i + 0.5) * (d.w - f.p.l - f.p.r) / n, y0 = f.Y(it[1]), y1 = f.Y(it[2]);
+      g.fillStyle = it[3]; g.fillRect(x - bw / 2, Math.min(y0, y1), bw, Math.max(1, Math.abs(y1 - y0)));
+      g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText(it[4], x, Math.min(y0, y1) - 4); g.fillStyle = BD.C.axis; g.fillText(it[0], x, d.h - 6); });
+    g.textAlign = 'left'; }
+  function draw() {
+    root.querySelectorAll('[data-n]').forEach(function (b) { b.setAttribute('aria-pressed', Math.abs(parseFloat(b.getAttribute('data-n')) - S.sn) < 0.005 ? 'true' : 'false'); });
+    var nz = Q2 * S.sn, vs = Q2 * S.ss + S.vm + 2 * RES, m = EH - nz - S.vj - 2 * S.vos - vs;
+    var da = BD.setup(q('[data-c="a"]')), fa = BD.frame(da, { x: [0, 1], y: [0, 1100], xt: [], yt: [[0, '0'], [500, '500'], [1000, '1000 mV']], pad: { l: 52, t: 20, b: 20 } });
+    bars(da, fa, [['launched', 0, 1000, 'rgba(170,205,240,.55)', '1000'], ['after REF', 0, 340, BD.C.blue, '340'], ['de-emphasis', 0, 209, BD.C.gold, '209']]);
+    var db = BD.setup(q('[data-c="b"]')), lo = Math.min(0, m - 10), fb = BD.frame(db, { x: [0, 1], y: [lo, 230], xt: [], yt: [[0, '0'], [100, '100'], [200, '200 mV']], pad: { l: 52, t: 20, b: 20 } });
+    var lv = 209, it = [['main', 0, 209, BD.C.gold, '209']];
+    [['ISI', 209 - EH, 'rgba(240,138,106,.8)'], ['noise', nz, 'rgba(240,138,106,.65)'], ['jitter', S.vj, 'rgba(240,138,106,.55)'], ['offset', 2 * S.vos, 'rgba(240,138,106,.45)'], ['V_sens', vs, 'rgba(240,138,106,.4)']].forEach(function (t) {
+      it.push([t[0], lv, lv - t[1], t[2], '−' + t[1].toFixed(0)]); lv -= t[1]; });
+    it.push(['margin', 0, m, m > 0 ? BD.C.green : BD.C.red, m.toFixed(0)]);
+    BD.hline(fb, 0, 'rgba(255,255,255,.3)', [2, 3]); bars(db, fb, it);
+    q('[data-o="nz"]').textContent = nz.toFixed(1) + ' mV';
+    q('[data-o="vs"]').textContent = vs.toFixed(1) + ' mV';
+    var me = q('[data-o="m"]'); me.textContent = m.toFixed(1) + ' mV'; me.className = m > 0 ? 'ok' : 'bad';
+    q('[data-o="cap"]').innerHTML = 'Start from 1 V launched: REF leaves a 340 mV main cursor, 6 dB of de-emphasis 209 mV, and the residual ISI at 10<sup>−12</sup> leaves a 131 mV statistical eye. ' +
+      'Then subtract, linearly and conservatively, 2Q times the noise, the jitter cost, twice the residual offset and the sampler sensitivity. ' +
+      'The largest single term is residual ISI (78 mV), not noise, so equalization is the best use of design effort. (The statistical check, with noise and jitter inside the eye, leaves 89 mV at the book values: the 7σ noise peak rarely meets a worst-case ISI pattern.)';
+  }
+  BD.observe(root, draw);
+})();
+</script>
