@@ -237,6 +237,8 @@ permalink: "/chapters/02-signals-systems-and-the-language-of-links/"
 <img src="{% endraw %}{{ '/assets/figs/ch02_eye_fold.svg' | relative_url }}{% raw %}" style="width:753px" alt="An eye diagram folds the waveform every 2 UI." loading="lazy" />
 <figcaption><span class="capnum">Figure 2.9.</span> <strong>An eye diagram folds the waveform every 2 UI.</strong> (a) Twelve UI of PRBS7 after a one-pole channel (<span class="math inline">\(\tau = 0.45\,\mathrm{UI}\)</span>), cut into six 2-UI windows. (b) The same segments, same colors, overlaid on 600 others (grey).</figcaption>
 </figure>
+<!-- demo:eyefold -->{% endraw %}{% include demos/eyefold.html %}{% raw %}<!-- /demo -->
+
 <p><a href="#fig:eye-anatomy">Figure 2.10</a> names the parts you will measure throughout this book.</p>
 <ul>
 <li><p><strong>Eye height</strong> (EH): the vertical opening at the sampling instant, between the lowest 1 and the highest 0. It must beat noise, offset and sampler sensitivity.</p></li>

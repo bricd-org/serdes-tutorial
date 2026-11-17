@@ -1,0 +1,40 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdEyeFold" role="group" aria-label="Interactive demo: an eye diagram folds the waveform every 2 UI">
+  <div class="bd-head"><span>// try it · fold the waveform into an eye</span><span>PRBS7 through a one-pole channel, τ = 0.45 UI</span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>2-UI windows folded <b data-v="n"></b></span><input type="range" data-k="n" min="1" max="126" step="1" value="6" aria-label="Number of windows folded"></label>
+  </div>
+  <div class="bd-scope short"><canvas data-c="w" aria-hidden="true"></canvas><span class="bd-tag">the waveform; each coloured 2-UI window is one trace of the eye</span></div>
+  <div class="bd-scope"><canvas data-c="e" aria-hidden="true"></canvas><span class="bd-tag">the same windows overlaid</span></div>
+  <div class="bd-read" aria-live="polite"><span>traces <b data-o="n">–</b></span><span>inner eye so far <b data-o="eh">–</b></span><span>full PRBS7 eye <b data-o="ef">–</b></span></div>
+  <div class="bd-controls"><button type="button" class="bd-toggle" data-t="run" aria-pressed="false">animate</button></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdEyeFold'); if (!root || !window.BD) return;
+  var SPS = 32, A = 0.5, N = 127, tau = 0.45, a = Math.exp(-1 / (tau * SPS)), bits = [], s = 0x7f, w = [], y = -A, timer = 0;
+  for (var i = 0; i < N; i++) { var nb = ((s >> 6) ^ (s >> 5)) & 1; s = ((s << 1) | nb) & 0x7f; bits.push(nb); }
+  bits = bits.slice(60).concat(bits.slice(0, 60));                     // start away from the longest runs
+  for (var m = 0; m < 3 * N * SPS; m++) { var x = bits[Math.floor(m / SPS) % N] ? A : -A; y = x + (y - x) * a; w.push(y); }
+  var base = N * SPS, cols = ['#7fb8f0', '#e0b85a', '#7fd0b8', '#f08a6a', '#c7a3f0', '#9fe0a0'];
+  var S = BD.bind(root, { n: { fmt: String } }, function () { draw(); });
+  var q = function (s) { return root.querySelector(s); }, sl = q('[data-k="n"]'), tb = q('[data-t="run"]');
+  BD.toggle(tb, function (on) { clearInterval(timer); if (on) timer = setInterval(function () { if (!root.isConnected) return clearInterval(timer); var v = +sl.value; sl.value = v >= 126 ? 1 : v + 1; sl.dispatchEvent(new Event('input')); }, 120); });
+  function eyeH(k) { var lo = 1e9, hi = -1e9; for (var j = 0; j < 2 * k; j++) { var b = j, v = w[base + b * SPS + SPS - 1]; if (bits[b % N]) lo = Math.min(lo, v); else hi = Math.max(hi, v); } return lo - hi; }
+  function draw() {
+    var n = S.n, d = BD.setup(q('[data-c="w"]')), span = Math.min(2 * n + 2, 24), f = BD.frame(d, { x: [0, span], y: [-0.6, 0.6], xt: [[0, '0'], [span, span + ' UI']], yt: [[-0.5, '−A'], [0.5, '+A']], pad: { l: 30, t: 16, b: 22 } });
+    var g = d.g; for (var k = 0; k < Math.min(n, span / 2); k++) { g.fillStyle = cols[k % 6].replace(')', ',.12)').replace('#', '#'); g.globalAlpha = 0.14; g.fillStyle = cols[k % 6]; g.fillRect(f.X(2 * k), f.p.t, f.X(2 * k + 2) - f.X(2 * k), d.h - f.p.t - f.p.b); g.globalAlpha = 1; }
+    var xs = [], ys = []; for (var j = 0; j <= span * SPS; j++) { xs.push(j / SPS); ys.push(w[base + j - 1]); } BD.line(f, xs, ys, '#ffffff', 1.4);
+    var de = BD.setup(q('[data-c="e"]')), fe = BD.frame(de, { x: [0, 2], y: [-0.6, 0.6], xt: [[0, '0'], [1, '1'], [2, '2 UI']], yt: [[-0.5, '−A'], [0, '0'], [0.5, '+A']], pad: { l: 30, t: 20 } });
+    for (k = 0; k < n; k++) { var tx = [], ty = []; for (j = 0; j <= 2 * SPS; j++) { tx.push(j / SPS); ty.push(w[base + 2 * k * SPS + j - 1]); }
+      BD.line(fe, tx, ty, k < 6 ? cols[k] : 'rgba(170,205,240,.22)', k < 6 ? 1.8 : 1); }
+    q('[data-o="n"]').textContent = n;
+    q('[data-o="eh"]').textContent = (eyeH(n) * 1e3).toFixed(0) + ' mV';
+    q('[data-o="ef"]').textContent = (eyeH(N) * 1e3).toFixed(0) + ' mV';
+    q('[data-o="cap"]').innerHTML = 'An oscilloscope triggered on the clock draws every 2-UI slice of the waveform on top of the others. The first few traces (coloured) show single patterns; the rest fill in the eye around them. ' +
+      'On this mild channel the worst pattern, a lone bit after a short run, turns up within a few traces, so the opening settles at once; on a channel with a long tail, rare long runs keep closing it, which is why an eye is only as deep as the number of bits behind it.';
+  }
+  BD.observe(root, draw);
+})();
+</script>

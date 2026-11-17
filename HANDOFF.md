@@ -69,7 +69,7 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 9. ★ `isieye` · One-pole ISI and the eye: τ slider (0.1–1.5 UI) → pulse, cursors, PRBS7 eye, measured opening vs
    2A(1 − 2e^(−Tb/τ)) (987/729/265 mV at τ = 0.2/0.5/1 UI). After fig:ch2-isi-tau. **done** (`isieye`)
 10. `eyefold` · Fold the waveform: animate 2-UI windows dropping onto the eye; persistence slider. After
-    fig:ch2-eye-fold. todo
+    fig:ch2-eye-fold. **done** (τ 0.45 UI, PRBS7, 1–126 windows, animate; eye 783 mV)
 11. `berq` · BER cliff: EH and σn sliders → Gaussian tails, Q, BER (Q = 7.03 ↔ 1e−12, 16.9 dB, ~3 decades/dB).
     After fig:ch2-ber. **done** (Q 7.03, 16.9 dB, 1.0e−12, 3.28 min between errors at 5 Gb/s)
 12. `bathtub2` · Bathtub from edge jitter: RJ slider → BER vs phase, opening at 1e−12 (0.72/0.45 UI at 0.02/0.04 UI).
@@ -294,7 +294,7 @@ noise, jitter) → stat eye and margin, the whole book on one panel. todo
 
 ### Next steps
 
-State on 17 Nov (third window): 63 placements; was 32 (31 includes incl. `labmap`), every chapter 1–16 covered, all merged
+State on 17 Nov (third window): 64 placements; was 32 (31 includes incl. `labmap`), every chapter 1–16 covered, all merged
 into `main` (deployed). Each `done` entry above lists the book numbers it reproduces.
 
 0. Values for the rest are already extracted in this pass: Ex 8.2 tap-1 budget (clk-Q 25–35, tap 10, 3τ = 60 with
