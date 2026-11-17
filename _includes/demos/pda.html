@@ -1,0 +1,75 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdPda" role="group" aria-label="Interactive demo: peak distortion analysis of the REF channel">
+  <div class="bd-head"><span>// try it · peak distortion</span>
+    <span class="bd-seg" role="group" aria-label="Equalization"><button type="button" data-eq="none" aria-pressed="true">REF, no EQ</button><button type="button" data-eq="ffe" aria-pressed="false">REF + 2-tap TX FFE</button></span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>post-cursors counted <b data-v="n"></b></span><input type="range" data-k="n" min="1" max="100" step="1" value="10" aria-label="Number of post-cursors counted"></label>
+  </div>
+  <div class="bd-row">
+    <div class="bd-scope"><canvas data-c="b" aria-hidden="true"></canvas><span class="bd-tag">|p<sub>k</sub>| and the cumulative ISI</span></div>
+    <div class="bd-scope"><canvas data-c="w" aria-hidden="true"></canvas><span class="bd-tag">the worst-case pattern at the RX</span></div>
+  </div>
+  <div class="bd-read" aria-live="polite"><span>p<sub>0</sub> <b data-o="p0">–</b></span><span>Σ|p<sub>k</sub>|, k = −2…N <b data-o="isi">–</b></span><span>PDA eye <b data-o="eh">–</b></span><span>full tail (300 UI) <b data-o="ef">–</b></span><span>hidden by truncation <b data-o="hid">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdPda'); if (!root || !window.BD || !window.SL) return;
+  var eq = 'none', H = SL.channel(), p0 = SL.pulseOf(H), c0 = SL.cursors(p0, 2, 10), pF = SL.ffe(p0, SL.zfTaps(c0, 0, 1), 0);
+  var S = BD.bind(root, { n: { fmt: function (x) { return 'k = 1…' + x; } } }, function () { draw(); });
+  BD.seg(root, 'eq', function (v) { eq = v; draw(); });
+  var q = function (s) { return root.querySelector(s); };
+  var mv = function (v) { return (v < 0 ? '−' : '') + Math.abs(v * 1e3).toFixed(0) + ' mV'; };
+  function draw() {
+    var p = eq === 'ffe' ? pF : p0, N = S.n, c = SL.cursors(p, 2, N), cf = SL.cursors(p, 2, 300), A = 0.5;
+    var i0 = c.k.indexOf(0), m = c.v[i0], isi = 0, cum = [], ck = [];
+    c.k.forEach(function (k, i) { if (k !== 0) { isi += Math.abs(c.v[i]); cum.push(isi); ck.push(k); } });
+    var eh = SL.pda(c), ef = SL.pda(cf), cross = null;
+    for (var i = 0; i < cum.length; i++) if (cum[i] > m && cross === null) cross = ck[i];
+    // bars
+    var XM = 40, d = BD.setup(q('[data-c="b"]')), top = Math.max(0.62, isi * 1.08);
+    var f = BD.frame(d, { x: [-3, XM + 1], y: [0, top], xt: [[-2, '−2'], [0, '0'], [10, '10'], [20, '20'], [30, '30'], [40, '40 UI']],
+      yt: [[0, '0'], [0.2, '0.2'], [0.4, '0.4'], [0.6, '0.6 V']], pad: { l: 42, t: 24 } });
+    var g = d.g, bw = Math.max(2, (f.X(1) - f.X(0)) * 0.6);
+    cf.k.forEach(function (k, j) { if (k > XM) return; var v = Math.abs(cf.v[j]), inc = k <= N;
+      g.fillStyle = k === 0 ? BD.C.gold : !inc ? 'rgba(170,205,240,.18)' : k < 0 ? 'rgba(240,138,106,.85)' : 'rgba(127,208,184,.85)';
+      g.fillRect(f.X(k) - bw / 2, f.Y(v), bw, f.Y(0) - f.Y(v)); });
+    BD.hline(f, m, BD.C.gold, [5, 4], 'p0');
+    var cx = [], cy = []; ck.forEach(function (k, j) { if (k <= XM) { cx.push(k); cy.push(cum[j]); } });
+    BD.line(f, cx, cy, '#9fd0ff', 2);
+    if (cross !== null && cross <= XM) { BD.dot(f, cross, cum[ck.indexOf(cross)], '#ffffff', 3.5); g.fillStyle = '#ffffff'; g.fillText('ISI > p0 at k = ' + cross, f.X(cross) + 8, f.Y(cum[ck.indexOf(cross)]) - 8); }
+    // worst-case pattern: each interfering bit opposes the victim "1"; long run before it, then the pre-cursor bits
+    var L = Math.min(N, 60), bits = [];
+    for (var k = L; k >= 1; k--) { var pk = c.v[c.k.indexOf(k)]; bits.push(pk > 0 ? 0 : 1); }
+    var vi = bits.length; bits.push(1); [-1, -2].forEach(function (kk) { bits.push(c.v[c.k.indexOf(kk)] > 0 ? 0 : 1); });
+    var pad0 = 4, all = []; for (i = 0; i < pad0; i++) all.push(i % 2); all = all.concat(bits);      // a short 1010 lead-in
+    var dw = BD.setup(q('[data-c="w"]')), span = 14, t0 = (vi + pad0) - span + 2;
+    var fw = BD.frame(dw, { x: [-span + 2, 2.5], y: [-0.55, 0.45], xt: [[-12, '−12'], [-8, '−8'], [-4, '−4'], [0, 'victim'], [2, '+2 UI']],
+      yt: [[-0.25, '−0.25'], [0, '0'], [0.25, '0.25 V']], pad: { l: 44, t: 24 } });
+    var tx = [], wv = [], idx = SL.argmax(p);
+    for (var s = 0; s <= (span + 0.5) * SL.SPS; s += 4) {        // waveform at the RX, time measured from the victim's sample
+      var t = -span + 2 + s / SL.SPS, y = 0;
+      for (var b = 0; b < all.length; b++) { var n = idx + Math.round((t - (b - (vi + pad0))) * SL.SPS); if (n >= 0 && n < p.length) y += A * (2 * all[b] - 1) * p[n]; }
+      tx.push(t); wv.push(y);
+    }
+    BD.hline(fw, 0, 'rgba(255,255,255,.4)', [3, 3]);
+    BD.line(fw, tx, wv, BD.C.blue, 2);
+    var yv = wv[Math.round((span - 2) * SL.SPS / 4)];
+    BD.dot(fw, 0, yv, yv > 0 ? BD.C.green : BD.C.red, 5);
+    dw.g.fillStyle = yv > 0 ? BD.C.green : BD.C.red; dw.g.fillText('worst "1": ' + mv(yv), fw.X(0) - 92, fw.Y(yv) + (yv > 0 ? -8 : 16));
+    var bstr = bits.slice(Math.max(0, vi - 9)).join('');
+    dw.g.fillStyle = BD.C.axis; dw.g.fillText('… ' + bstr.slice(0, bstr.length - 3) + ' [' + bstr[bstr.length - 3] + '] ' + bstr.slice(-2), fw.p.l + 4, fw.p.t + 12);
+    q('[data-o="p0"]').textContent = m.toFixed(3) + ' V';
+    q('[data-o="isi"]').textContent = isi.toFixed(3) + ' V';
+    var e = q('[data-o="eh"]'); e.textContent = mv(eh); e.className = eh > 0 ? 'ok' : 'bad';
+    var e2 = q('[data-o="ef"]'); e2.textContent = mv(ef); e2.className = ef > 0 ? 'ok' : 'bad';
+    q('[data-o="hid"]').textContent = mv(eh - ef);
+    q('[data-o="cap"]').innerHTML = (eq === 'none'
+      ? 'Every REF cursor is positive, so the worst case for a "1" is a long run of 0s before it and a 0 after it. Each 0 pulls the sample down by A|p<sub>k</sub>|. '
+      : 'With 6 dB of de-emphasis (c<sub>0</sub> = 0.652, c<sub>1</sub> = −0.348) the post-cursors shrink, and the main cursor with them: the eye opens, but at a third of the swing. ') +
+      (eh - ef > 0.02 ? 'Counting only ' + (N + 2) + ' cursors hides ' + mv(eh - ef) + ' of tail ISI: always extend the list until the tail is negligible.'
+       : 'With ' + N + ' post-cursors the PDA is within ' + mv(Math.max(eh - ef, 0)) + ' of the full-tail value.');
+  }
+  BD.observe(root, draw);
+})();
+</script>

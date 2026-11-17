@@ -86,12 +86,14 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
     lobe. After fig:ch3-via. **done** (6.2 GHz at 6 mm, ε_eff 4; 5/10/25 Gb/s presets)
 19. `tdr` · TDR explorer: place an L bump and a C dip, rise-time slider (Fig 3.9). After fig:ch3-tdr. todo
 20. ★ `s21pulse` · From S21 to the pulse: loss slider over the LOSS_FAMILY (5–30 dB) → |S21|, pulse, cursors,
-    p1/p0 (46 % at 15 dB; REF 53.5 %, p0 = 0.340 V). Uses SL. After fig:ref-pulse. todo
+    p1/p0 (46 % at 15 dB; REF 53.5 %, p0 = 0.340 V). Uses SL. After fig:ref-pulse. **done** (REF −17.4 dB, 6.82 ns,
+    0.049/0.340, 53.5 %, PDA −161 mV; 10 dB line 0.020/0.556; length and pad-C sliders)
 21. `ifftpit` · IFFT pitfalls: df, f_max, window and missing DC → how the cursors change (Pitfall box). todo
 
 **Ch 4 · Link budgets**
 22. ★ `pda` · Peak distortion analysis: cursor bars with cumulative ISI; worst-case pattern built live;
-    truncation slider (13 cursors hides 90 mV; −126 mV worst sample). After fig:ch4-pda. todo
+    truncation slider (13 cursors hides 90 mV; −126 mV worst sample). After fig:ch4-pda. **done** (Σ 0.501 V,
+    −161 mV, full tail −255 mV, 94 mV hidden; with 2-tap FFE main 209 mV, PDA 150 mV / 125 mV full)
 23. ★ `isipdf` · ISI distribution by convolution: add cursors one at a time, watch each spike split; noise σ;
     log y (6 % of 1s below threshold unequalized). After fig:ch4-isipdf. todo
 24. `stateye` · Statistical eye: noise σ, RJ, DJ sliders → BER contours 1e−3…1e−12, eye height/width at 1e−12
@@ -111,7 +113,8 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 
 **Ch 6 · TX FFE**
 30. ★ `ffe` · FFE playground: c−1, c0, c1 sliders under Σ|c| = 1 → TX waveform, pulse after REF, cursors, PDA
-    eye (2-tap ZF [0.652, −0.349] → 163 mV open; 3-tap [−0.085, 0.596, −0.319]). After fig:ch6-ref. todo
+    eye (2-tap ZF [0.652, −0.349] → 163 mV open; 3-tap [−0.085, 0.596, −0.319]). After fig:ch6-ref. **done**
+    (163 / 145 mV PRBS7 eyes, −78 mV without FFE, presets −3.5/−6 dB; ZF taps solved live the Lab 3 way)
 31. `deemph` · De-emphasis in volts: dB slider → transition/run levels, PCIe presets (−3.5/−6 dB). After
     fig:ch6-deemph. todo
 32. `ffefreq` · FFE frequency response: peaks at f_N, periodic in f_b; cascade with REF stays −17.4 dB at f_N.
@@ -124,12 +127,14 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 35. ★ `ctlebode` · Degenerated pair designer: g_m, R_S, C_S, R_D, C_L → zero/poles, ideal vs realized boost at f_N
     (14 dB ideal, 10.9 dB realized for the Lab 4 values). After fig:ch7-bode. todo
 36. ★ `ctleref` · CTLE on REF: peaking slider 0–20 dB → pulse, cursors, PRBS eye; best 14 dB (113 mV),
-    over-equalization > 16 dB; shaded 0–12 dB range. Uses SL. After fig:ch7-ref. todo
+    over-equalization > 16 dB; shaded 0–12 dB range. Uses SL. After fig:ch7-ref. **done** (14 dB: 113 mV,
+    main cursor −7.6 dB vs 0 dB, p1 < 0 above 16 dB; eye-vs-peaking curve)
 37. `ctlefix` · Ideal vs realized boost (Ex 7.2): 10 dB promised, 7.0 dB realized; move f_p1 to 2f_N. After fig:ch7-we6. todo
 
 **Ch 8 · DFE and adaptation**
 38. ★ `dfe` · DFE step-through: bit by bit, decisions fed back, summer waveform; tap count; error propagation
-    toggle (a wrong decision doubles ISI). After fig:ch8-cancel. todo
+    toggle (a wrong decision doubles ISI). After fig:ch8-cancel. **done** as `dfe` (REF + 8 dB CTLE: data level
+    91.6 mV, taps 27.6/11.8 mV, eye 60 → 129 mV with 2 taps; no step-through or error propagation yet)
 39. `tap1` · Tap-1 timing budget: clk-Q, summer settling, setup sliders vs 1 UI and 0.5 UI; unroll toggle
     (140 ps direct). After fig:ch8-timing. todo
 40. ★ `sslms` · Sign-sign LMS live: μ, noise, pre-cursor sliders → taps converge to 91.6/27.6/11.8 mV, wander
@@ -222,6 +227,17 @@ noise, jitter) → stat eye and margin, the whole book on one panel. todo
 - 15 Nov (later): `pi` (Ch 13) done, merged and pushed. 6 demos live: isieye, nrzpsd, berq, bounce, bathtub, pi.
 - 15 Nov (later): `onepole` (Ch 2) and `slope` (Ch 11) done, merged and pushed: 8 demos live.
 - 15 Nov (later): `lfsr` (Ch 2) and `viastub` (Ch 3) done, merged and pushed: 10 demos live.
+- 17 Nov: `assets/js/serdes-link.js` (SL) written and verified against the book: REF −17.38 dB, peak 6.82 ns,
+  cursors 0.0486/0.3396/0.1817/0.0909 … 0.0085, Σ13 = 0.501, tail 0.094 (book 0.093), full PDA −0.255;
+  10 dB line 0.020/0.556/0.160/0.063; PRBS7 eyes −77.7 mV (Lab 2), 162.8 mV 2-tap (Lab 3), 113.3 mV at 14 dB
+  CTLE (Lab 4); ZF taps the Lab 3 way (`zfTaps`, only the cursors h−npre…h+npost, like sdp.forcing_ffe).
+  `eyeScan`/`eyeTraces` treat one PRBS period as periodic (circular convolution), 4 ms per scan.
+  Demos on SL: `s21pulse` (Ch 3), `pda` (Ch 4), `ffe` (Ch 6), `ctleref` (Ch 7), `dfe` (Ch 8). 15 demos live.
+- Visual check while the browser pane is hidden: screenshots fail, so a page snippet POSTs the canvases to a
+  local receiver (`python3 -I shotsrv.py <dir>` on 127.0.0.1:4099, kept in the session scratchpad) and the PNG
+  is read back. Recreate it if needed: it base64-decodes `name|dataURL` bodies.
+- Open question: Ch 2 text says the 10 dB line's PDA eye is 230 mV; with 13 cursors SL gives 204 mV. Check
+  which cursor count the book used before quoting either.
 
 ### Next steps
 

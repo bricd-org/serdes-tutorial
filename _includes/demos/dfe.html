@@ -1,0 +1,77 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdDfe" role="group" aria-label="Interactive demo: a DFE cancelling post-cursors on REF after a CTLE">
+  <div class="bd-head"><span>// try it · DFE</span>
+    <span class="bd-seg" role="group" aria-label="Number of DFE taps"><button type="button" data-n="0" aria-pressed="false">no DFE</button><button type="button" data-n="1" aria-pressed="false">1 tap</button><button type="button" data-n="2" aria-pressed="true">2 taps</button><button type="button" data-n="5" aria-pressed="false">5 taps</button></span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>CTLE peaking before the DFE <b data-v="pk"></b></span><input type="range" data-k="pk" min="0" max="12" step="0.5" value="8" aria-label="CTLE peaking in dB"></label>
+    <label class="bd-sl"><span>DFE taps <b data-v="n"></b></span><input type="range" data-k="n" min="0" max="8" step="1" value="2" aria-label="Number of DFE taps"></label>
+  </div>
+  <div class="bd-row">
+    <div class="bd-scope"><canvas data-c="c" aria-hidden="true"></canvas><span class="bd-tag">cursors (×A): left after the DFE, gold = fed-back taps</span></div>
+    <div class="bd-scope"><canvas data-c="s" aria-hidden="true"></canvas><span class="bd-tag">every PRBS7 decision sample: before (faint), after</span></div>
+  </div>
+  <div class="bd-scope short"><canvas data-c="h" aria-hidden="true"></canvas><span class="bd-tag">eye height against the number of DFE taps</span></div>
+  <div class="bd-read" aria-live="polite"><span>data level A·p<sub>0</sub> <b data-o="d">–</b></span><span>taps w<sub>1</sub>, w<sub>2</sub> <b data-o="w">–</b></span><span>eye without DFE <b data-o="e0">–</b></span><span>eye with DFE <b data-o="e1">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdDfe'); if (!root || !window.BD || !window.SL) return;
+  var H = SL.channel(), bits = SL.prbs(7, 127), memo = {}, A = 0.5, NMAX = 8;
+  function link(pk) { if (memo[pk]) return memo[pk]; var p = SL.pulseOf(SL.mul(H, SL.ctle(pk))), idx0 = SL.argmax(p), res = [];
+    for (var n = 0; n <= NMAX; n++) {                  // ideal DFE: the first n post-cursors vanish at the sampling phase
+      var best = -1e9, bph = 0, bys = null;
+      for (var ph = -SL.SPS / 2; ph < SL.SPS / 2; ph += 2) {
+        var q2 = p.slice(); for (var k = 1; k <= n; k++) q2[idx0 + ph + k * SL.SPS] = 0;
+        var y = SL.periodicSamples(q2, bits, ph, idx0, A), lo = 1e9, hi = -1e9;
+        for (var m = 0; m < bits.length; m++) { if (bits[m]) lo = Math.min(lo, y[m]); else hi = Math.max(hi, y[m]); }
+        if (lo - hi > best) { best = lo - hi; bph = ph; bys = y; }
+      }
+      res.push({ eye: best, ph: bph, y: bys });
+    }
+    return (memo[pk] = { p: p, idx0: idx0, res: res }); }
+  var S = BD.bind(root, { pk: { fmt: function (x) { return x.toFixed(1) + ' dB'; } }, n: { fmt: function (x) { return x === 0 ? 'none' : x + (x === 1 ? ' tap' : ' taps'); } } }, function () { draw(); });
+  var q = function (s) { return root.querySelector(s); }, sn = q('[data-k="n"]');
+  BD.seg(root, 'n', function (v) { sn.value = v; sn.dispatchEvent(new Event('input')); });
+  var mv = function (v) { return (v < 0 ? '−' : '') + Math.abs(v * 1e3).toFixed(v !== 0 && Math.abs(v) < 0.1 ? 1 : 0) + ' mV'; };
+  function draw() {
+    var L = link(S.pk), N = S.n, r = L.res[N], r0 = L.res[0];
+    root.querySelectorAll('[data-n]').forEach(function (b) { b.setAttribute('aria-pressed', +b.getAttribute('data-n') === N ? 'true' : 'false'); });
+    var c = SL.cursors(L.p, 2, 10, L.idx0 + r.ph);
+    // cursor bars: before (outline), after (filled), taps (gold, drawn as the subtraction)
+    var d = BD.setup(q('[data-c="c"]')), f = BD.frame(d, { x: [-2.6, 10.6], y: [-0.02, 0.1], xt: [[-2, '−2'], [0, '0'], [2, '2'], [4, '4'], [6, '6'], [8, '8'], [10, '10 UI']],
+      yt: [[0, '0'], [0.05, '50'], [0.1, '100 mV']], pad: { l: 50, t: 24 } });
+    var g = d.g, bw = (f.X(1) - f.X(0)) * 0.5;
+    c.k.forEach(function (k, i) { var v = A * c.v[i], after = k >= 1 && k <= N ? 0 : v;
+      g.strokeStyle = 'rgba(170,205,240,.45)'; g.lineWidth = 1; g.strokeRect(f.X(k) - bw / 2, Math.min(f.Y(v), f.Y(0)), bw, Math.abs(f.Y(v) - f.Y(0)));
+      g.fillStyle = k === 0 ? BD.C.gold : k < 0 ? 'rgba(240,138,106,.85)' : 'rgba(127,208,184,.85)';
+      if (Math.abs(after) > 1e-5) g.fillRect(f.X(k) - bw / 2, Math.min(f.Y(after), f.Y(0)), bw, Math.abs(f.Y(after) - f.Y(0)));
+      if (k >= 1 && k <= N) { g.fillStyle = 'rgba(224,184,90,.9)'; g.fillText('−' + (v * 1e3).toFixed(1), f.X(k) - 12, f.Y(v) - 4); } });
+    BD.hline(f, 0, 'rgba(255,255,255,.3)', [2, 3]);
+    // decision samples
+    var ds = BD.setup(q('[data-c="s"]')), lim = 0.2;
+    var fs = BD.frame(ds, { x: [0, 127], y: [-lim, lim], xt: [[0, '0'], [64, '64'], [127, '127']], yt: [[-0.1, '−100'], [0, '0'], [0.1, '100 mV']], pad: { l: 50, t: 24 } });
+    var g2 = ds.g;
+    if (r.eye > 0) { g2.fillStyle = 'rgba(127,224,160,.10)'; var lo1 = 1e9, hi0 = -1e9; r.y.forEach(function (v, m) { if (bits[m]) lo1 = Math.min(lo1, v); else hi0 = Math.max(hi0, v); });
+      g2.fillRect(fs.p.l, fs.Y(lo1), ds.w - fs.p.l - fs.p.r, fs.Y(hi0) - fs.Y(lo1)); }
+    BD.hline(fs, 0, 'rgba(255,255,255,.4)', [3, 3]);
+    if (N > 0) r0.y.forEach(function (v, m) { BD.dot(fs, m, v, bits[m] ? 'rgba(127,184,240,.28)' : 'rgba(224,184,90,.28)', 2); });
+    r.y.forEach(function (v, m) { BD.dot(fs, m, v, bits[m] ? BD.C.blue : BD.C.gold, 2.4); });
+    // eye vs taps
+    var dh = BD.setup(q('[data-c="h"]')), es = L.res.map(function (x) { return x.eye; }), top = Math.max(0.16, Math.max.apply(null, es) * 1.15), bot = Math.min(0, Math.min.apply(null, es) * 1.2);
+    var fh = BD.frame(dh, { x: [-0.3, NMAX + 0.3], y: [bot, top], xt: [0, 1, 2, 3, 4, 5, 6, 7, 8].map(function (v) { return [v, String(v)]; }), yt: [[0, '0'], [0.1, '100 mV']], pad: { l: 50, t: 20, b: 22 } });
+    BD.line(fh, [0, 1, 2, 3, 4, 5, 6, 7, 8], es, BD.C.teal, 2);
+    es.forEach(function (e, i) { BD.dot(fh, i, e, i === N ? BD.C.green : 'rgba(127,208,184,.7)', i === N ? 5 : 3); });
+    var w = [1, 2].map(function (k) { return A * c.v[c.k.indexOf(k)]; });
+    q('[data-o="d"]').textContent = mv(A * c.v[c.k.indexOf(0)]);
+    q('[data-o="w"]').textContent = mv(w[0]) + ', ' + mv(w[1]);
+    var e0 = q('[data-o="e0"]'); e0.textContent = mv(r0.eye); e0.className = r0.eye > 0 ? 'ok' : 'bad';
+    var e1 = q('[data-o="e1"]'); e1.textContent = mv(r.eye); e1.className = r.eye > 0 ? 'ok' : 'bad';
+    q('[data-o="cap"]').innerHTML = N === 0
+      ? 'Without a DFE the residual post-cursors spread the samples into bands. Add taps: each one subtracts w<sub>k</sub> = A·p<sub>k</sub> times the decision made k bits ago.'
+      : 'The DFE knows the past bits, so it subtracts their ISI exactly at the sampling instant, and because it feeds back clean ±1 decisions it adds no noise. The ' + (N === 1 ? 'first tap' : 'first ' + N + ' taps') + ' add ' + mv(r.eye - r0.eye) + ' of eye; ' +
+        'the gains shrink fast after two taps, and the pre-cursor p<sub>−1</sub> is untouched: no feedback can cancel a bit that has not been decided yet. Tap 1 must settle within one UI (Section 8.2).';
+  }
+  BD.observe(root, draw);
+})();
+</script>

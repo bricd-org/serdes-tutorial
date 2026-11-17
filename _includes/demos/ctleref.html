@@ -1,0 +1,78 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdCtleRef" role="group" aria-label="Interactive demo: CTLE peaking on the REF channel">
+  <div class="bd-head"><span>// try it · CTLE on REF</span>
+    <span class="bd-seg" role="group" aria-label="Peaking presets"><button type="button" data-pk="0" aria-pressed="false">0 dB</button><button type="button" data-pk="8" aria-pressed="false">8 dB</button><button type="button" data-pk="14" aria-pressed="true">14 dB</button><button type="button" data-pk="20" aria-pressed="false">20 dB</button></span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>CTLE peaking (DC gain below HF) <b data-v="pk"></b></span><input type="range" data-k="pk" min="0" max="20" step="0.5" value="14" aria-label="CTLE peaking in dB"></label>
+  </div>
+  <div class="bd-row">
+    <div class="bd-scope"><canvas data-c="b" aria-hidden="true"></canvas><span class="bd-tag">REF (faint), CTLE (gold), REF × CTLE (blue)</span></div>
+    <div class="bd-scope"><canvas data-c="e" aria-hidden="true"></canvas><span class="bd-tag">PRBS7 eye after the CTLE</span></div>
+  </div>
+  <div class="bd-row">
+    <div class="bd-scope short"><canvas data-c="p" aria-hidden="true"></canvas><span class="bd-tag">pulse and cursors after the CTLE</span></div>
+    <div class="bd-scope short"><canvas data-c="h" aria-hidden="true"></canvas><span class="bd-tag">eye height against peaking (Open-SERDES range shaded)</span></div>
+  </div>
+  <div class="bd-read" aria-live="polite"><span>p<sub>−1</sub> <b data-o="pm">–</b></span><span>main cursor <b data-o="p0">–</b></span><span>vs 0 dB <b data-o="dr">–</b></span><span>p<sub>1</sub> <b data-o="p1">–</b></span><span>PRBS7 eye <b data-o="eye">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdCtleRef'); if (!root || !window.BD || !window.SL) return;
+  var H = SL.channel(), bits = SL.prbs(7, 127), memo = {}, curve = null;
+  var m0 = SL.cursors(SL.pulseOf(SL.mul(H, SL.ctle(0))), 2, 10).v[2];
+  function at(pk) { if (memo[pk]) return memo[pk]; var C = SL.ctle(pk), HH = SL.mul(H, C), p = SL.pulseOf(HH);
+    return (memo[pk] = { C: C, HH: HH, p: p, c: SL.cursors(p, 2, 10), es: SL.eyeScan(p, bits) }); }
+  var S = BD.bind(root, { pk: { fmt: function (x) { return x.toFixed(1) + ' dB'; } } }, function () { draw(); });
+  var q = function (s) { return root.querySelector(s); }, sl = q('[data-k="pk"]');
+  BD.seg(root, 'pk', function (v) { sl.value = v; sl.dispatchEvent(new Event('input')); });
+  var mv = function (v) { return (v < 0 ? '−' : '') + Math.abs(v * 1e3).toFixed(0) + ' mV'; };
+  var db = function (Hx, k) { return 10 * Math.log10(Hx.re[k] * Hx.re[k] + Hx.im[k] * Hx.im[k]); };
+  function draw() {
+    var pk = S.pk, r = at(pk);
+    root.querySelectorAll('[data-pk]').forEach(function (b) { b.setAttribute('aria-pressed', Math.abs(parseFloat(b.getAttribute('data-pk')) - pk) < 0.01 ? 'true' : 'false'); });
+    var d = BD.setup(q('[data-c="b"]')), f = BD.frame(d, { x: [0.1, 20], y: [-40, 4], xlog: true, xt: [[0.1, '0.1'], [1, '1'], [2.5, 'f_N'], [10, '10 GHz']],
+      yt: [[0, '0'], [-10, '−10'], [-20, '−20'], [-30, '−30'], [-40, '−40 dB']], pad: { l: 44, t: 24 } });
+    var xs = [], a = [], b = [], cc = [];
+    for (var i = 0; i <= 240; i++) { var fr = 0.1e9 * Math.pow(200, i / 240), k = Math.round(fr / SL.DF); xs.push(fr / 1e9); a.push(db(H, k)); b.push(db(r.C, k)); cc.push(db(r.HH, k)); }
+    BD.line(f, xs, a, 'rgba(170,205,240,.35)', 1.4, [4, 3]); BD.line(f, xs, b, BD.C.gold, 1.6); BD.line(f, xs, cc, BD.C.blue, 2);
+    var kN = Math.round(2.5e9 / SL.DF); BD.dot(f, 2.5, db(r.HH, kN), BD.C.blue, 4);
+    // eye
+    var de = BD.setup(q('[data-c="e"]')), fe = BD.frame(de, { x: [-1, 1], y: [-0.3, 0.3], xt: [[-1, '−1'], [0, '0'], [1, '1 UI']],
+      yt: [[-0.2, '−0.2'], [0, '0'], [0.2, '0.2 V']], pad: { l: 42, t: 24 } });
+    SL.drawEye(fe, SL.eyeTraces(r.p, bits, r.es.phase, 0.5, 2));
+    var g = de.g, xm = fe.X(0);
+    if (r.es.best > 0) { g.strokeStyle = BD.C.gold; g.lineWidth = 1.5; g.beginPath(); g.moveTo(xm, fe.Y(r.es.best / 2)); g.lineTo(xm, fe.Y(-r.es.best / 2)); g.stroke();
+      g.fillStyle = BD.C.gold; g.fillText(mv(r.es.best), xm + 8, fe.Y(0) + 3); }
+    else { g.fillStyle = '#f39a7c'; g.textAlign = 'center'; g.fillText('closed', xm, fe.Y(0) + 3); g.textAlign = 'left'; }
+    // pulse + cursors
+    var dp = BD.setup(q('[data-c="p"]')), c = r.c, top = Math.max(0.36, c.v[2] * 1.1);
+    var fp = BD.frame(dp, { x: [-3, 10], y: [-0.05, top], xt: [[-2, '−2'], [0, '0'], [5, '5'], [10, '10 UI']], yt: [[0, '0'], [0.2, '0.2 V']], pad: { l: 42, t: 20, b: 22 } });
+    var tx = [], pv = []; for (var n = c.idx0 - 3 * SL.SPS; n <= c.idx0 + 10 * SL.SPS; n += 2) { tx.push((n - c.idx0) / SL.SPS); pv.push(r.p[n]); }
+    BD.line(fp, tx, pv, 'rgba(127,184,240,.6)', 1.5); BD.hline(fp, 0, 'rgba(255,255,255,.25)', [2, 3]); SL.drawCursors(fp, c);
+    // eye vs peaking (filled in lazily)
+    var dh = BD.setup(q('[data-c="h"]')), fh = BD.frame(dh, { x: [0, 20], y: [-0.1, 0.13], xt: [[0, '0'], [4, '4'], [8, '8'], [12, '12'], [16, '16'], [20, '20 dB']],
+      yt: [[-0.1, '−100'], [0, '0'], [0.1, '100 mV']], pad: { l: 50, t: 20, b: 22 } });
+    dh.g.fillStyle = 'rgba(127,224,160,.08)'; dh.g.fillRect(fh.X(0), fh.p.t, fh.X(12) - fh.X(0), dh.h - fh.p.t - fh.p.b);
+    BD.hline(fh, 0, 'rgba(255,255,255,.3)', [2, 3]);
+    if (curve) BD.line(fh, curve.x, curve.y, BD.C.teal, 2);
+    BD.dot(fh, pk, Math.max(-0.1, r.es.best), r.es.best > 0 ? BD.C.green : BD.C.red, 4.5);
+    var drop = 20 * Math.log10(c.v[2] / m0);
+    q('[data-o="pm"]').textContent = c.v[1].toFixed(3);
+    q('[data-o="p0"]').textContent = c.v[2].toFixed(3) + ' V';
+    q('[data-o="dr"]').textContent = (drop < -0.05 ? '−' : '') + Math.abs(drop).toFixed(1) + ' dB';
+    q('[data-o="p1"]').textContent = (c.v[3] < 0 ? '−' : '') + Math.abs(c.v[3]).toFixed(3);
+    var ee = q('[data-o="eye"]'); ee.textContent = mv(r.es.best); ee.className = r.es.best > 0 ? 'ok' : 'bad';
+    q('[data-o="cap"]').innerHTML = pk < 6
+      ? 'Little peaking: the CTLE barely flattens REF, the tail stays and the eye stays shut.'
+      : c.v[3] < -0.003
+      ? '<b style="color:#f39a7c">Over-equalized.</b> The first post-cursors have gone negative: the CTLE now makes ISI of the opposite sign, and the eye closes again.'
+      : 'Peaking pulls the low frequencies down until REF × CTLE is nearly flat to f<sub>N</sub>. The tail shrinks and the eye opens (best near 14 dB, 113 mV), but the main cursor falls ' + Math.abs(drop).toFixed(1) + ' dB with it: noise added after the CTLE does not fall.' +
+        (pk > 12 ? ' Above 12 dB is outside the Open-SERDES CTLE range: there the DFE takes p<sub>1</sub> instead.' : '');
+  }
+  BD.observe(root, draw);
+  var pks = [], hs = [], k0 = 0;                       // compute the eye-vs-peaking curve in small chunks
+  (function chunk() { for (var j = 0; j < 3 && k0 <= 40; j++, k0++) { var pk = k0 / 2; pks.push(pk); hs.push(at(pk).es.best); }
+    if (k0 <= 40) setTimeout(chunk, 0); else { curve = { x: pks, y: hs }; draw(); } })();
+})();
+</script>

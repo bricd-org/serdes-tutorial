@@ -117,6 +117,8 @@ permalink: "/chapters/06-transmit-ffe/"
 <img src="{% endraw %}{{ '/assets/figs/ch06_ref.svg' | relative_url }}{% raw %}" style="width:753px" alt="On REF, a 2-tap FFE opens the eye; the 3-tap ZF FFE does slightly worse." loading="lazy" />
 <figcaption><span class="capnum">Figure 6.5.</span> <strong>On REF, a 2-tap FFE opens the eye; the 3-tap ZF FFE does slightly worse.</strong> (a) Pulse responses without FFE, with the 2-tap ZF taps <span class="math inline">\([0.652,-0.349]\)</span> and with the 3-tap ZF taps <span class="math inline">\([-0.085,0.596,-0.319]\)</span>. Dots mark the cursors. (b, c) PRBS7 eyes at the RX input, plotted on the same scale. The open eye is 163 mV but only about a third of the unequalized swing. That is the price of equalizing at the TX.</figcaption>
 </figure>
+<!-- demo:ffe -->{% endraw %}{% include demos/ffe.html %}{% raw %}<!-- /demo -->
+
 <div class="tbox tbox-tryit">
 <div class="tbox-title">
 <p>Lab 3: TX FFE</p>
