@@ -139,6 +139,8 @@ permalink: "/chapters/09-the-transmitter/"
 <img src="{% endraw %}{{ '/assets/figs/ch09_current.svg' | relative_url }}{% raw %}" style="width:753px" alt="A CML driver pays four times the current of a voltage-mode driver for the same swing." loading="lazy" />
 <figcaption><span class="capnum">Figure 9.6.</span> <strong>A CML driver pays four times the current of a voltage-mode driver for the same swing.</strong> (a) Supply current from <a href="#eq:ch9-drv">Equation (9.3)</a>; the band is the Open-SERDES range of 0.8–1.0 Vppd. With 6 dB of de-emphasis an SST driver draws 1.38 times more on average, because its main and post slices fight; CML draws the same current at every FFE setting. (b) Output-stage power: 40–50 mW for HBT CML from 2.5 V versus about 6 mW for SST.</figcaption>
 </figure>
+<!-- demo:cmlsst -->{% endraw %}{% include demos/cmlsst.html %}{% raw %}<!-- /demo -->
+
 <h5 id="why-hbts">Why HBTs</h5>
 <p>A CML stage must switch its tail current fully. A bipolar pair splits it as <span class="math inline">\(\Delta I=I_T\tanh(V_\mathrm{id}/2V_T)\)</span>, so <span class="math inline">\(V_\mathrm{id}\approx4V_T\approx100\,\mathrm{mV}\)</span> steers 96 % of it at any current. A MOS pair needs <span class="math inline">\(\sqrt2\,V_\mathrm{OD}\)</span>, typically 200–300 mV. The HBT’s <span class="math inline">\(g_\mathrm{m}/I_C=1/V_T=38.7\,1/\mathrm{V}\)</span> is also several times a MOSFET’s.</p>
 <div class="tbox tbox-example">

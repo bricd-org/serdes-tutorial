@@ -1,0 +1,41 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdCmlSst" role="group" aria-label="Interactive demo: driver current and power, CML against voltage mode">
+  <div class="bd-head"><span>// try it · CML or SST driver?</span>
+    <span class="bd-seg" role="group" aria-label="Swing presets"><button type="button" data-v="0.8" aria-pressed="false">0.8 V<sub>ppd</sub></button><button type="button" data-v="1" aria-pressed="true">1 V<sub>ppd</sub></button></span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>differential swing V<sub>d,pp</sub> <b data-v="vd"></b></span><input type="range" data-k="vd" min="0.2" max="1.2" step="0.01" value="1" aria-label="Differential swing"></label>
+    <label class="bd-sl"><span>CML supply <b data-v="vcc"></b></span><input type="range" data-k="vcc" min="1.5" max="3.3" step="0.05" value="2.5" aria-label="CML supply"></label>
+    <label class="bd-sl"><span>SST regulator input <b data-v="vreg"></b></span><input type="range" data-k="vreg" min="0.8" max="1.8" step="0.05" value="1.2" aria-label="SST regulator input voltage"></label>
+  </div>
+  <div class="bd-scope"><canvas data-c="b" aria-hidden="true"></canvas><span class="bd-tag">output-stage current and power (Equation 9.3, Z<sub>0</sub> = 50 Ω)</span></div>
+  <div class="bd-read" aria-live="polite"><span>CML I<sub>T</sub> = V/Z<sub>0</sub> <b data-o="ic">–</b></span><span>CML power <b data-o="pc">–</b></span><span>SST I = V/4Z<sub>0</sub> <b data-o="is">–</b></span><span>SST power <b data-o="ps">–</b></span><span>energy at 5 Gb/s <b data-o="e">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdCmlSst'); if (!root || !window.BD) return;
+  var Z0 = 50;
+  var S = BD.bind(root, { vd: { fmt: function (x) { return x.toFixed(2) + ' V'; } }, vcc: { fmt: function (x) { return x.toFixed(2) + ' V'; } }, vreg: { fmt: function (x) { return x.toFixed(2) + ' V'; } } }, function () { draw(); });
+  var q = function (s) { return root.querySelector(s); }, sl = q('[data-k="vd"]');
+  BD.seg(root, 'v', function (v) { sl.value = v; sl.dispatchEvent(new Event('input')); });
+  function draw() {
+    var V = S.vd, ic = V / Z0, ise = V / (2 * Z0), isd = V / (4 * Z0), pc = ic * S.vcc, ps = isd * S.vreg;
+    root.querySelectorAll('[data-v]').forEach(function (b) { b.setAttribute('aria-pressed', Math.abs(parseFloat(b.getAttribute('data-v')) - V) < 0.005 ? 'true' : 'false'); });
+    var rows = [['CML (current mode)', ic, pc, BD.C.blue], ['VM, single-ended term.', ise, ise * S.vreg, 'rgba(127,208,184,.75)'], ['SST, differential term.', isd, ps, BD.C.teal]];
+    var d = BD.setup(q('[data-c="b"]')), g = d.g, L = 150, R = d.w - 90, top = 30, bh = 18, gap = 46, pmax = Math.max(60e-3, pc * 1.1);
+    g.fillStyle = BD.C.axis; g.fillText('current', L, 16); g.fillText('power', (L + R) / 2 + 10, 16);
+    rows.forEach(function (r, i) { var y = top + i * gap, half = (R - L) / 2 - 10;
+      g.fillStyle = BD.C.axis; g.textAlign = 'right'; g.fillText(r[0], L - 8, y + 12); g.textAlign = 'left';
+      g.fillStyle = r[3]; g.fillRect(L, y, half * r[1] / 0.025, bh); g.fillStyle = '#fff'; g.fillText((r[1] * 1e3).toFixed(1) + ' mA', L + half * r[1] / 0.025 + 5, y + 12);
+      var x2 = L + half + 20; g.fillStyle = r[3]; g.fillRect(x2, y, half * r[2] / pmax, bh); g.fillStyle = '#fff'; g.fillText((r[2] * 1e3).toFixed(1) + ' mW', x2 + half * r[2] / pmax + 5, y + 12); });
+    q('[data-o="ic"]').textContent = (ic * 1e3).toFixed(1) + ' mA';
+    q('[data-o="pc"]').textContent = (pc * 1e3).toFixed(0) + ' mW';
+    q('[data-o="is"]').textContent = (isd * 1e3).toFixed(1) + ' mA';
+    q('[data-o="ps"]').textContent = (ps * 1e3).toFixed(1) + ' mW';
+    q('[data-o="e"]').textContent = (pc / 5e9 * 1e12).toFixed(1) + ' vs ' + (ps / 5e9 * 1e12).toFixed(1) + ' pJ/b';
+    q('[data-o="cap"]').innerHTML = 'A CML driver steers its tail current into one of two 50 Ω loads that are also its back-termination, so half the current heats its own resistors and none of it reverses through the line: four times the current of a voltage-mode (SST) driver into the same differential termination, from a higher supply. ' +
+      'The SST driver would save ' + ((pc - ps) * 1e3).toFixed(0) + ' mW here, but Open-SERDES keeps CML: a passive resistor sets the impedance with no calibration loop, the supply current never changes, and the FFE taps leave the impedance untouched.';
+  }
+  BD.observe(root, draw);
+})();
+</script>
