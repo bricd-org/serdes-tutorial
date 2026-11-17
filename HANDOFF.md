@@ -77,7 +77,7 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 
 **Ch 3 · The channel**
 13. `tline` · When is a wire a transmission line: rise time and length → t_d vs t_r/6 rule; FR-4 delay
-    (Ex 3.1). End of sec3.2.1. todo
+    (Ex 3.1). End of sec3.2.1. **done** (6.67 ps/mm, 1.25 mm at 50 ps, 334 nH/m, 133 pF/m)
 14. `skin` · Skin depth and R(f): frequency slider; δ vs thickness; R_DC 7.7 Ω/m → 46 Ω/m at 2.5 GHz. After
     fig:ch3-skin. **done** (7.7 → 45.8 Ω/m, onset 56.9 MHz; perimeter-skin model)
 15. ★ `lossbuild` · Build the channel loss: sliders for k_R, tanδ, ε_r, length, pad C → conductor (√f) and
@@ -195,7 +195,8 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
     fig:ch11-bathtub. **done** (TJ 58.6 ps; 0.71/0.59/0.45 UI at σ 1.32/3/5 ps, DJδδ 40 ps)
 58. ★ `pnjitter` · Phase noise to jitter: drag the PN profile and integration limits → rms jitter (1.01 ps from
     10 kHz, 0.61 ps above …). After fig:ch11-pn. **done by reusing `pllnoise`** (it has the integration-limit slider)
-59. `jbudget` · Jitter budget: each DJ/RJ term → TJ 58.6 ps, 0.71 UI eye. After fig:ch11-budget. todo
+59. `jbudget` · Jitter budget: each DJ/RJ term → TJ 58.6 ps, 0.71 UI eye. After fig:ch11-budget. **done** (Table 11.1
+    rows: DJ 8+6+6+20 = 40, RJ RSS 1.32, TJ 58.6 ps = 0.293 UI, eye 141 ps)
 
 **Ch 12 · PLL**
 60. `pfd` · PFD/CP waveforms: phase offset → UP/DN pulses, dead zone with T_rst. After fig:ch12-pfd. **done**
@@ -293,7 +294,7 @@ noise, jitter) → stat eye and margin, the whole book on one panel. todo
 
 ### Next steps
 
-State on 17 Nov (third window): 59 placements; was 32 (31 includes incl. `labmap`), every chapter 1–16 covered, all merged
+State on 17 Nov (third window): 61 placements; was 32 (31 includes incl. `labmap`), every chapter 1–16 covered, all merged
 into `main` (deployed). Each `done` entry above lists the book numbers it reproduces.
 
 0. Values for the rest are already extracted in this pass: Ex 8.2 tap-1 budget (clk-Q 25–35, tap 10, 3τ = 60 with
@@ -301,7 +302,7 @@ into `main` (deployed). Each `done` entry above lists the book numbers it reprod
    0.625 mA; −6 dB → 15/5 mA), Ex 11.3 budget (DJ 8+6+6+20 = 40 ps, RJ √(1.0²+0.7²+0.5²) = 1.32 ps, TJ 58.6 ps),
    Ex 14.3 power (CML 77 mA × 2.5 V = 192 mW + 25 mW = 216 mW, 43.2 pJ/b; SST −44 mW; 0.8 V_ppd −10 mW; Purdue
    219 pJ/b), Ex 3.1 (t_r 50 ps → t_r·v/6 = 1.25 mm, 6.67 ps/mm, 334 nH/m, 133 pF/m). `tap1`, `ffecurr` and `power` are done;
-   still to build from these: `jbudget` (needs Table 11.1 row labels) and `tline`.
+   `jbudget` and `tline` too.
 1. Remaining ★ demos: `stateye` (Ch 4, needs a jitter-aware statistical eye in SL), `ctlebode` (Ch 7 degenerated
    pair g_m/R_S/C_S/R_D/C_L → 14 dB ideal, 10.9 dB realized), `term` (Ch 9), `dfe` step-through with error
    propagation (Ch 8).
