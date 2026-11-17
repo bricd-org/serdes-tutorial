@@ -1,0 +1,42 @@
+{% include demos/assets.html %}
+<div class="bd" id="bdZfSolve" role="group" aria-label="Interactive demo: zero forcing removes only the cursors it is told to">
+  <div class="bd-head"><span>// try it · zero forcing, tap by tap</span><span>REF channel, taps scaled to Σ|c| = 1</span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>pre-taps <b data-v="np"></b></span><input type="range" data-k="np" min="0" max="2" step="1" value="1" aria-label="Number of pre-taps"></label>
+    <label class="bd-sl"><span>post-taps <b data-v="nq"></b></span><input type="range" data-k="nq" min="1" max="4" step="1" value="1" aria-label="Number of post-taps"></label>
+  </div>
+  <div class="bd-scope tall"><canvas data-c="c" aria-hidden="true"></canvas><span class="bd-tag">cursors before (outline) and after the ZF FFE (filled); shaded = the cursors forced to zero</span></div>
+  <div class="bd-read" aria-live="polite"><span>taps <b data-o="t">–</b></span><span>main cursor <b data-o="m">–</b></span><span>ISI left outside the window <b data-o="o">–</b></span><span>PDA eye <b data-o="e">–</b></span></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdZfSolve'); if (!root || !window.BD || !window.SL) return;
+  var A = 0.5, p0 = SL.pulseOf(SL.channel()), c0 = SL.cursors(p0, 6, 30);
+  var S = BD.bind(root, { np: { fmt: String }, nq: { fmt: String } }, function () { draw(); });
+  var q = function (s) { return root.querySelector(s); };
+  var mv = function (v) { return (v < 0 ? '−' : '') + Math.abs(v * 1e3).toFixed(0) + ' mV'; };
+  function draw() {
+    var np = S.np, nq = S.nq, taps = SL.zfTaps(c0, np, nq), p = SL.ffe(p0, taps, np), c = SL.cursors(p, 6, 30, c0.idx0);
+    var d = BD.setup(q('[data-c="c"]')), f = BD.frame(d, { x: [-4.5, 12.5], y: [-0.03, 0.2], xt: [-4, -2, 0, 2, 4, 6, 8, 10, 12].map(function (k) { return [k, k === 12 ? '12 UI' : String(k)]; }),
+      yt: [[0, '0'], [0.1, '100'], [0.2, '200 mV']], pad: { l: 50, t: 24 } });
+    var g = d.g; g.fillStyle = 'rgba(127,224,160,.08)'; g.fillRect(f.X(-np - 0.5), f.p.t, f.X(nq + 0.5) - f.X(-np - 0.5), d.h - f.p.t - f.p.b);
+    var bw = (f.X(1) - f.X(0)) * 0.5, out = 0;
+    c.k.forEach(function (k, i) { if (k < -4 || k > 12) return; var b = A * c0.v[c0.k.indexOf(k)], a = A * c.v[i];
+      g.strokeStyle = 'rgba(170,205,240,.45)'; g.strokeRect(f.X(k) - bw / 2, Math.min(f.Y(b), f.Y(0)), bw, Math.abs(f.Y(b) - f.Y(0)));
+      g.fillStyle = k === 0 ? BD.C.gold : (k >= -np && k <= nq) ? BD.C.green : Math.abs(a) > 0.002 ? BD.C.red : 'rgba(127,208,184,.8)';
+      g.fillRect(f.X(k) - bw / 2, Math.min(f.Y(a), f.Y(0)), bw, Math.max(1, Math.abs(f.Y(a) - f.Y(0)))); });
+    c.k.forEach(function (k, i) { if (k !== 0 && (k < -np || k > nq)) out += Math.abs(c.v[i]); });
+    BD.hline(f, 0, 'rgba(255,255,255,.3)', [2, 3]);
+    var eh = SL.pda(c);
+    q('[data-o="t"]').textContent = '[' + taps.map(function (t) { return t.toFixed(3); }).join(', ') + ']';
+    q('[data-o="m"]').textContent = mv(A * c.v[c.k.indexOf(0)]);
+    q('[data-o="o"]').textContent = mv(A * out);
+    var e = q('[data-o="e"]'); e.textContent = mv(eh); e.className = eh > 0 ? 'ok' : 'bad';
+    q('[data-o="cap"]').innerHTML = 'Zero forcing solves for the taps that make the chosen cursors exactly zero (green window), the way Lab 3 does with only those cursors. ' +
+      'It says nothing about the cursors outside the window: they shrink, stay or grow. Every extra tap also takes swing from c<sub>0</sub> under Σ|c| = 1, so the main cursor falls. ' +
+      (np > 0 ? 'On REF the pre-tap costs more main cursor than its small pre-cursor is worth.' : 'Without a pre-tap the pre-cursor stays, but REF\'s is small.');
+  }
+  BD.observe(root, draw);
+})();
+</script>

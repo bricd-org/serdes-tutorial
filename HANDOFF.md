@@ -127,7 +127,7 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
 32. `ffefreq` · FFE frequency response: peaks at f_N, periodic in f_b; cascade with REF stays −17.4 dB at f_N.
     After fig:ch6-ffefreq. **done** (cascade −17.4 dB at f_N for every setting)
 33. `zfsolve` · Zero forcing step by step: pick which cursors to force → matrix, taps, new ISI at k = −2/+3.
-    After fig:ch6-zf. todo
+    After fig:ch6-zf. **done** on REF (0–2 pre, 1–4 post taps; Lab 3 taps reproduced; matrix not displayed)
 
 **Ch 7 · CTLE**
 34. `rlc` · RLC peaking: ζ slider → impedance peak (16.6 dB at ζ = 0.2) and ringing step (2.7×). After fig:ch7-rlc.
@@ -282,7 +282,7 @@ noise, jitter) → stat eye and margin, the whole book on one panel. todo
 
 ### Next steps
 
-State at the end of 17 Nov (second window): 46 placements; was 32 (31 includes incl. `labmap`), every chapter 1–16 covered, all merged
+State at the end of 17 Nov (second window): 47 placements; was 32 (31 includes incl. `labmap`), every chapter 1–16 covered, all merged
 into `main` (deployed). Each `done` entry above lists the book numbers it reproduces.
 
 1. Remaining ★ demos: `stateye` (Ch 4, needs a jitter-aware statistical eye in SL), `ctlebode` (Ch 7 degenerated
