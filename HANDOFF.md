@@ -225,7 +225,7 @@ Priority: ★ = build first (the hardest concepts, or reused by later demos).
     (3/N rule at 95 %). End of sec:labtest. **done** (Poisson bound: 3.00e12 bits, 10 min at 1e−12/95 %; k errors)
 77. `lumped` · Sections for a lumped line model: rise time and t_d → N sections. todo
 
-**Ch 16 · Labs**: the labs run serdespy in Python, so instead of new demos each lab links back to the demo that
+**Ch 16 · Labs** (**done** as `labmap`, a try-it box at the end of Lab 0 linking all 11 demos; links checked): the labs run serdespy in Python, so instead of new demos each lab links back to the demo that
 previews it (Lab 1 → `s21pulse`, Lab 2 → `isieye`, Lab 3 → `ffe`, Lab 4 → `ctleref`, Lab 5 → `dfe`,
 Lab 6 → `bathtub`, Lab 7 → `cdrsim`). 78. `linkall` capstone: full link (REF length, FFE, CTLE, DFE taps,
 noise, jitter) → stat eye and margin, the whole book on one panel. todo
@@ -273,6 +273,22 @@ noise, jitter) → stat eye and margin, the whole book on one panel. todo
 
 ### Next steps
 
-1. Check `isieye` at 375 px and in light mode.
-2. Write `assets/js/serdes-link.js` (SL) and verify it against the REF numbers above.
-3. Build the ★ demos in chapter order, then the rest. Mark each `done` here with the numbers it reproduces.
+State at the end of 17 Nov: 32 placements (31 includes incl. `labmap`), every chapter 1–16 covered, all merged
+into `main` (deployed). Each `done` entry above lists the book numbers it reproduces.
+
+1. Remaining ★ demos: `stateye` (Ch 4, needs a jitter-aware statistical eye in SL), `ctlebode` (Ch 7 degenerated
+   pair g_m/R_S/C_S/R_D/C_L → 14 dB ideal, 10.9 dB realized), `term` (Ch 9), `dfe` step-through with error
+   propagation (Ch 8).
+2. Then the plain `todo` entries, cheapest first: `fo4ui`/`ratechain`/`epb` (Ch 1), `eyefold`/`bathtub2` (Ch 2),
+   `tline`/`skin`/`padrl`/`tdr` (Ch 3), `waterfall`/`pam4` (Ch 4), `zfnoise`/`cable` (Ch 5), `deemph`/`ffefreq`/
+   `zfsolve` (Ch 6), `rlc`/`ctlefix` (Ch 7), `tap1`/`partition` (Ch 8), `fo4rule`/`muxtiming`/`ffecurr`/`tcoil`
+   (Ch 9), `aperture`/`offsetcal`/`calloop`/`sens` (Ch 10), `tie`/`jbudget` (Ch 11), `pfd`/`leeson`/`ppf`/`lock`
+   (Ch 12), `alex` (Ch 13), `budget10g`/`bondwire`/`power` (Ch 14), `mcruns`/`lumped` (Ch 15), `linkall` capstone,
+   `calc` (App A).
+3. Open questions: Ch 2's 230 mV PDA for the 10 dB line (SL gives 204 mV with 13 cursors); `pllnoise` is 10 % low at
+   f_u = 0.5 MHz (book's VCO model may have more close-in noise); `dualdirac` does not reproduce Fig 11.4's 15.6 ps
+   case; `cmlsst` lacks the 1.38× SST de-emphasis penalty; a JTOL sweep by simulation would replace the estimate.
+4. Workflow per batch: write includes → add to `DEMOS` in `tools/insert_demos.py` → `python3 tools/insert_demos.py`
+   → check numbers in the browser console and a canvas snapshot → mark `done` here → commit on `interactive-demos`,
+   merge `--no-ff` into `main`, push (the user approved merging demo batches). Watch for two bugs met twice: a
+   `dispatchEvent` at start-up before a helper `var` is defined, and bit-history offsets shorter than the cursor span.

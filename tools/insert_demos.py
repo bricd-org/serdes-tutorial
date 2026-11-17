@@ -49,6 +49,7 @@ DEMOS = [
     (CH + "13-clock-and-data-recovery.html", "cdrsim", "after:fig:ch13-sim"),
     (CH + "14-the-open-serdes-architecture.html", "clockplan", "after:fig:ch14-clock"),
     (CH + "15-design-and-verification-flow-with-open-tools.html", "bercount", "end:sec:labtest"),
+    (CH + "16-hands-on-labs-with-serdespy.html", "labmap", "end:sec:lab0"),
 ]
 
 BLOCK = re.compile(r"\n?<!-- demo:[\w-]+ -->.*?<!-- /demo -->\n?", re.S)
