@@ -101,6 +101,8 @@ permalink: "/chapters/03-the-channel/"
 <img src="{% endraw %}{{ '/assets/figs/ch03_loss.svg' | relative_url }}{% raw %}" style="width:753px" alt="Above about 0.5 GHz, dielectric loss dominates FR-4." loading="lazy" />
 <figcaption><span class="capnum">Figure 3.4.</span> <strong>Above about 0.5 GHz, dielectric loss dominates FR-4.</strong> Conductor loss (dashed) grows as <span class="math inline">\(\sqrt f\)</span>, dielectric loss (dash-dot) as <span class="math inline">\(f\)</span>. At the NRZ Nyquist frequency a smooth 5-mil stripline loses 0.33 dB/in; a low-loss laminate cuts that to 0.15 dB/in. The REF model (dotted) has a rougher, lossier conductor and loses 0.44 dB/in.</figcaption>
 </figure>
+<!-- demo:lossbuild -->{% endraw %}{% include demos/lossbuild.html %}{% raw %}<!-- /demo -->
+
 <div class="tbox tbox-example">
 <div class="tbox-title">
 <p>Worked Example 3.2 · Loss per inch and reach for a 10 dB budget</p>
