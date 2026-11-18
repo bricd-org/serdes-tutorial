@@ -266,7 +266,7 @@ permalink: "/chapters/15-design-and-verification-flow-with-open-tools/"
 </div>
 <p>Fifty runs know <span class="math inline">\(\sigma\)</span> to about 10 %, 200 runs to 5 % (for the sampler, <span class="math inline">\(4.9\pm0.25\)</span> mV). <strong>CACE</strong> turns all of this into a datasheet: a YAML file per block lists each parameter with its minimum, typical and maximum limits, the testbench that measures it and the conditions to sweep; <strong>CACE</strong> runs every combination and reports pass or fail, so <a href="{% endraw %}{{ '/chapters/14-the-open-serdes-architecture/' | relative_url }}{% raw %}#tab:specs">Table 14.2</a> becomes an executable checklist.</p>
 
-<!-- demo:mcruns -->{% endraw %}{% include demos/mcruns.html %}{% raw %}<!-- /demo -->
+<!-- demo:mcruns -->{% endraw %}{% include demos/assets.html %}{% include demos/mcruns.html %}{% raw %}<!-- /demo -->
 <h2 id="sec:layout-hs"><span class="secnum">15.4</span>Layout for high speed</h2>
 <p>At 5 Gb/s a layout can lose the margin that the schematic won. Six habits keep it.</p>
 <h5 id="symmetry">Symmetry</h5>

@@ -29,7 +29,10 @@ local repo `~/BRICD/biomedical-ic-design`, which has 14 of them).
   PRBS, erfc/Q). **It must reproduce the book**: REF = −17.4 dB at 2.5 GHz, p0 = 0.340 V at 6.82 ns,
   p1/p0 = 53.5 %, p−1 = 0.049, cumulative ISI 0.501 V by k = 10 (+0.093 V tail), 2-tap ZF taps
   [0.652, −0.349]. Check these in the browser console before relying on it.
-- `_includes/demos/assets.html` loads the CSS/JS; each demo is `_includes/demos/<name>.html`: one `.bd`
+- `_includes/demos/assets.html` loads the CSS/JS **once per page**: `insert_demos.py` adds it just before the first
+  demo in document order, so demo includes must NOT include it themselves (removed from all on 18 Nov). It also
+  writes `demos.md` (the /demos/ index page, nav_order 1.5, generated from the registry and each include's
+  aria-label and "// try it ·" head: do not edit by hand). Each demo is `_includes/demos/<name>.html`: one `.bd`
   block plus one IIFE, no external libraries, readouts with `aria-live`, works at 375 px and in dark mode.
   Captions are set from JS, so use HTML `<sub>/<sup>`, not `\( \)` maths (KaTeX renders only at load).
 - **Placement survives rebuilds**: `tools/insert_demos.py` holds the registry (`DEMOS`: page slug, demo name,
@@ -291,6 +294,12 @@ noise, jitter) → stat eye and margin, the whole book on one panel. todo
   is read back. Recreate it if needed: it base64-decodes `name|dataURL` bodies.
 - Open question: Ch 2 text says the 10 dB line's PDA eye is 230 mV; with 13 cursors SL gives 204 mV. Check
   which cursor count the book used before quoting either.
+
+- 18 Nov: site audit (31 pages: 0 broken links/anchors, all images with alt, no raw Liquid). Done from it: shared
+  demo assets loaded once per page; /demos/ index (57 demos, 62 placements, all links checked); home page section
+  and README line. All 62 panels re-checked at 375 px: readouts filled, no overflow. Still open from the audit:
+  lazy-start heavy demos when scrolled into view; version v0.1 → v0.2 (user's call); PDF pointers to the demos;
+  91 Sass deprecation warnings in the build; the four small number mismatches; ~15 remaining proposals.
 
 ### Next steps
 

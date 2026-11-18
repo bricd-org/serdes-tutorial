@@ -7,7 +7,7 @@ IHP SG13G2 130 nm SiGe BiCMOS open PDK, written for the Open-SERDES project at
 **Read it online:** https://www.thebricd.org/serdes-tutorial/
 **PDF edition:** [assets/pdf/Open-SERDES_Tutorial.pdf](assets/pdf/Open-SERDES_Tutorial.pdf)
 
-It has 16 chapters in five parts, 135+ figures and seven serdespy labs:
+It has 16 chapters in five parts, 135+ figures, seven serdespy labs and, on the website, nearly 60 interactive\ndemos (listed at https://www.thebricd.org/serdes-tutorial/demos/):
 
 | Part | Chapters |
 |---|---|
@@ -30,7 +30,7 @@ tools/build_site.py   converts book/ into the website pages below
 chapters/ appendices/ parts/ preface.html references.html   generated pages (do not edit by hand)
 assets/figs/          generated figures (SVG/PNG)    assets/pdf/   the compiled book and the intro slides
 assets/figs/analog/   the analog schematics in the intro slides, copied from open-serdes doc/fig/analog/ (build_site.py leaves them alone)
-tools/build_slides.py  rebuilds the Intro Slides page (slides.md, assets/slides/) from the exported deck
+tools/insert_demos.py  places the interactive demos (_includes/demos/, assets/js/) into the generated pages and writes demos.md\ntools/build_slides.py  rebuilds the Intro Slides page (slides.md, assets/slides/) from the exported deck
 _config.yml, _sass/, _includes/   Jekyll + just-the-docs theme settings (BRICD colours and fonts)
 .github/workflows/pages.yml       builds the site and deploys it to GitHub Pages
 ```
