@@ -120,9 +120,42 @@ def main():
                 html = insert(html, name, anchor)
             except ValueError as e:
                 print(f"{page}: {e}", file=sys.stderr); errors += 1
+        # load the shared CSS/JS once, just before the first demo in document order (labmap needs none)
+        m = re.search(r"<!-- demo:(?!labmap\b)([\w-]+) -->\{% endraw %\}\{% include demos/", html)
+        if m:
+            html = html[:m.end()] + "assets.html %}{% include demos/" + html[m.end():]
         path.write_text(html)
         print(f"{page}: {len(items)} demo(s)")
+    write_index()
     return 1 if errors else 0
+
+
+def write_index():
+    """demos.md: every demo, by chapter, linked to its place in the text (generated; do not edit)."""
+    out, seen = [], set()
+    for page in dict.fromkeys(p for p, _, _ in DEMOS):
+        txt = (ROOT / page).read_text()
+        title = re.search(r'^title: "(.*)"', txt, re.M).group(1)
+        link = re.search(r'^permalink: "(.*)"', txt, re.M).group(1)
+        names = [n for n in re.findall(r"<!-- demo:([\w-]+) -->", txt) if n != "labmap"]
+        if not names:
+            continue
+        out.append(f"\n## {title}\n")
+        for n in names:
+            inc = (ROOT / "_includes" / "demos" / f"{n}.html").read_text()
+            head = re.search(r"// try it · ([^<]+)<", inc).group(1).strip()
+            desc = re.search(r'aria-label="Interactive demo: ([^"]+)"', inc).group(1)
+            did = re.search(r'class="bd" id="(\w+)"', inc).group(1)
+            out.append(f"- [{head[0].upper() + head[1:]}]({{{{ '{link}' | relative_url }}}}#{did}): {desc}.")
+            seen.add(n)
+    head = ('---\ntitle: "Interactive Demos"\nnav_order: 1.5\npermalink: "/demos/"\n---\n\n'
+            "# Interactive demos\n\n"
+            f"{len(seen)} interactive demos break the hard ideas of the book into things you can move. Each one runs in "
+            "the page, with no install, and reproduces the numbers its chapter quotes at its default settings; most of "
+            "the channel and equalizer demos run a JavaScript port of the labs' link model. Click a demo to jump to it "
+            "in its chapter.\n{: .fs-5 .fw-300 }\n")
+    (ROOT / "demos.md").write_text(head + "\n".join(out) + "\n")
+    print(f"demos.md: {len(seen)} demos")
 
 
 if __name__ == "__main__":

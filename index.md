@@ -45,6 +45,10 @@ Every fast interface (PCIe, USB, Ethernet, chiplet links) rides on a SerDes, yet
   <div class="card"><span class="card-label">Appendices</span><h3><a href="{{ '/appendices/' | relative_url }}">Reference</a></h3><p>Formula sheet, Q-function and dB tables, design-review checklists, glossary and further reading.</p></div>
 </div>
 
+## Interactive demos
+
+Nearly 60 interactive demos turn the hardest ideas into something you can move: drag the channel length and watch the pulse spread, add FFE, CTLE and DFE taps and see the eye open, run a PLL loop or a phase-interpolator CDR live. Each one reproduces its chapter's numbers. [Browse all the demos]({{ '/demos/' | relative_url }}).
+
 ## Hands-on labs
 
 [Chapter 16]({{ '/chapters/16-hands-on-labs-with-serdespy/' | relative_url }}) reproduces the key plots of the book with [serdespy](https://github.com/richard259/serdespy): the reference channel, PRBS eyes, TX FFE, CTLE and DFE sweeps, jitter and BER, and a bang-bang phase-interpolator CDR. The scripts live in [`book/tutorial/code/`](https://github.com/bricd-org/serdes-tutorial/tree/main/book/tutorial/code).
