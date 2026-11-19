@@ -198,7 +198,7 @@ permalink: "/chapters/02-signals-systems-and-the-language-of-links/"
 <div class="tbox-title">
 <p>Lab 1: pulse response and cursors</p>
 </div>
-<p><code>lab1_channel.py</code> turns the REF channel’s <span class="math inline">\(S_{21}\)</span> into a pulse response and its cursors. Lengthen the line and watch <span class="math inline">\(p_{1}/p_{0}\)</span> grow (<a href="{% endraw %}{{ '/chapters/16-hands-on-labs-with-serdespy/' | relative_url }}{% raw %}#sec:lab1">Section 16.2</a>).</p>
+<p><code>lab1_channel.py</code> turns the REF channel’s <span class="math inline">\(S_{21}\)</span> into a pulse response and its cursors. Lengthen the line and watch <span class="math inline">\(p_{1}/p_{0}\)</span> grow (<a href="{% endraw %}{{ '/labs/lab-1/' | relative_url }}{% raw %}#sec:lab1">Section 16.2</a>).</p>
 </div>
 <h2 id="sec:ch2-isi"><span class="secnum">2.5</span>ISI: how pulse spreading closes the eye</h2>
 <p>The one-pole channel shows in closed form how bandwidth turns into ISI. Its pulse response peaks at the end of the bit, <span class="math inline">\(t = T_\mathrm{b}\)</span>. Sampling there and writing <span class="math inline">\(r = e^{-T_\mathrm{b}/\tau}\)</span> gives <span class="math inline">\(p_{0} = 1 - r\)</span> and <span class="math inline">\(p_{k} = (1-r)\,r^{k}\)</span> for <span class="math inline">\(k \ge 1\)</span>, with no pre-cursors. The post-cursors form a geometric series that sums to <span class="math inline">\(r\)</span>. The worst case for a 1 is that every earlier bit is a 0, so each tail pulls it down. The smallest 1 is then <span class="math inline">\(A(p_{0} - \sum_{k\ge1}p_{k})\)</span>, and by symmetry the eye opening at the sampling instant is</p>
@@ -265,7 +265,7 @@ permalink: "/chapters/02-signals-systems-and-the-language-of-links/"
 <div class="tbox-title">
 <p>Lab 2: PRBS7 eye through the REF channel</p>
 </div>
-<p><code>lab2_prbs_eye.py</code> draws the PRBS7 eye before and after the REF channel. The output eye is closed (<span class="math inline">\(-78\,\mathrm{mV}\)</span>): the motivation for Part II (<a href="{% endraw %}{{ '/chapters/16-hands-on-labs-with-serdespy/' | relative_url }}{% raw %}#sec:lab2">Section 16.3</a>).</p>
+<p><code>lab2_prbs_eye.py</code> draws the PRBS7 eye before and after the REF channel. The output eye is closed (<span class="math inline">\(-78\,\mathrm{mV}\)</span>): the motivation for Part II (<a href="{% endraw %}{{ '/labs/lab-2/' | relative_url }}{% raw %}#sec:lab2">Section 16.3</a>).</p>
 </div>
 <h2 id="sec:ber"><span class="secnum">2.7</span>Noise and the bit-error rate</h2>
 <p>The receiver compares each sample <span class="math inline">\(y_n\)</span> with a threshold at 0, and an error happens when noise pushes a sample across it. With a worst-case eye of height EH, a 1 arrives at least <span class="math inline">\(\mathrm{EH}/2\)</span> above the threshold and a 0 at least <span class="math inline">\(\mathrm{EH}/2\)</span> below it. Add Gaussian noise <span class="math inline">\(n \sim \mathcal{N}(0, \sigma_\mathrm{n}^2)\)</span> from the termination, the front end and the sampler (<a href="#fig:ch2-ber">Figure 2.11</a>a). A 1 is read as a 0 when <span class="math inline">\(n &lt; -\mathrm{EH}/2\)</span>: <span id="eq:ch2-qdef"></span><span class="math display">\[\begin{align}

@@ -70,7 +70,7 @@ permalink: "/chapters/14-the-open-serdes-architecture/"
 <td style="text-align: left;">Link model</td>
 <td style="text-align: left;">the Python link simulator, statistical eye and GUI, driven by one spec file</td>
 <td style="text-align: left;">0</td>
-<td style="text-align: left;">Chapters <a href="{% endraw %}{{ '/chapters/04-link-budgets-and-statistical-analysis/' | relative_url }}{% raw %}">4</a> and <a href="{% endraw %}{{ '/chapters/16-hands-on-labs-with-serdespy/' | relative_url }}{% raw %}">16</a></td>
+<td style="text-align: left;">Chapters <a href="{% endraw %}{{ '/chapters/04-link-budgets-and-statistical-analysis/' | relative_url }}{% raw %}">4</a> and <a href="{% endraw %}{{ '/labs/' | relative_url }}{% raw %}">16</a></td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">Cell library</td>
@@ -547,7 +547,7 @@ permalink: "/chapters/14-the-open-serdes-architecture/"
 <td style="text-align: left;">3 taps</td>
 <td style="text-align: left;">2 taps, 4+ taps</td>
 <td style="text-align: left;">post-tap does most of the work; pre-tap for <span class="math inline">\(p_{-1}\)</span> on longer channels (on REF, 2 taps win: Lab 3)</td>
-<td style="text-align: left;"><a href="{% endraw %}{{ '/chapters/06-transmit-ffe/' | relative_url }}{% raw %}">Chapter 6</a> and <a href="{% endraw %}{{ '/chapters/16-hands-on-labs-with-serdespy/' | relative_url }}{% raw %}#sec:lab3">Section 16.4</a></td>
+<td style="text-align: left;"><a href="{% endraw %}{{ '/chapters/06-transmit-ffe/' | relative_url }}{% raw %}">Chapter 6</a> and <a href="{% endraw %}{{ '/labs/lab-3/' | relative_url }}{% raw %}#sec:lab3">Section 16.4</a></td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">RX equalizer</td>
@@ -626,7 +626,7 @@ permalink: "/chapters/14-the-open-serdes-architecture/"
 <td style="text-align: left;">3 · Measure and publish</td>
 <td style="text-align: left;">test PCB; eye and BER in both modes; open measurement data; paper (IEEE JSSC or TCAS, SMACD 2027)</td>
 <td style="text-align: left;">BER <span class="math inline">\(\le10^{-12}\)</span> at 5 Gb/s through a real channel and at 10 Gb/s through a short one; bathtub and JTOL measured; release: data + paper</td>
-<td style="text-align: left;"><a href="{% endraw %}{{ '/chapters/15-design-and-verification-flow-with-open-tools/' | relative_url }}{% raw %}#sec:labtest">Section 15.5</a> and <a href="{% endraw %}{{ '/chapters/16-hands-on-labs-with-serdespy/' | relative_url }}{% raw %}">Chapter 16</a></td>
+<td style="text-align: left;"><a href="{% endraw %}{{ '/chapters/15-design-and-verification-flow-with-open-tools/' | relative_url }}{% raw %}#sec:labtest">Section 15.5</a> and <a href="{% endraw %}{{ '/labs/' | relative_url }}{% raw %}">Chapter 16</a></td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">4 · Beyond</td>
@@ -653,7 +653,7 @@ permalink: "/chapters/14-the-open-serdes-architecture/"
 <li><p><strong>Timing loops.</strong> DFE tap 1 uses about 140 of its 200 ps and the CDR dither 19 of its 20 ps; both need post-layout confirmation.</p></li>
 <li><p><strong>The 10 GHz clock and the 10 Gb/s timing budget.</strong> The VCO is a new design, and the budget needs every picosecond term roughly halved (<a href="#we:ch14-10g">Worked Example 14.1</a>). Put the VCO and its <span class="math inline">\(\div2\)</span> on the Phase-1 shuttle, and give the test chip an external clock input so that both modes can be measured without the on-chip PLL.</p></li>
 <li><p><strong>Packaging and measurement.</strong> Bond wires longer than about 1 mm (0.5 mm at 10 Gb/s) cost return loss (<a href="#we:ch14-bond">Worked Example 14.2</a>); the test PCB, a clean reference clock and access to a sampling scope or BERT must be ready before first silicon.</p></li>
-<li><p><strong>Area, pads and the channel.</strong> The PLL is 0.347 mm<span class="math inline">\(^2\)</span> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-smacd2026pll">9</a>], the MIM capacitors add tenths of a mm<span class="math inline">\(^2\)</span>, and the high-speed pads need SMA-grade access; REF must be replaced by measured S-parameters (<a href="{% endraw %}{{ '/chapters/16-hands-on-labs-with-serdespy/' | relative_url }}{% raw %}#sec:ch16-next">Section 16.9</a>).</p></li>
+<li><p><strong>Area, pads and the channel.</strong> The PLL is 0.347 mm<span class="math inline">\(^2\)</span> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-smacd2026pll">9</a>], the MIM capacitors add tenths of a mm<span class="math inline">\(^2\)</span>, and the high-speed pads need SMA-grade access; REF must be replaced by measured S-parameters (<a href="{% endraw %}{{ '/labs/' | relative_url }}{% raw %}#sec:ch16-next">Section 16.9</a>).</p></li>
 </ul>
 <div class="tbox tbox-takeaways">
 <div class="tbox-title">

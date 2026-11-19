@@ -1,0 +1,36 @@
+---
+title: "Lab 5. DFE"
+parent: "Hands-on Labs"
+nav_order: 5
+permalink: "/labs/lab-5/"
+---
+{% raw %}
+<h1 id="sec:lab5"><span class="chapnum">Lab 5 · Section 16.6</span>DFE</h1>
+<h5 id="goal-5">Goal</h5>
+<p>Take the post-cursors left by a moderate 8 dB CTLE as DFE taps, measure the eye against the number of taps, and estimate the BER (<a href="{% endraw %}{{ '/chapters/08-decision-feedback-equalization-and-adaptation/' | relative_url }}{% raw %}#ch:dfe">Chapter 8</a>).</p>
+<div class="sourceCode" id="cb6" data-language="Python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>PEAK <span class="op">=</span> <span class="dv">8</span>                                   <span class="co"># CTLE peaking [dB] (lab 4 model)</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>h_link, t <span class="op">=</span> impulse(H <span class="op">*</span> ctle(PEAK))        <span class="co"># channel x CTLE</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>y <span class="op">=</span> through(tx_wave(bits), h_link)         <span class="co"># CTLE output waveform</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>cur <span class="op">=</span> sdp.channel_coefficients(pulse(h_link), t, SPS, <span class="dv">1</span>, <span class="dv">8</span>, res<span class="op">=</span><span class="dv">150</span>)</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>h_pre, h0, post <span class="op">=</span> cur[<span class="dv">0</span>], cur[<span class="dv">1</span>], cur[<span class="dv">2</span>:]</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> n <span class="kw">in</span> (<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">4</span>, <span class="dv">5</span>, <span class="dv">8</span>):</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    rx <span class="op">=</span> sdp.Receiver(y, SPS, F_NYQ, LEVELS, shift<span class="op">=</span><span class="va">True</span>)  <span class="co"># centre eye at 0</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> n:</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>        rx.nrz_DFE(post[:n])</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>    report_eye(<span class="ss">f&quot;CTLE </span><span class="sc">{</span>PEAK<span class="sc">}</span><span class="ss"> dB + </span><span class="sc">{</span>n<span class="sc">}</span><span class="ss">-tap DFE&quot;</span>, rx.signal, bits)</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a><span class="co"># ... final design: 3 taps, then ber_q(S[ph], A[ph], sigma) for 5..20 mV</span></span></code></pre></div>
+<h5 id="what-you-should-see-4">What you should see</h5>
+<p><a href="#fig:ch16-lab5">Figure 16.5</a>. With the 8 dB CTLE, <span class="math inline">\(p_{-1}=0.0138\)</span>, <span class="math inline">\(p_0=0.1832\)</span> and <span class="math inline">\(p_1\)</span>–<span class="math inline">\(p_3\)</span> = 0.0552, 0.0235, 0.0160 V. The eye grows from 60.0 mV with no DFE to 110.7, 129.5 and <strong>143.0 mV</strong> with 1, 2 and 3 taps, then saturates near 155 mV. With 3 taps the feedback is <span class="math inline">\(\pm27.6\)</span>, <span class="math inline">\(\pm11.8\)</span> and <span class="math inline">\(\pm8.0\)</span> mV, and the estimated BER is <span class="math inline">\(5.9\times10^{-46}\)</span>, <strong><span class="math inline">\(3.2\times10^{-14}\)</span></strong>, <span class="math inline">\(6.0\times10^{-8}\)</span> and <span class="math inline">\(1.8\times10^{-5}\)</span> at <span class="math inline">\(\sigma\)</span> = 5, 10, 15 and 20 mV. A noise-free run through <code>sdp.prbs_checker</code> gives 0 errors in 5024 bits. The lab uses 3 taps; the chip has 2, which gives 129.5 mV here.</p>
+<div id="fig:ch16-lab5">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch16_lab5.svg' | relative_url }}{% raw %}" style="width:753px" alt="Lab 5: the first DFE tap is worth more than the next five together." loading="lazy" />
+<figcaption><span class="capnum">Figure 16.5.</span> <strong>Lab 5: the first DFE tap is worth more than the next five together.</strong> (a) Eye height against the number of DFE taps after an 8 dB CTLE; teal is the Open-SERDES choice, gold the lab’s. (b), (c) The eye before and after a 3-tap DFE. The steps at <span class="math inline">\(\pm0.5\)</span> UI in (c) are an artifact of serdespy’s per-UI feedback; only the sampling instant is meaningful.</figcaption>
+</figure>
+<h5 id="questions-and-extensions-4">Questions and extensions</h5>
+<p>(1) Reproduce the Open-SERDES operating point of <a href="{% endraw %}{{ '/chapters/08-decision-feedback-equalization-and-adaptation/' | relative_url }}{% raw %}#sec:eq-partition">Section 8.5</a>: TX taps <span class="math inline">\([0.75, -0.25]\)</span> (<span class="math inline">\(-6\)</span> dB), a 0 dB CTLE and 2 DFE taps. You should get 171.8 mV. (2) The worst-case <span class="math inline">\(Q\)</span> at 10 mV is <span class="math inline">\(143.0/2/10=7.15\)</span>, yet the BER is <span class="math inline">\(3.2\times10^{-14}\)</span>, not <span class="math inline">\(Q(7.15)\)</span>. Why is <code>ber_q</code> more optimistic than the worst case?</p>
+
+<nav class="prev-next" aria-label="Chapter navigation"><a class="pn-link prev" href="{% endraw %}{{ '/labs/lab-4/' | relative_url }}{% raw %}"><small>← Previous</small>Lab 4. CTLE</a><a class="pn-link next" href="{% endraw %}{{ '/labs/lab-6/' | relative_url }}{% raw %}"><small>Next →</small>Lab 6. Jitter, noise and BER</a></nav>
+<p class="page-source">Generated from <a href="https://github.com/bricd-org/serdes-tutorial/blob/main/book/tutorial/chapters/16_labs.tex">book/tutorial/chapters/16_labs.tex</a>. Figure, table and equation numbers match the <a href="{% endraw %}{{ '/assets/pdf/Open-SERDES_Tutorial.pdf' | relative_url }}{% raw %}">PDF edition</a>.</p>
+{% endraw %}

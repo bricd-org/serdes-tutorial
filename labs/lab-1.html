@@ -1,0 +1,36 @@
+---
+title: "Lab 1. The channel"
+parent: "Hands-on Labs"
+nav_order: 1
+permalink: "/labs/lab-1/"
+---
+{% raw %}
+<h1 id="sec:lab1"><span class="chapnum">Lab 1 · Section 16.2</span>The channel</h1>
+<h5 id="goal-1">Goal</h5>
+<p>Build REF from serdespy’s ABCD-matrix functions, plot <span class="math inline">\(\lvert S_{21}\rvert\)</span>, and turn it into the impulse response, the pulse response and its cursors (Sections <a href="{% endraw %}{{ '/chapters/02-signals-systems-and-the-language-of-links/' | relative_url }}{% raw %}#sec:pulse-response">2.4</a> and <a href="{% endraw %}{{ '/chapters/03-the-channel/' | relative_url }}{% raw %}#sec:refchannel">3.7</a>).</p>
+<div class="sourceCode" id="cb2" data-language="Python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> common <span class="im">import</span> <span class="op">*</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>H <span class="op">=</span> channel()                                  <span class="co"># complex S21 on the grid F</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>h, t <span class="op">=</span> impulse(H)                              <span class="co"># h is per-sample: sum(h) = H(0)</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>p <span class="op">=</span> pulse(h)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>n_pre, n_post <span class="op">=</span> <span class="dv">2</span>, <span class="dv">10</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>cur <span class="op">=</span> sdp.channel_coefficients(p, t, SPS, n_pre, n_post, res<span class="op">=</span><span class="dv">150</span>,</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>                               title<span class="op">=</span><span class="st">&quot;Pulse response and cursors&quot;</span>)</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>isi <span class="op">=</span> np.<span class="bu">sum</span>(np.<span class="bu">abs</span>(cur)) <span class="op">-</span> cur[n_pre]</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;Peak-distortion eye (1 V swing, </span><span class="sc">{</span>n_pre<span class="sc">}</span><span class="ss">+</span><span class="sc">{</span>n_post<span class="sc">}</span><span class="ss"> cursors) = &quot;</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>      <span class="ss">f&quot;</span><span class="sc">{</span>cur[n_pre] <span class="op">-</span> isi<span class="sc">:+.4f}</span><span class="ss"> V  (negative = closed)&quot;</span>)</span></code></pre></div>
+<h5 id="what-you-should-see">What you should see</h5>
+<p><a href="#fig:ch16-lab1">Figure 16.1</a>. The loss is <span class="math inline">\(-0.59\)</span> dB at DC, <span class="math inline">\(-10.40\)</span> dB at 1.25 GHz, <strong><span class="math inline">\(-17.38\)</span> dB at 2.5 GHz</strong> and <span class="math inline">\(-30.07\)</span> dB at 5 GHz. The cursors are <span class="math inline">\(p_{-1}=0.0486\)</span>, <span class="math inline">\(p_0=0.3396\)</span>, <span class="math inline">\(p_1=0.1817\)</span>, <span class="math inline">\(p_2=0.0909\)</span>, <span class="math inline">\(p_3=0.0537\)</span> V, with <span class="math inline">\(p_1/p_0=0.535\)</span>. The ISI magnitudes add to 0.5008 V, more than the main cursor, so the peak-distortion eye is <strong><span class="math inline">\(-0.161\)</span> V</strong>: closed.</p>
+<div id="fig:ch16-lab1">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch16_lab1.svg' | relative_url }}{% raw %}" style="width:753px" alt="Lab 1: a third of the pulse arrives in its own UI, and the tail outweighs it." loading="lazy" />
+<figcaption><span class="capnum">Figure 16.1.</span> <strong>Lab 1: a third of the pulse arrives in its own UI, and the tail outweighs it.</strong> (a) <span class="math inline">\(\lvert S_{21}\rvert\)</span> of REF; the dot is the 2.5 GHz Nyquist loss. (b) The 1-UI, 1 V pulse response (pale) and its cursors at 1 UI spacing from the peak: pre-cursor red, main gold, post-cursors blue.</figcaption>
+</figure>
+<h5 id="questions-and-extensions">Questions and extensions</h5>
+<p>(1) Call <code>channel(LOSS_FAMILY[10])</code> and <code>channel(LOSS_FAMILY[25])</code> (0.572 and 1.441 m). How do <span class="math inline">\(p_1/p_0\)</span> and the PDA eye change with loss? (2) Set <code>c_pad=1e-12</code>. Where in the tail do the pad reflections appear, and why can a short DFE not cancel them?</p>
+
+<nav class="prev-next" aria-label="Chapter navigation"><a class="pn-link prev" href="{% endraw %}{{ '/labs/lab-0/' | relative_url }}{% raw %}"><small>← Previous</small>Lab 0. Set-up</a><a class="pn-link next" href="{% endraw %}{{ '/labs/lab-2/' | relative_url }}{% raw %}"><small>Next →</small>Lab 2. A PRBS eye through the channel</a></nav>
+<p class="page-source">Generated from <a href="https://github.com/bricd-org/serdes-tutorial/blob/main/book/tutorial/chapters/16_labs.tex">book/tutorial/chapters/16_labs.tex</a>. Figure, table and equation numbers match the <a href="{% endraw %}{{ '/assets/pdf/Open-SERDES_Tutorial.pdf' | relative_url }}{% raw %}">PDF edition</a>.</p>
+{% endraw %}
