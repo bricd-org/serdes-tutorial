@@ -155,7 +155,8 @@ def write_index():
             did = re.search(r'class="bd" id="(\w+)"', inc).group(1)
             out.append(f"- [{head[0].upper() + head[1:]}]({{{{ '{link}' | relative_url }}}}#{did}): {desc}.")
             seen.add(n)
-    head = ('---\ntitle: "Interactive Demos"\nnav_order: 1.5\npermalink: "/demos/"\n---\n\n'
+    # layout: plain Jekyll gives a page no layout unless _config.yml's defaults cover its path
+    head = ('---\ntitle: "Interactive Demos"\nlayout: default\nnav_order: 1.5\npermalink: "/demos/"\n---\n\n'
             "# Interactive demos\n\n"
             f"{len(seen)} interactive demos break the hard ideas of the book into things you can move. Each one runs in "
             "the page, with no install, and reproduces the numbers its chapter quotes at its default settings; most of "
