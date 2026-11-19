@@ -1,5 +1,6 @@
 ---
 title: "Interactive Demos"
+layout: default
 nav_order: 1.5
 permalink: "/demos/"
 ---
