@@ -13,10 +13,64 @@ This file is excluded from the Jekyll site (`_config.yml` → `exclude`).
   Chapter 16 page into `labs/index.html` (lead, objectives, Table 16.1 with links, "Where to go next") and one
   page per lab (`labs/lab-N.html`), relinks the rest of the site and leaves a forwarding stub at the old
   `/chapters/16-hands-on-labs-with-serdespy/` address. The PDF keeps Chapter 16 and its 16.x numbers.
-- pandoc is not installed on the maintainer's Mac, so the generated pages are usually not rebuilt locally.
+- pandoc is not installed on the maintainer's Mac, so the generated pages are usually not rebuilt locally. The Mac has
+  TeX Live (`latexmk` builds the book into `book/_build/` in about 30 s), Docker Desktop and Chrome, but no pandoc,
+  no poppler and only the system Ruby 2.6; the user said "not now" to installing them with Homebrew. So a LaTeX change
+  reaches the site and `assets/pdf/` only after `build_site.py` runs somewhere that has them (see "Book and site" below).
+- Every page Jekyll serves needs a layout: plain Jekyll gives none unless `_config.yml`'s `defaults` cover the path
+  (they cover `chapters/`, `appendices/`, `parts/`, `labs/`, `preface.html`, `references.html`), so any other page
+  must say `layout: default` in its front matter. `/demos/` was served bare for this reason until 19 Nov.
 - Preview: Jekyll in Docker (`ruby:3.3`), e.g. `docker run --rm -p 4007:4007 -v "$PWD":/site -v serdes-gems:/usr/local/bundle -w /site ruby:3.3 sh -c 'bundle install && bundle exec jekyll serve --host 0.0.0.0 --port 4007'`
-  → http://localhost:4007/serdes-tutorial/ . Revert `Gemfile.lock` after a Docker build.
+  → http://localhost:4007/serdes-tutorial/ . `preview_start serdes` runs that from `/Users/kithminrw/SerDes Project/.claude/launch.json`.
+  Revert `Gemfile.lock` after a Docker build.
 - Work on a branch, merge into `main` with a merge commit (see `git log`); a push to `main` deploys the public site.
+- Several Claude sessions may share this folder. For a task of its own use a worktree
+  (`git worktree add -b NAME ../serdes-tutorial-NAME origin/main`) and its own preview port, `git fetch` right before
+  merging (main once moved between a check and a merge), and remove the worktree afterwards (`rm -rf` the folder, then
+  `git worktree prune`). git here is 2.15: no `git worktree remove`, no `git merge -F` (use `-m`), no
+  `git branch --show-current`.
+
+## Book and site: open items outside the demos (written 19 Nov 2026)
+
+1. **Section 14.5.3's supply resonance is in the LaTeX only.** Commit `1bc337a` (merged in `134d847`, 11 Nov) added
+   the "Supply and ground pins" paragraph and Worked Example 14.3 (`we:ch14-pdn`) to `14_arch.tex`; energy per bit
+   is now Worked Example 14.4. The book compiles cleanly, but `chapters/14-the-open-serdes-architecture.html` and
+   `assets/pdf/Open-SERDES_Tutorial.pdf` show the old section until `build_site.py` runs. The numbers are first
+   estimates: two 2.5 nH DVDD wires in parallel plus 0.15 nH of paddle down-bonds give L_loop ≈ 1.4 nH; with the
+   210 pF of Ex 15.2, f_res = 294 MHz against the 312.5 MHz clock; √(L/C) = 2.6 Ω; R_loop 0.25–0.5 Ω (a 25 µm gold
+   wire 2.5 mm long is ≈ 0.21 Ω at 300 MHz) gives Q 5–10, a 13–26 Ω peak and 11–16 Ω at 312.5 MHz, so 2 mA at the
+   clock makes 20–30 mV. A second 210 pF behind 2.6 Ω brings the peak to ≈ 5 Ω (≈ 3 Ω at 312.5 MHz); four DVDD
+   wires move f_res to ≈ 390 MHz. A supply-resonance demo next to `padbond` would be a natural addition.
+2. **Proposed corrections to Section 14.5.3, not made (waiting for the user).** A package study (the REF `channel()`
+   with a die pad C, a bond-wire L and 0.25 pF of lead and board land at each end; best PDA eye over the book's
+   3-tap FFE, 0–12 dB CTLE and 2-tap DFE ranges, 120 cursors) found:
+   - In a 7 × 7 mm QFN-48 the lead tips are ≈ 3.1 mm from the centre and a 2 × 2 mm die's pads ≈ 0.95 mm, so the
+     high-speed wires are ≈ 2.3–2.5 mm (≈ 2.5 nH) and corner pins ≈ 3 mm: the "≤ 1 mm" in Table 14.2 and Fig 14.7
+     cannot be met with that die in that package. Options: a QFN-32 5 × 5 mm (≈ 1.3 mm; the pin list still fits), an
+     off-centre die, two parallel wires, chip-on-board, or probing the bare die first.
+   - REF has no package and uses 300 fF pads, where Chapter 9 estimates 0.63 pF, so the 5 Gb/s voltage budget
+     (76 mV against 50 mV) leaves both out.
+   - Worked Example 14.2 treats the wire alone (2.5 nH → RL 8.7 dB); with the pad and lead capacitance around it the
+     section is close to 50 Ω and RL stays ≥ 12 dB (Chapter 3's artificial-line remark already says so).
+   - PDA eye after EQ on REF: 124 mV as in the book, 117 mV with 0.63 pF pads, 122 / 119 / 118 mV with 1.2 / 2.5 /
+     3.2 nH wires. Loss at 5 GHz: −30.1 / −31.5 / −30.3 / −32.4 / −34.9 dB. So the package costs ≈ 5 mV at 5 Gb/s and
+     matters for the 10 Gb/s target.
+   - The biggest unknown is TX → RX crosstalk inside the package: a rough coupled-pair estimate gives a few mV to
+     ≈ 15 mV at the RX pad against 26 mV of slack. Simulate the bond wires in openEMS and separate the pairs.
+   - The test board (QFN footprint and launch, via stubs, SMA) is part of the measured channel: de-embed it or
+     design its traces to REF's loss.
+   The study script lived in a session scratchpad and is gone; it is ≈ 150 lines (common.py's `channel()` written as
+   numpy ABCD matrices, the package sections and a grid search) and quick to rebuild.
+3. **`thebricd.org` without www does not resolve** (no DNS record; `www.thebricd.org` → `bricd-org.github.io`
+   works). The PDF cover and page footers print "thebricd.org", and the Open-BioAFE flyer's footer address uses it.
+   The fix is at the domain registrar (GitHub Pages' apex A records or a redirect to www), not in this repo.
+4. **`tools/split_labs.py` has only run on the existing generated pages**, never after a real `build_site.py` run.
+   On the first rebuild, check that it still finds `sec:lab0` … `sec:lab7`, `sec:ch16-next` and `tab:ch16-labs`
+   in Chapter 16 (it asserts the section order), that `labmap` lands on `labs/lab-0.html`, and crawl the site for
+   broken links and anchors (a ≈ 40-line urllib crawler did this on 18–19 Nov: 40 pages, 4262 links, none broken).
+5. **Outside this repo:** a LinkedIn flyer and caption about the REF pulse response ("What does a metre of PCB do to
+   one bit?") are in `~/BRICD/LinkedIn/OpenSERDES_smear_flyer*`, with `make_flyer.py`, which recomputes REF and
+   stops unless it matches the book. Not posted; posting is the user's.
 
 ## Interactive demos (started 15 Nov 2026)
 
@@ -318,13 +372,20 @@ noise, jitter) → stat eye and margin, the whole book on one panel. todo
   even with 2000 sections (or 10 cm at λ/10), because the edge has energy above f_max, so it would have blamed
   Eq 15.2 for the edge. Preview: `/Users/kithminrw/SerDes Project/.claude/launch.json` now has `serdes` (port 4007,
   this repo) next to another session's `serdes-labs` (port 4008, `serdes-tutorial-labs`).
+- 18–19 Nov (another session, outside the demos): the labs became a top-level Hands-on Labs section
+  (`tools/split_labs.py`, merged in `5989ccb` together with `lumped`; the one conflict, the `insert_demos.py`
+  docstring, kept both anchor kinds); `labmap` moved to `labs/lab-0.html`. `/demos/` had been served without the
+  theme since 15 Nov because `demos.md` had no layout; `write_index()` now writes `layout: default` (`21618e6`). The
+  temporary `serdes-labs` and `serdes-demos` launch entries and their worktrees are removed; `serdes` (port 4007)
+  remains.
 
 ### Next steps (written 18 Nov 2026, when the user said to stop here)
 
-**State.** 62 demo placements (57 distinct demos; `fo4rule`, `clockplan`, `padbond`, `margin`, `pllnoise` appear in two
-chapters) on every chapter 1–15, plus `labmap` in Ch 16. All merged into `main` and pushed (main = 49618a1 plus this
-HANDOFF commit). `/demos/` index page generated by `tools/insert_demos.py` (`demos.md`); shared assets load once per
-page; all 62 panels checked at 375 px (readouts filled, no overflow). Branch `interactive-demos` = `main`.
+**State** (updated 19 Nov). 63 demo placements (58 distinct demos; `fo4rule`, `clockplan`, `padbond`, `margin`, `pllnoise`
+appear in two chapters) on every chapter 1–15, plus `labmap` on the Lab 0 page (`/labs/lab-0/`). All merged into `main`
+and pushed (main = `21618e6` plus this HANDOFF commit). `/demos/` index page generated by `tools/insert_demos.py`
+(`demos.md`, now with the site layout); shared assets load once per page; all 63 panels have been checked at 375 px.
+Branch `interactive-demos` on GitHub is at `b29ffb2`, behind `main`: merge `main` into it before the next demo commit.
 
 **Remaining demos (13 after `lumped`, done 18 Nov), cheapest first; the book values each must reproduce are in the proposal list above:**
 2. `calc` (Appendix A): UI/f_N, Q↔BER, dB↔ratio, skin depth, energy per bit.
@@ -386,3 +447,6 @@ page; all 62 panels checked at 375 px (readouts filled, no overflow). Branch `in
   canvases by POSTing `canvas.toDataURL()` to a tiny local receiver and read the PNG.
 - Start a fresh session for the next round: this conversation's context grew past 650k tokens, so each step cost
   about 1 % of the 5-hour window by the end.
+- PDF pages: the Read tool cannot render them here (no poppler). Render a page with a few lines of Swift and PDFKit
+  (`swift render.swift book.pdf PAGE out.png`), or open the PDF in the browser pane. The physical page of a printed
+  page number is offset by the front matter (printed 129 was physical 138 on 11 Nov).
