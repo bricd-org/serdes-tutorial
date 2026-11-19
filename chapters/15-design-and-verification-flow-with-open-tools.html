@@ -253,6 +253,8 @@ permalink: "/chapters/15-design-and-verification-flow-with-open-tools/"
   \quad\Rightarrow\quad N\ge\frac{10\,\ell\,f_\mathrm{max}}{v} \tag{15.2}\]</span></p>
 </div>
 <p>For REF, <span class="math inline">\(\ell=1\)</span> m, <span class="math inline">\(v=c/\sqrt{4}=1.5\times10^8\)</span> m/s and <span class="math inline">\(f_\mathrm{max}=10\)</span> GHz give <span class="math inline">\(N\ge667\)</span> sections, each needing extra R–L branches to mimic the skin effect. That is slow and hard to fit. Option (iii) is exact for a matched link and is what Open-SERDES uses: simulate the TX into a 50 Ω-per-side load in SPICE, export the differential waveform, apply the channel in Python with <code>through(x, h)</code>, and feed the result back into the RX testbench as a PWL source behind 50 Ω per side.</p>
+
+<!-- demo:lumped -->{% endraw %}{% include demos/assets.html %}{% include demos/lumped.html %}{% raw %}<!-- /demo -->
 <h5 id="corners-monte-carlo-and-cace">Corners, Monte Carlo and CACE</h5>
 <p>The SG13G2 model libraries have typical, best-case and worst-case sections for MOS devices, HBTs and resistors; combine them with supply <span class="math inline">\(\pm5\)</span> % and 0–85 <span class="math inline">\(^\circ\)</span>C. Mismatch-sensitive specs (sampler offset, I/Q phase, mirror ratios) need Monte Carlo, and the number of runs sets how well you know the answer.</p>
 <div class="tbox tbox-keyeq">
@@ -266,7 +268,7 @@ permalink: "/chapters/15-design-and-verification-flow-with-open-tools/"
 </div>
 <p>Fifty runs know <span class="math inline">\(\sigma\)</span> to about 10 %, 200 runs to 5 % (for the sampler, <span class="math inline">\(4.9\pm0.25\)</span> mV). <strong>CACE</strong> turns all of this into a datasheet: a YAML file per block lists each parameter with its minimum, typical and maximum limits, the testbench that measures it and the conditions to sweep; <strong>CACE</strong> runs every combination and reports pass or fail, so <a href="{% endraw %}{{ '/chapters/14-the-open-serdes-architecture/' | relative_url }}{% raw %}#tab:specs">Table 14.2</a> becomes an executable checklist.</p>
 
-<!-- demo:mcruns -->{% endraw %}{% include demos/assets.html %}{% include demos/mcruns.html %}{% raw %}<!-- /demo -->
+<!-- demo:mcruns -->{% endraw %}{% include demos/mcruns.html %}{% raw %}<!-- /demo -->
 <h2 id="sec:layout-hs"><span class="secnum">15.4</span>Layout for high speed</h2>
 <p>At 5 Gb/s a layout can lose the margin that the schematic won. Six habits keep it.</p>
 <h5 id="symmetry">Symmetry</h5>

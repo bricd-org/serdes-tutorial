@@ -1,0 +1,125 @@
+<div class="bd" id="bdLumped" role="group" aria-label="Interactive demo: how many LC sections a lumped model of a line needs">
+  <div class="bd-head"><span>// try it · sections for a lumped line model</span><span>lossless ladder · Z<sub>0</sub> = 50 Ω</span></div>
+  <div class="bd-sliders">
+    <label class="bd-sl"><span>line length ℓ <b data-v="len"></b></span><input type="range" data-k="len" min="1" max="100" step="1" value="100" aria-label="Line length in cm"></label>
+    <label class="bd-sl"><span>dielectric constant ε<sub>r</sub> <b data-v="er"></b></span><input type="range" data-k="er" min="1" max="10" step="0.1" value="4" aria-label="Dielectric constant"></label>
+    <label class="bd-sl"><span>highest frequency f<sub>max</sub> <b data-v="fm"></b></span><input type="range" data-k="fm" min="1" max="40" step="0.5" value="10" aria-label="Highest frequency in GHz"></label>
+    <label class="bd-sl"><span>sections in the ladder N <b data-v="n"></b></span><input type="range" data-k="n" min="0" max="4" step="any" value="2.8241" aria-label="Number of LC sections, log scale"></label>
+  </div>
+  <div class="bd-row">
+    <div class="bd-scope short"><canvas data-c="a" aria-hidden="true"></canvas><span class="bd-tag" data-o="ta"></span></div>
+    <div class="bd-scope short"><canvas data-c="b" aria-hidden="true"></canvas><span class="bd-tag" data-o="tb"></span></div>
+  </div>
+  <div class="bd-scope"><canvas data-c="e" aria-hidden="true"></canvas><span class="bd-tag">ladder phase error vs the real line (log–log)</span></div>
+  <div class="bd-read" aria-live="polite"><span>v <b data-o="v">–</b></span><span>t<sub>d</sub> <b data-o="td">–</b></span><span>λ<sub>min</sub> = v/f<sub>max</sub> <b data-o="lam">–</b></span><span>Eq 15.2: N ≥ <b data-o="nmin">–</b></span><span>Δℓ = ℓ/N <b data-o="dl">–</b></span><span>ladder cutoff f<sub>c</sub> <b data-o="fc">–</b></span><span>error at f<sub>N</sub> = 2.5 GHz <b data-o="en">–</b></span><span>at f<sub>max</sub> <b data-o="em">–</b></span><span>R, L, G, C elements <b data-o="el">–</b></span></div>
+  <div class="bd-controls"><button type="button" class="bd-btn" data-act="rule">set N by Eq 15.2</button></div>
+  <p class="bd-caption" data-o="cap"></p>
+</div>
+<script>
+(function () {
+  var root = document.getElementById('bdLumped'); if (!root || !window.BD) return;
+  var C0 = 3e8, Z0 = 50, FN = 2.5e9;            // c = 3e8 m/s as in the book's example (v = c/√4 = 1.5e8 m/s)
+  var q = function (s) { return root.querySelector(s); };
+  function mm(x) { var v = x * 1e3; return (v < 10 ? v.toFixed(2) : v < 100 ? v.toFixed(1) : v.toFixed(0)) + ' mm'; }
+  function ghz(f) { return f < 1e9 ? (f / 1e6).toFixed(0) + ' MHz' : (f / 1e9 < 100 ? (f / 1e9).toFixed(1) : (f / 1e9).toFixed(0)) + ' GHz'; }
+  function deg(e) { return (e < 10 ? e.toFixed(1) : e.toFixed(0)) + '°'; }
+  function ps(t) { return (t < 10 ? t.toFixed(1) : t.toFixed(0)) + ' ps'; }
+  function secs(n) { return n + (n === 1 ? ' section' : ' sections'); }
+
+  /* N lossless π sections (C/2 – L – C/2), 50 Ω source and load. Per section cos θ = 1 − ω²LC/2.
+     Phase error = N(θ − ω√(LC)) + arg q, with q = (1 + k/2) + (1 − k/2)e^(−2jNθ), k = Z_i/Z0 + Z0/Z_i (termination ripple). */
+  function model(len, er, N) {
+    var v = C0 / Math.sqrt(er), dl = len / N, L = Z0 * dl / v, C = dl / (Z0 * v), s = Math.sqrt(L * C);
+    return { v: v, dl: dl, L: L, C: C, s: s, N: N, td: len / v, fc: 1 / (Math.PI * s) };
+  }
+  function perr(m, f) {                           // radians, NaN at or above the cutoff
+    var w = 2 * Math.PI * f, x = w * m.s / 2;
+    if (x >= 1) return NaN;
+    var th = 2 * Math.asin(x), Zi = w * m.L / Math.sin(th), k = Zi / Z0 + Z0 / Zi, a = 2 * m.N * th;
+    var qr = 1 + k / 2 + (1 - k / 2) * Math.cos(a), qi = -(1 - k / 2) * Math.sin(a);
+    return m.N * (th - w * m.s) + Math.atan2(qi, qr);
+  }
+  function node(m, f, n) {                        // Re{V} at node n of the matched ladder, unit wave at x = 0
+    var x = Math.PI * f * m.s;
+    if (x < 1) return Math.cos(n * 2 * Math.asin(x));
+    var al = Math.acosh(2 * x * x - 1); return (n % 2 ? -1 : 1) * Math.exp(-n * al);
+  }
+  function wave(cv, m, f, x0, x1) {
+    var d = BD.setup(cv), span = x1 - x0, ticks = [];
+    for (var i = 0; i <= 3; i++) { var t = x0 + span * i / 3; ticks.push([t, (t * 1e3).toFixed(span < 0.03 ? 1 : 0) + (i === 3 ? ' mm' : '')]); }
+    var fr = BD.frame(d, { x: [x0, x1], y: [-1.4, 1.4], xt: ticks, yt: [[0, '']], pad: { l: 10, r: 26, t: 26, b: 22 } });
+    var beta = 2 * Math.PI * f / m.v, xs = [], ys = [], K = 500;
+    for (var j = 0; j <= K; j++) { var xx = x0 + span * j / K; xs.push(xx); ys.push(Math.cos(beta * xx)); }
+    BD.line(fr, xs, ys, BD.C.gold, 1.4);
+    var n0 = Math.max(0, Math.ceil(x0 / m.dl - 1e-9)), n1 = Math.min(m.N, Math.floor(x1 / m.dl + 1e-9)), nx = [], ny = [];
+    for (var n = n0; n <= n1; n++) { nx.push(n * m.dl); ny.push(node(m, f, n)); }
+    BD.line(fr, nx, ny, 'rgba(127,184,240,.55)', 1);
+    var px = (fr.X(x0 + m.dl) - fr.X(x0));
+    if (px >= 3) nx.forEach(function (xv, i) { BD.dot(fr, xv, ny[i], BD.C.blue, px > 8 ? 2.6 : 1.8); });
+    var g = d.g, lbl = '• ladder nodes', wl = g.measureText(lbl).width; g.textAlign = 'right';
+    g.fillStyle = BD.C.blue; g.fillText(lbl, d.w - 12, 15); g.fillStyle = BD.C.gold; g.fillText('— line', d.w - 20 - wl, 15); g.textAlign = 'left';
+  }
+
+  var S, draw = function () {};
+  S = BD.bind(root, {
+    len: { map: function (v) { return v / 100; }, fmt: function (x) { return (x * 100).toFixed(0) + ' cm'; } },
+    er: { fmt: function (x) { return x.toFixed(1); } },
+    fm: { map: function (v) { return v * 1e9; }, fmt: function (x) { return (x / 1e9).toFixed(1) + ' GHz'; } },
+    n: { map: function (v) { return Math.max(1, Math.round(Math.pow(10, v))); }, fmt: function (x) { return String(x); } }
+  }, function () { draw(); });
+
+  draw = function () {
+    var len = S.len, fmx = S.fm, m = model(len, S.er, S.n), lam = m.v / fmx;
+    var nmin = 10 * len * fmx / m.v, need = Math.ceil(nmin - 1e-9), ok = m.N >= need;
+    // the wave at f_max along the line: first and last few wavelengths (or the two halves of a short line)
+    var W = Math.max(3 * lam, 4 * m.dl); if (2 * W >= len) W = len / 2;
+    wave(q('[data-c="a"]'), m, fmx, 0, W); wave(q('[data-c="b"]'), m, fmx, len - W, len);
+    q('[data-o="ta"]').innerHTML = 'f<sub>max</sub> wave · 0–' + mm(W);
+    q('[data-o="tb"]').innerHTML = 'line end · ' + mm(len - W).replace(' mm', '') + '–' + mm(len);
+    // phase error against frequency
+    var f0 = fmx / 100, f1 = fmx * 10, d = BD.setup(q('[data-c="e"]'));
+    var fr = BD.frame(d, { x: [f0, f1], y: [1e-3, 1e5], xlog: true, ylog: true, xt: BD.logticks(f0, f1, 'Hz'),
+      yt: [[1e-3, '0.001°'], [0.1, '0.1°'], [10, '10°'], [1000, '1000°'], [1e5, '10⁵°']], pad: { l: 48, r: 28, t: 30 } });
+    var g = d.g;
+    if (m.fc < f1) { var xc = fr.X(Math.max(m.fc, f0)); g.fillStyle = 'rgba(240,138,106,.12)'; g.fillRect(xc, fr.p.t, d.w - fr.p.r - xc, d.h - fr.p.t - fr.p.b);
+      g.fillStyle = BD.C.red; g.fillText('cut off above f_c', Math.min(xc + 5, d.w - 110), d.h - fr.p.b - 8); }
+    var xs = [], ys = [];
+    for (var i = 0; i <= 400; i++) { var f = f0 * Math.pow(f1 / f0, i / 400), e = perr(m, f); xs.push(f); ys.push(e > 0 ? e * 180 / Math.PI : NaN); }
+    BD.line(fr, xs, ys, BD.C.blue, 2);
+    BD.hline(fr, 360, 'rgba(240,138,106,.7)', [5, 4], 'one full cycle (360°)');
+    BD.vline(fr, FN, 'rgba(170,205,240,.55)', [3, 3], 'f_N'); BD.vline(fr, fmx, BD.C.gold, [4, 3], 'f_max');
+    var eN = perr(m, FN), eM = perr(m, fmx);
+    if (eN > 0) BD.dot(fr, FN, eN * 180 / Math.PI, BD.C.white); if (eM > 0) BD.dot(fr, fmx, eM * 180 / Math.PI, BD.C.gold);
+    // readouts
+    q('[data-o="v"]').textContent = (m.v / 1e8).toFixed(2) + '×10⁸ m/s';
+    q('[data-o="td"]').textContent = m.td < 1e-9 ? (m.td * 1e12).toFixed(0) + ' ps' : (m.td * 1e9).toFixed(2) + ' ns';
+    q('[data-o="lam"]').textContent = mm(lam);
+    q('[data-o="nmin"]').textContent = String(need);
+    var dlo = q('[data-o="dl"]'); dlo.textContent = mm(m.dl) + ' = λ/' + (lam / m.dl).toFixed(1); dlo.className = ok ? 'ok' : 'bad';
+    q('[data-o="fc"]').textContent = ghz(m.fc);
+    var en = q('[data-o="en"]'), em = q('[data-o="em"]');
+    en.textContent = isNaN(eN) ? 'cut off' : deg(eN * 180 / Math.PI) + ' (' + ps(eN / (2 * Math.PI * FN) * 1e12) + ')';
+    em.textContent = isNaN(eM) ? 'cut off' : deg(eM * 180 / Math.PI) + ' (' + ps(eM / (2 * Math.PI * fmx) * 1e12) + ')';
+    en.className = isNaN(eN) || eN * 180 / Math.PI > 90 ? 'bad' : ''; em.className = isNaN(eM) || eM * 180 / Math.PI > 360 ? 'bad' : '';
+    q('[data-o="el"]').textContent = String(4 * m.N);
+    // caption
+    var xm = Math.PI * fmx * m.s, per = xm < 1 ? (Math.asin(xm) / xm - 1) * 100 : NaN, cap;
+    if (m.fc <= FN) cap = 'With only ' + secs(m.N) + ' of ' + mm(m.dl) + ', the ladder cuts off at f<sub>c</sub> = ' + ghz(m.fc) +
+      ', below f<sub>N</sub>: it cannot carry a 5 Gb/s signal at all. The wave at f<sub>max</sub> does not propagate; it dies out within a few sections. Eq 15.2 asks for ' + need + '.';
+    else if (m.fc <= fmx) cap = (m.N === 1 ? 'The single section is ' : 'Each of the ' + m.N + ' sections is ') + mm(m.dl) + ', longer than λ/10, so the ladder cuts off at f<sub>c</sub> = ' + ghz(m.fc) +
+      ', below f<sub>max</sub>: frequencies up to f<sub>max</sub> no longer pass. With Δℓ = λ/10 (N = ' + need + ') the cutoff sits at about 3.2 f<sub>max</sub>.';
+    else cap = secs(m.N) + ' of ' + mm(m.dl) + (ok ? (m.N === 1 ? ' meets' : ' meet') : (m.N === 1 ? ' misses' : ' miss')) + ' Eq 15.2 (N ≥ ' + need + ' for Δℓ ≤ λ/10 at f<sub>max</sub>). Each section samples the wave ' +
+      (lam / m.dl).toFixed(1) + ' times per wavelength and adds only ' + per.toFixed(2) + ' % too much phase at f<sub>max</sub>, but the errors add up along the line: after ' + secs(m.N) +
+      ' the ladder is ' + deg(eM * 180 / Math.PI) + ' behind the real line at f<sub>max</sub>' + (eN > 0 ? ' and ' + deg(eN * 180 / Math.PI) + ' at f<sub>N</sub>' : '') +
+      '. The error grows as f<sup>3</sup> and falls as 1/N<sup>2</sup>, so more accuracy costs more sections: already ' + 4 * m.N +
+      ' R, L, G, C elements, before the skin-effect branches that REF needs in every section. That is why Open-SERDES applies the channel in Python instead.';
+    q('[data-o="cap"]').innerHTML = cap;
+  };
+
+  q('[data-act="rule"]').addEventListener('click', function () {
+    var m = model(S.len, S.er, 1), need = Math.max(1, Math.ceil(10 * S.len * S.fm / m.v - 1e-9)), el = q('[data-k="n"]');
+    el.value = Math.log10(need).toFixed(4); el.dispatchEvent(new Event('input'));
+  });
+  BD.observe(root, draw);
+})();
+</script>
