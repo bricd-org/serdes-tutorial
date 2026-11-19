@@ -7,6 +7,7 @@ demos survive every rebuild. Run it by hand after adding a demo:  python3 tools/
 Each entry: (page file under ROOT, demo name, anchor). The anchor is either
   "after:fig:ID"  -> just after the </figure> that follows <div id="fig:ID">
   "end:sec:ID"    -> just before the next <h2>/<h3> after the heading with id sec:ID
+  "before:ID"     -> just before the heading with id ID (e.g. a \\paragraph heading, <h5>)
 The script removes old <!-- demo:... --> blocks first, so it is idempotent.
 """
 import re
@@ -77,6 +78,7 @@ DEMOS = [
     (CH + "14-the-open-serdes-architecture.html", "clockplan", "after:fig:ch14-clock"),
     (CH + "14-the-open-serdes-architecture.html", "padbond", "end:sec14.5.3-package-and-pinout"),
     (CH + "14-the-open-serdes-architecture.html", "power", "after:fig:ch14-power"),
+    (CH + "15-design-and-verification-flow-with-open-tools.html", "lumped", "before:corners-monte-carlo-and-cace"),
     (CH + "15-design-and-verification-flow-with-open-tools.html", "mcruns", "end:sec:testbenches"),
     (CH + "15-design-and-verification-flow-with-open-tools.html", "bercount", "end:sec:labtest"),
     (CH + "16-hands-on-labs-with-serdespy.html", "labmap", "end:sec:lab0"),
@@ -98,6 +100,11 @@ def insert(html, name, anchor):
             raise ValueError(f"no section {ident}")
         nxt = re.compile(r"<h[23] |<nav class=\"prev-next\"").search(html, m.end())
         pos = nxt.start() if nxt else len(html)
+    elif kind == "before":
+        m = re.search(r'<h[2-6] id="%s">' % re.escape(ident), html)
+        if not m:
+            raise ValueError(f"no heading {ident}")
+        pos = m.start()
     else:
         raise ValueError(f"bad anchor {anchor}")
     block = ("\n<!-- demo:%s -->{%% endraw %%}{%% include demos/%s.html %%}{%% raw %%}<!-- /demo -->\n"

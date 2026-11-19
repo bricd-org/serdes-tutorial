@@ -6,7 +6,7 @@ permalink: "/demos/"
 
 # Interactive demos
 
-57 interactive demos break the hard ideas of the book into things you can move. Each one runs in the page, with no install, and reproduces the numbers its chapter quotes at its default settings; most of the channel and equalizer demos run a JavaScript port of the labs' link model. Click a demo to jump to it in its chapter.
+58 interactive demos break the hard ideas of the book into things you can move. Each one runs in the page, with no install, and reproduces the numbers its chapter quotes at its default settings; most of the channel and equalizer demos run a JavaScript port of the labs' link model. Click a demo to jump to it in its chapter.
 {: .fs-5 .fw-300 }
 
 ## 1. Why Serial Links?
@@ -113,5 +113,6 @@ permalink: "/demos/"
 
 ## 15. Design and Verification Flow with Open Tools
 
+- [Sections for a lumped line model]({{ '/chapters/15-design-and-verification-flow-with-open-tools/' | relative_url }}#bdLumped): how many LC sections a lumped model of a line needs.
 - [How many Monte Carlo runs?]({{ '/chapters/15-design-and-verification-flow-with-open-tools/' | relative_url }}#bdMcRuns): how many Monte Carlo runs it takes to know a sigma.
 - [Bits needed to claim a BER]({{ '/chapters/15-design-and-verification-flow-with-open-tools/' | relative_url }}#bdBerCount): how many bits it takes to claim a BER.
