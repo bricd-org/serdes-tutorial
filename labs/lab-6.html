@@ -1,0 +1,74 @@
+---
+title: "Lab 6. Jitter, noise and BER"
+parent: "Hands-on Labs"
+nav_order: 6
+permalink: "/labs/lab-6/"
+---
+{% raw %}
+<h1 id="sec:lab6"><span class="chapnum">Lab 6 · Section 16.7</span>Jitter, noise and BER</h1>
+<h5 id="goal-6">Goal</h5>
+<p>Add 5 ps rms TX random jitter and RX noise to the Lab 5 link, count real bit errors, and compare them with the estimate and the bathtub (<a href="{% endraw %}{{ '/chapters/11-jitter/' | relative_url }}{% raw %}#sec:dualdirac">Section 11.3</a>).</p>
+<div class="sourceCode" id="cb7" data-language="Python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>np.random.seed(<span class="dv">2026</span>)                       <span class="co"># repeatable jitter and noise</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>PEAK, N_TAPS, RJ_UI <span class="op">=</span> <span class="dv">8</span>, <span class="dv">3</span>, <span class="fl">0.025</span>          <span class="co"># RJ = 2.5 % UI = 5 ps rms</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>bits <span class="op">=</span> np.tile(sdp.prbs7(<span class="dv">1</span>), <span class="dv">800</span>)          <span class="co"># 101 600 bits</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>y <span class="op">=</span> through(tx_wave(bits, jitter_ui<span class="op">=</span>RJ_UI), h_link)   <span class="co"># TX RJ -&gt; channel -&gt; CTLE</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>rx <span class="op">=</span> sdp.Receiver(y, SPS, F_NYQ, LEVELS, shift<span class="op">=</span><span class="va">True</span>)  <span class="co"># sampling phase -&gt; index 0</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>rx.nrz_DFE(taps)</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>hts, ph, S, A <span class="op">=</span> report_eye(<span class="st">&quot;With 5 ps TX RJ, no noise&quot;</span>, rx.signal, bits)</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> sigma <span class="kw">in</span> (<span class="fl">10e-3</span>, <span class="fl">15e-3</span>, <span class="fl">20e-3</span>, <span class="fl">25e-3</span>):</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>    rx.noise(sigma)                        <span class="co"># resets to pre-DFE signal + AWGN</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>    rx.nrz_DFE(taps)                       <span class="co"># real decisions: error propagation</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>    d <span class="op">=</span> sdp.nrz_a2d(rx.signal, SPS, <span class="fl">0.0</span>)[skip:<span class="op">-</span><span class="dv">5</span>]</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>    n_err <span class="op">=</span> sdp.prbs_checker(<span class="dv">7</span>, sdp.prbs7(<span class="dv">1</span>), d)[<span class="dv">0</span>]</span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>    est <span class="op">=</span> ber_q(S[<span class="dv">0</span>], A[<span class="dv">0</span>], sigma)</span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a><span class="co"># ... bathtub: ber_q(S[o % SPS], A[o % SPS], sigma) at every phase offset o</span></span></code></pre></div>
+<h5 id="what-you-should-see-5">What you should see</h5>
+<p><a href="#fig:ch16-lab6">Figure 16.6</a>. With jitter but no noise the eye is 115.6 mV and 0.73 UI. Counting over 101 544 bits:</p>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;"><span class="math inline">\(\sigma\)</span> (mV)</th>
+<th style="text-align: center;">10</th>
+<th style="text-align: center;">15</th>
+<th style="text-align: center;">20</th>
+<th style="text-align: center;">25</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">errors counted</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">6</td>
+<td style="text-align: center;">43</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">counted BER</td>
+<td style="text-align: center;"><span class="math inline">\(&lt;3\times10^{-5}\)</span></td>
+<td style="text-align: center;"><span class="math inline">\(9.9\times10^{-6}\)</span></td>
+<td style="text-align: center;"><span class="math inline">\(5.9\times10^{-5}\)</span></td>
+<td style="text-align: center;"><span class="math inline">\(4.2\times10^{-4}\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">estimated BER</td>
+<td style="text-align: center;"><span class="math inline">\(1.4\times10^{-12}\)</span></td>
+<td style="text-align: center;"><span class="math inline">\(1.4\times10^{-7}\)</span></td>
+<td style="text-align: center;"><span class="math inline">\(2.4\times10^{-5}\)</span></td>
+<td style="text-align: center;"><span class="math inline">\(3.9\times10^{-4}\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>At 25 mV count and estimate agree within 10 %; the single 15 mV error is a true rare event (a 63.6 mV margin hit by <span class="math inline">\(4.25\sigma\)</span> of noise). With <span class="math inline">\(\sigma=5\)</span> mV the bathtub is open <strong>0.45 UI at <span class="math inline">\(10^{-12}\)</span></strong> (0.66 UI at <span class="math inline">\(10^{-5}\)</span>); at 20 mV it never reaches <span class="math inline">\(10^{-5}\)</span>, and the counted points fall on the estimate.</p>
+<div id="fig:ch16-lab6">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch16_lab6.svg' | relative_url }}{% raw %}" style="width:753px" alt="Lab 6: counted errors confirm the estimate where counting is possible; the estimate takes over below 10^{-5}." loading="lazy" />
+<figcaption><span class="capnum">Figure 16.6.</span> <strong>Lab 6: counted errors confirm the estimate where counting is possible; the estimate takes over below <span class="math inline">\(10^{-5}\)</span>.</strong> (a) Bathtubs from <code>ber_q</code> for 5 and 20 mV of noise, with error counts at 20 mV (dots) at offsets up to <span class="math inline">\(\pm0.375\)</span> UI. (b) BER at the eye center against noise. The open triangle at 10 mV is the 95 % bound <span class="math inline">\(3/N\)</span> of <a href="{% endraw %}{{ '/chapters/15-design-and-verification-flow-with-open-tools/' | relative_url }}{% raw %}#eq:ch15-bits">Equation (15.4)</a> for zero errors in <span class="math inline">\(N\)</span> bits.</figcaption>
+</figure>
+<h5 id="questions-and-extensions-5">Questions and extensions</h5>
+<p>(1) How many bits would you have to simulate to see one error at <span class="math inline">\(\sigma=10\)</span> mV? How long would that take? (2) Raise the RJ to 6 ps rms (<code>RJ_UI = 0.03</code>). How much does the <span class="math inline">\(10^{-12}\)</span> opening at 5 mV shrink? Compare with the 14<span class="math inline">\(\sigma\)</span> rule of <a href="{% endraw %}{{ '/chapters/11-jitter/' | relative_url }}{% raw %}#eq:tj">Equation (11.3)</a>.</p>
+
+<nav class="prev-next" aria-label="Chapter navigation"><a class="pn-link prev" href="{% endraw %}{{ '/labs/lab-5/' | relative_url }}{% raw %}"><small>← Previous</small>Lab 5. DFE</a><a class="pn-link next" href="{% endraw %}{{ '/labs/lab-7/' | relative_url }}{% raw %}"><small>Next →</small>Lab 7. A bang-bang PI-CDR</a></nav>
+<p class="page-source">Generated from <a href="https://github.com/bricd-org/serdes-tutorial/blob/main/book/tutorial/chapters/16_labs.tex">book/tutorial/chapters/16_labs.tex</a>. Figure, table and equation numbers match the <a href="{% endraw %}{{ '/assets/pdf/Open-SERDES_Tutorial.pdf' | relative_url }}{% raw %}">PDF edition</a>.</p>
+{% endraw %}

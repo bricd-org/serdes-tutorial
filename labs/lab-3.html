@@ -1,0 +1,36 @@
+---
+title: "Lab 3. TX FFE"
+parent: "Hands-on Labs"
+nav_order: 3
+permalink: "/labs/lab-3/"
+---
+{% raw %}
+<h1 id="sec:lab3"><span class="chapnum">Lab 3 · Section 16.4</span>TX FFE</h1>
+<h5 id="goal-3">Goal</h5>
+<p>Compute zero-forcing 2-tap and 3-tap TX FFEs from the cursors, impose the peak-swing constraint, and measure the eyes (<a href="{% endraw %}{{ '/chapters/06-transmit-ffe/' | relative_url }}{% raw %}">Chapter 6</a>).</p>
+<div class="sourceCode" id="cb4" data-language="Python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>cur <span class="op">=</span> sdp.channel_coefficients(p, t, SPS, <span class="dv">1</span>, <span class="dv">1</span>, res<span class="op">=</span><span class="dv">150</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>c3 <span class="op">=</span> sdp.forcing_ffe(<span class="dv">1</span>, cur)              <span class="co"># [c-1, c0, c+1], c0 = 1</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>c3 <span class="op">=</span> c3 <span class="op">/</span> np.<span class="bu">sum</span>(np.<span class="bu">abs</span>(c3))              <span class="co"># peak-swing constraint sum|c| = 1</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>c2 <span class="op">=</span> sdp.forcing_ffe(<span class="dv">0</span>, cur[<span class="dv">1</span>:])          <span class="co"># [c0, c+1]: classic de-emphasis</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>c2 <span class="op">=</span> c2 <span class="op">/</span> np.<span class="bu">sum</span>(np.<span class="bu">abs</span>(c2))</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co"># ...</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>bits <span class="op">=</span> np.tile(sdp.prbs7(<span class="dv">1</span>), <span class="dv">40</span>)</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> name, c, png <span class="kw">in</span> ((<span class="va">None</span>, <span class="va">None</span>, <span class="va">None</span>), (<span class="st">&quot;2-tap&quot;</span>, c2, <span class="va">None</span>),</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>                     (<span class="st">&quot;3-tap&quot;</span>, c3, <span class="st">&quot;lab3_eye_ffe3.png&quot;</span>)):</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    y <span class="op">=</span> through(tx_wave(bits, fir<span class="op">=</span>c), h)</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    hts, ph, S, A <span class="op">=</span> report_eye(<span class="ss">f&quot;Channel + </span><span class="sc">{</span>name <span class="kw">or</span> <span class="st">&#39;no&#39;</span><span class="sc">}</span><span class="ss"> FFE&quot;</span>, y, bits)</span></code></pre></div>
+<h5 id="what-you-should-see-2">What you should see</h5>
+<p><a href="#fig:ch16-lab3">Figure 16.3</a>. The 3-tap taps are <span class="math inline">\([-0.0853, 0.5959, -0.3188]\)</span> (DC gain 0.192, 14.34 dB of Nyquist boost), the 2-tap taps <span class="math inline">\([0.6515, -0.3485]\)</span> (10.37 dB). The main cursor drops from 0.3396 to 0.1749 V, the price of equalizing at the TX. The eyes are <strong>162.7 mV, 0.89 UI with 2 taps</strong> and <strong>144.8 mV, 0.83 UI with 3 taps</strong>.</p>
+<div id="fig:ch16-lab3">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch16_lab3.svg' | relative_url }}{% raw %}" style="width:753px" alt="Lab 3: zero-forcing flattens the channel to Nyquist, but the pre-tap costs more than it gives." loading="lazy" />
+<figcaption><span class="capnum">Figure 16.3.</span> <strong>Lab 3: zero-forcing flattens the channel to Nyquist, but the pre-tap costs more than it gives.</strong> (a) REF (blue), the 3-tap FFE (amber, 0 dB at Nyquist and <span class="math inline">\(-14.3\)</span> dB at DC) and their product (teal), flat to about 2.5 GHz. (b), (c) PRBS7 eyes with the 2-tap and the 3-tap FFE.</figcaption>
+</figure>
+<h5 id="questions-and-extensions-2">Questions and extensions</h5>
+<p>(1) Zero-forcing does not maximize the eye. Hold <span class="math inline">\(c_1\)</span> and sweep <span class="math inline">\(c_{-1}\)</span> from 0 to <span class="math inline">\(-0.1\)</span>, renormalizing each time: where is the best eye, and why does the pre-tap lose under <span class="math inline">\(\sum\lvert c_k\rvert=1\)</span>? (2) Quantize the taps to multiples of 1/32 (the 5-bit driver of <a href="{% endraw %}{{ '/chapters/09-the-transmitter/' | relative_url }}{% raw %}#sec:ffe-impl">Section 9.5</a>). How much eye is lost?</p>
+
+<nav class="prev-next" aria-label="Chapter navigation"><a class="pn-link prev" href="{% endraw %}{{ '/labs/lab-2/' | relative_url }}{% raw %}"><small>← Previous</small>Lab 2. A PRBS eye through the channel</a><a class="pn-link next" href="{% endraw %}{{ '/labs/lab-4/' | relative_url }}{% raw %}"><small>Next →</small>Lab 4. CTLE</a></nav>
+<p class="page-source">Generated from <a href="https://github.com/bricd-org/serdes-tutorial/blob/main/book/tutorial/chapters/16_labs.tex">book/tutorial/chapters/16_labs.tex</a>. Figure, table and equation numbers match the <a href="{% endraw %}{{ '/assets/pdf/Open-SERDES_Tutorial.pdf' | relative_url }}{% raw %}">PDF edition</a>.</p>
+{% endraw %}

@@ -8,6 +8,11 @@ This file is excluded from the Jekyll site (`_config.yml` → `exclude`).
 - The LaTeX book in `book/` is the source of truth. `tools/build_site.py` (needs TeX Live, pandoc ≥ 3,
   poppler) regenerates `chapters/`, `appendices/`, `parts/`, `preface.html`, `references.html`.
   **Never hand-edit those pages**: the next build overwrites them.
+- On the site the labs are their own top-level section, like a part (`/labs/`, after Part V), not Chapter 16
+  under Part V. `tools/split_labs.py`, run by `build_site.py` before `insert_demos.py`, splits the generated
+  Chapter 16 page into `labs/index.html` (lead, objectives, Table 16.1 with links, "Where to go next") and one
+  page per lab (`labs/lab-N.html`), relinks the rest of the site and leaves a forwarding stub at the old
+  `/chapters/16-hands-on-labs-with-serdespy/` address. The PDF keeps Chapter 16 and its 16.x numbers.
 - pandoc is not installed on the maintainer's Mac, so the generated pages are usually not rebuilt locally.
 - Preview: Jekyll in Docker (`ruby:3.3`), e.g. `docker run --rm -p 4007:4007 -v "$PWD":/site -v serdes-gems:/usr/local/bundle -w /site ruby:3.3 sh -c 'bundle install && bundle exec jekyll serve --host 0.0.0.0 --port 4007'`
   → http://localhost:4007/serdes-tutorial/ . Revert `Gemfile.lock` after a Docker build.

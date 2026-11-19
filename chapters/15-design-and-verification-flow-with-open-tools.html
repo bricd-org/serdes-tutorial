@@ -55,7 +55,7 @@ permalink: "/chapters/15-design-and-verification-flow-with-open-tools/"
 <tbody>
 <tr class="odd">
 <td style="text-align: left;"><strong>serdespy</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-serdespy">3</a>], <strong>PyBERT</strong> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-pybert">44</a>]</td>
-<td style="text-align: left;">link models, eyes, BER (<a href="{% endraw %}{{ '/chapters/16-hands-on-labs-with-serdespy/' | relative_url }}{% raw %}">Chapter 16</a>); PyBERT adds a GUI and IBIS-AMI</td>
+<td style="text-align: left;">link models, eyes, BER (<a href="{% endraw %}{{ '/labs/' | relative_url }}{% raw %}">Chapter 16</a>); PyBERT adds a GUI and IBIS-AMI</td>
 <td style="text-align: left;">system model</td>
 </tr>
 <tr class="even">
@@ -117,7 +117,7 @@ permalink: "/chapters/15-design-and-verification-flow-with-open-tools/"
 </table>
 </div>
 <h2 id="sec:model-loop"><span class="secnum">15.2</span>The model–circuit loop</h2>
-<p>The labs of <a href="{% endraw %}{{ '/chapters/16-hands-on-labs-with-serdespy/' | relative_url }}{% raw %}">Chapter 16</a> describe each block by an ideal transfer function. The circuits will not match those ideals, and the only way to know whether the difference matters is to put the circuit’s real response back into the model (<a href="#fig:ch15-loop">Figure 15.3</a>). Because the link is linear up to the sampler, each simulated block becomes one more factor in the cascade:</p>
+<p>The labs of <a href="{% endraw %}{{ '/labs/' | relative_url }}{% raw %}">Chapter 16</a> describe each block by an ideal transfer function. The circuits will not match those ideals, and the only way to know whether the difference matters is to put the circuit’s real response back into the model (<a href="#fig:ch15-loop">Figure 15.3</a>). Because the link is linear up to the sampler, each simulated block becomes one more factor in the cascade:</p>
 <div class="tbox tbox-keyeq">
 <div class="tbox-title">
 <p>Key equation · Back-annotating the link model</p>
@@ -411,6 +411,6 @@ permalink: "/chapters/15-design-and-verification-flow-with-open-tools/"
 
 
 <!-- demo:bercount -->{% endraw %}{% include demos/bercount.html %}{% raw %}<!-- /demo -->
-<nav class="prev-next" aria-label="Chapter navigation"><a class="pn-link prev" href="{% endraw %}{{ '/chapters/14-the-open-serdes-architecture/' | relative_url }}{% raw %}"><small>← Previous</small>The Open-SERDES Architecture</a><a class="pn-link next" href="{% endraw %}{{ '/chapters/16-hands-on-labs-with-serdespy/' | relative_url }}{% raw %}"><small>Next →</small>Hands-on Labs with serdespy</a></nav>
+<nav class="prev-next" aria-label="Chapter navigation"><a class="pn-link prev" href="{% endraw %}{{ '/chapters/14-the-open-serdes-architecture/' | relative_url }}{% raw %}"><small>← Previous</small>The Open-SERDES Architecture</a><a class="pn-link next" href="{% endraw %}{{ '/labs/' | relative_url }}{% raw %}"><small>Next →</small>Hands-on Labs</a></nav>
 <p class="page-source">Generated from <a href="https://github.com/bricd-org/serdes-tutorial/blob/main/book/tutorial/chapters/15_flow.tex">book/tutorial/chapters/15_flow.tex</a>. Figure, table and equation numbers match the <a href="{% endraw %}{{ '/assets/pdf/Open-SERDES_Tutorial.pdf' | relative_url }}{% raw %}">PDF edition</a>.</p>
 {% endraw %}

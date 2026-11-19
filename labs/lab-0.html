@@ -1,0 +1,36 @@
+---
+title: "Lab 0. Set-up"
+parent: "Hands-on Labs"
+nav_order: 0
+permalink: "/labs/lab-0/"
+---
+{% raw %}
+<h1 id="sec:lab0"><span class="chapnum">Lab 0 · Section 16.1</span>Set-up</h1>
+<h5 id="goal">Goal</h5>
+<p>A working serdespy environment, and a map of the labs.</p>
+<div class="sourceCode" id="cb1" data-language="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> <span class="at">-m</span> venv ~/serdes-venv           <span class="co"># tested with Python 3.13</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="bu">source</span> ~/serdes-venv/bin/activate</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install serdespy                     <span class="co"># pulls numpy, scipy, matplotlib, scikit-rf</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> tutorial/code</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> lab1_channel.py                   <span class="co"># PNGs appear in this folder</span></span></code></pre></div>
+<p>serdespy 1.0 still uses <code>np.complex_</code>, which NumPy 2 removed; <code>common.py</code>, imported by every lab, restores it with <code>np.complex_ = np.complex128</code> before serdespy is imported. It also defines the simulation grid (64 samples per UI, <span class="math inline">\(\Delta t=3.125\)</span> ps, 0–160 GHz in 10 MHz steps) and the shared functions: <code>channel()</code> for REF, <code>ctle()</code>, <code>impulse()</code>, <code>pulse()</code>, <code>tx_wave()</code>, <code>through()</code>, the eye measurement <code>eye_scan()</code> (serdespy has none) and the Gaussian BER estimate <code>ber_q()</code>. <a href="{% endraw %}{{ '/labs/' | relative_url }}{% raw %}#tab:ch16-labs">Table 16.1</a> maps the labs to the chapters.</p>
+
+<div class="tbox tbox-pitfall">
+<div class="tbox-title">
+<p>serdespy quirks that cost an afternoon each</p>
+</div>
+<ul>
+<li><p><code>sdp.Transmitter(data, levels, f)</code>: <code>f</code> is the <em>Nyquist</em> frequency (pass 2.5e9 for 5 Gb/s), whatever the docstring says.</p></li>
+<li><p>Call <code>Transmitter.FIR()</code> before <code>oversample()</code>, with taps <code>[pre, main, post]</code> or <code>[main, post]</code>.</p></li>
+<li><p><code>sdp.channel_coefficients()</code> always plots, at 1200 dpi by default: pass <code>res=150</code>.</p></li>
+<li><p><code>sdp.forcing_ffe()</code> sets the main tap to 1: rescale to <span class="math inline">\(\sum\lvert c_k\rvert=1\)</span> yourself.</p></li>
+<li><p><code>Receiver.noise()</code> discards any FFE or DFE already applied: add noise first, then equalize. Use <code>Receiver.FFE()</code>, not <code>FFE_BR()</code>, which misaligns the data.</p></li>
+<li><p>serdespy has no CDR and no MLSE, whatever the README lists; Lab 7 builds the CDR.</p></li>
+</ul>
+</div>
+
+
+<!-- demo:labmap -->{% endraw %}{% include demos/labmap.html %}{% raw %}<!-- /demo -->
+<nav class="prev-next" aria-label="Chapter navigation"><a class="pn-link prev" href="{% endraw %}{{ '/labs/' | relative_url }}{% raw %}"><small>← Previous</small>Hands-on Labs</a><a class="pn-link next" href="{% endraw %}{{ '/labs/lab-1/' | relative_url }}{% raw %}"><small>Next →</small>Lab 1. The channel</a></nav>
+<p class="page-source">Generated from <a href="https://github.com/bricd-org/serdes-tutorial/blob/main/book/tutorial/chapters/16_labs.tex">book/tutorial/chapters/16_labs.tex</a>. Figure, table and equation numbers match the <a href="{% endraw %}{{ '/assets/pdf/Open-SERDES_Tutorial.pdf' | relative_url }}{% raw %}">PDF edition</a>.</p>
+{% endraw %}

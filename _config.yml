@@ -88,6 +88,10 @@ defaults:
       path: "references.html"
     values:
       layout: "default"
+  - scope:
+      path: "labs"
+    values:
+      layout: "default"
 
 exclude:
   - book/

@@ -6,7 +6,7 @@ demos survive every rebuild. Run it by hand after adding a demo:  python3 tools/
 
 Each entry: (page file under ROOT, demo name, anchor). The anchor is either
   "after:fig:ID"  -> just after the </figure> that follows <div id="fig:ID">
-  "end:sec:ID"    -> just before the next <h2>/<h3> after the heading with id sec:ID
+  "end:sec:ID"    -> just before the next <h2>/<h3> after the heading with id sec:ID (a lab page's <h1> too)
   "before:ID"     -> just before the heading with id ID (e.g. a \\paragraph heading, <h5>)
 The script removes old <!-- demo:... --> blocks first, so it is idempotent.
 """
@@ -81,7 +81,7 @@ DEMOS = [
     (CH + "15-design-and-verification-flow-with-open-tools.html", "lumped", "before:corners-monte-carlo-and-cace"),
     (CH + "15-design-and-verification-flow-with-open-tools.html", "mcruns", "end:sec:testbenches"),
     (CH + "15-design-and-verification-flow-with-open-tools.html", "bercount", "end:sec:labtest"),
-    (CH + "16-hands-on-labs-with-serdespy.html", "labmap", "end:sec:lab0"),
+    ("labs/lab-0.html", "labmap", "end:sec:lab0"),
 ]
 
 BLOCK = re.compile(r"\n?<!-- demo:[\w-]+ -->.*?<!-- /demo -->\n?", re.S)
@@ -95,7 +95,7 @@ def insert(html, name, anchor):
             raise ValueError(f"no figure {ident}")
         pos = html.index("</figure>", m.end()) + len("</figure>")
     elif kind == "end":
-        m = re.search(r'<h[23] id="%s">' % re.escape(ident), html)
+        m = re.search(r'<h[123] id="%s">' % re.escape(ident), html)
         if not m:
             raise ValueError(f"no section {ident}")
         nxt = re.compile(r"<h[23] |<nav class=\"prev-next\"").search(html, m.end())

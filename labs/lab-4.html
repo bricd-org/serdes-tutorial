@@ -1,0 +1,40 @@
+---
+title: "Lab 4. CTLE"
+parent: "Hands-on Labs"
+nav_order: 4
+permalink: "/labs/lab-4/"
+---
+{% raw %}
+<h1 id="sec:lab4"><span class="chapnum">Lab 4 · Section 16.5</span>CTLE</h1>
+<h5 id="goal-4">Goal</h5>
+<p>Sweep the peaking of a one-zero, two-pole CTLE, find the best eye, and translate it into a degenerated differential pair (<a href="{% endraw %}{{ '/chapters/07-continuous-time-linear-equalizer/' | relative_url }}{% raw %}#sec:ctle-degen">Section 7.2</a>).</p>
+<div class="sourceCode" id="cb5" data-language="Python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>FP1, FP2 <span class="op">=</span> <span class="fl">2.5e9</span>, <span class="fl">10e9</span>                    <span class="co"># pole 1 at Nyquist, output pole 10 GHz</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>H <span class="op">=</span> channel()</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>bits <span class="op">=</span> np.tile(sdp.prbs7(<span class="dv">1</span>), <span class="dv">40</span>)</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> tx_wave(bits)</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>peaks, eh, ew <span class="op">=</span> np.arange(<span class="dv">0</span>, <span class="dv">21</span>, <span class="dv">2</span>), [], []</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> pk <span class="kw">in</span> peaks:</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    h_link, t <span class="op">=</span> impulse(H <span class="op">*</span> ctle(pk, FP1, FP2))   <span class="co"># channel x CTLE</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    hts, ph, S, A <span class="op">=</span> eye_scan(through(x, h_link), bits)</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    eh.append(hts[ph])<span class="op">;</span> ew.append(np.<span class="bu">sum</span>(hts <span class="op">&gt;</span> <span class="dv">0</span>) <span class="op">/</span> SPS)</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>best <span class="op">=</span> peaks[<span class="bu">int</span>(np.argmax(eh))]</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="co"># ...</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>gm, a <span class="op">=</span> <span class="fl">20e-3</span>, <span class="dv">10</span><span class="op">**</span>(best <span class="op">/</span> <span class="dv">20</span>)            <span class="co"># example: gm = 20 mS per side</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>RS <span class="op">=</span> <span class="dv">2</span> <span class="op">*</span> (a <span class="op">-</span> <span class="dv">1</span>) <span class="op">/</span> gm                     <span class="co"># A = 1 + gm*RS/2</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>CS <span class="op">=</span> <span class="dv">1</span> <span class="op">/</span> (RS <span class="op">*</span> <span class="dv">2</span> <span class="op">*</span> np.pi <span class="op">*</span> FP1 <span class="op">/</span> a)       <span class="co"># wz = 1/(RS*CS)</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>RD, CL <span class="op">=</span> <span class="dv">1</span> <span class="op">/</span> gm, <span class="dv">1</span> <span class="op">/</span> (<span class="dv">2</span> <span class="op">*</span> np.pi <span class="op">*</span> FP2 <span class="op">/</span> gm)   <span class="co"># gm*RD = 1, wp2 = 1/(RD*CL)</span></span></code></pre></div>
+<h5 id="what-you-should-see-3">What you should see</h5>
+<p><a href="#fig:ch16-lab4">Figure 16.4</a>. The eye opens at 6 dB (31.6 mV), reaches 104.0 mV at 12 dB, peaks at <strong>113.3 mV, 0.94 UI at 14 dB</strong> and falls again beyond. With 14 dB nominal, the real peak-to-DC gain is only 12.11 dB because the second pole eats some of it; the CTLE is <span class="math inline">\(-14.00\)</span> dB at DC and <span class="math inline">\(-3.10\)</span> dB at Nyquist. The circuit values are <span class="math inline">\(R_S=401\,\Omega\)</span>, <span class="math inline">\(C_S=0.795\)</span> pF, <span class="math inline">\(R_D=50\,\Omega\)</span> and <span class="math inline">\(C_\mathrm{L}=318\)</span> fF.</p>
+<div id="fig:ch16-lab4">
+
+</div>
+<figure>
+<img src="{% endraw %}{{ '/assets/figs/ch16_lab4.svg' | relative_url }}{% raw %}" style="width:753px" alt="Lab 4: more peaking opens the eye until the CTLE starts making ISI of its own." loading="lazy" />
+<figcaption><span class="capnum">Figure 16.4.</span> <strong>Lab 4: more peaking opens the eye until the CTLE starts making ISI of its own.</strong> (a) CTLE responses for 4, 8 and 14 dB, all 0 dB at high frequency. (b) Eye height against peaking; the shaded band is the 0–12 dB range of the Open-SERDES CTLE. (c) The eye at the 14 dB optimum.</figcaption>
+</figure>
+<h5 id="questions-and-extensions-3">Questions and extensions</h5>
+<p>(1) The optimum lies outside the Open-SERDES range. What does the DFE of Lab 5 do with the 8 dB eye that the CTLE alone cannot? (2) Move <code>FP2</code> to 6 GHz and re-sweep; compare with <a href="{% endraw %}{{ '/chapters/15-design-and-verification-flow-with-open-tools/' | relative_url }}{% raw %}#we:ch15-pole">Worked Example 15.1</a>.</p>
+
+<nav class="prev-next" aria-label="Chapter navigation"><a class="pn-link prev" href="{% endraw %}{{ '/labs/lab-3/' | relative_url }}{% raw %}"><small>← Previous</small>Lab 3. TX FFE</a><a class="pn-link next" href="{% endraw %}{{ '/labs/lab-5/' | relative_url }}{% raw %}"><small>Next →</small>Lab 5. DFE</a></nav>
+<p class="page-source">Generated from <a href="https://github.com/bricd-org/serdes-tutorial/blob/main/book/tutorial/chapters/16_labs.tex">book/tutorial/chapters/16_labs.tex</a>. Figure, table and equation numbers match the <a href="{% endraw %}{{ '/assets/pdf/Open-SERDES_Tutorial.pdf' | relative_url }}{% raw %}">PDF edition</a>.</p>
+{% endraw %}

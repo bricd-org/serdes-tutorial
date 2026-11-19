@@ -121,7 +121,7 @@ permalink: "/chapters/07-continuous-time-linear-equalizer/"
 <div class="tbox-title">
 <p>Lab 4: CTLE</p>
 </div>
-<p><code>lab4_ctle.py</code> sweeps the peaking from 0 to 20 dB, prints the eye and the cursors, and converts the best setting into <span class="math inline">\(R_S\)</span>, <span class="math inline">\(C_S\)</span>, <span class="math inline">\(R_D\)</span> and <span class="math inline">\(C_\mathrm{L}\)</span> (<a href="{% endraw %}{{ '/chapters/16-hands-on-labs-with-serdespy/' | relative_url }}{% raw %}#sec:lab4">Section 16.5</a>).</p>
+<p><code>lab4_ctle.py</code> sweeps the peaking from 0 to 20 dB, prints the eye and the cursors, and converts the best setting into <span class="math inline">\(R_S\)</span>, <span class="math inline">\(C_S\)</span>, <span class="math inline">\(R_D\)</span> and <span class="math inline">\(C_\mathrm{L}\)</span> (<a href="{% endraw %}{{ '/labs/lab-4/' | relative_url }}{% raw %}#sec:lab4">Section 16.5</a>).</p>
 </div>
 <h2 id="sec:ctle-hbt"><span class="secnum">7.4</span>An HBT CTLE in SG13G2</h2>
 <p>Open-SERDES builds its CTLE from SG13G2 SiGe HBTs. A bipolar transistor gives <span class="math inline">\(g_\mathrm{m}=I_C/V_T=38.7\,\mathrm{mS}\)</span> per mA, several times more than a MOSFET at the same current, and its <span class="math inline">\(f_T\approx300\,\mathrm{GHz}\)</span> keeps device capacitance small. The circuit is <a href="#fig:ch7-degen">Figure 7.3</a> with npn devices, emitter degeneration <span class="math inline">\(R_E\Vert C_E\)</span> and collector loads <span class="math inline">\(R_C\)</span>. Each <span class="math inline">\(V_{CE}\)</span> must stay below the <span class="math inline">\(\mathrm{BV}_{CEO}\)</span> of about 1.6–1.7 V on the 2.5 V analog supply.</p>

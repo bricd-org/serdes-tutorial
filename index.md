@@ -41,7 +41,8 @@ Every fast interface (PCIe, USB, Ethernet, chiplet links) rides on a SerDes, yet
   <div class="card"><span class="card-label">Part II · Ch 5–8</span><h3><a href="{{ '/part-2/' | relative_url }}">Equalization</a></h3><p>TX FFE, CTLE and DFE theory and circuits, adaptation, and how to split the work between them.</p></div>
   <div class="card"><span class="card-label">Part III · Ch 9–10</span><h3><a href="{{ '/part-3/' | relative_url }}">Transceiver circuits</a></h3><p>Serializer, CML driver, termination and ESD; receiver front-end, StrongARM and HBT latches, metastability.</p></div>
   <div class="card"><span class="card-label">Part IV · Ch 11–13</span><h3><a href="{{ '/part-4/' | relative_url }}">Clocking</a></h3><p>Jitter and the dual-Dirac model, the charge-pump PLL and LC VCO, and a phase-interpolator CDR.</p></div>
-  <div class="card"><span class="card-label">Part V · Ch 14–16</span><h3><a href="{{ '/part-5/' | relative_url }}">Putting it together</a></h3><p>The full architecture and budgets, the open-source design and verification flow, and seven serdespy labs.</p></div>
+  <div class="card"><span class="card-label">Part V · Ch 14–15</span><h3><a href="{{ '/part-5/' | relative_url }}">Putting it together</a></h3><p>The full architecture and budgets, and the open-source design and verification flow.</p></div>
+  <div class="card"><span class="card-label">Labs · Lab 0–7</span><h3><a href="{{ '/labs/' | relative_url }}">Hands-on labs</a></h3><p>Seven serdespy scripts that reproduce the key plots, from the closed eye of the bare channel to a bang-bang CDR.</p></div>
   <div class="card"><span class="card-label">Appendices</span><h3><a href="{{ '/appendices/' | relative_url }}">Reference</a></h3><p>Formula sheet, Q-function and dB tables, design-review checklists, glossary and further reading.</p></div>
 </div>
 
@@ -51,7 +52,7 @@ Nearly 60 interactive demos turn the hardest ideas into something you can move: 
 
 ## Hands-on labs
 
-[Chapter 16]({{ '/chapters/16-hands-on-labs-with-serdespy/' | relative_url }}) reproduces the key plots of the book with [serdespy](https://github.com/richard259/serdespy): the reference channel, PRBS eyes, TX FFE, CTLE and DFE sweeps, jitter and BER, and a bang-bang phase-interpolator CDR. The scripts live in [`book/tutorial/code/`](https://github.com/bricd-org/serdes-tutorial/tree/main/book/tutorial/code).
+The [Hands-on Labs]({{ '/labs/' | relative_url }}) section reproduces the key plots of the book with [serdespy](https://github.com/richard259/serdespy): the reference channel, PRBS eyes, TX FFE, CTLE and DFE sweeps, jitter and BER, and a bang-bang phase-interpolator CDR. The scripts live in [`book/tutorial/code/`](https://github.com/bricd-org/serdes-tutorial/tree/main/book/tutorial/code).
 
 ## About
 

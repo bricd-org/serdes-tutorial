@@ -18,4 +18,5 @@ The complete Open-SERDES architecture and its budgets, the open-source design an
 
 - [14. The Open-SERDES Architecture]({{ '/chapters/14-the-open-serdes-architecture/' | relative_url }})
 - [15. Design and Verification Flow with Open Tools]({{ '/chapters/15-design-and-verification-flow-with-open-tools/' | relative_url }})
-- [16. Hands-on Labs with serdespy]({{ '/chapters/16-hands-on-labs-with-serdespy/' | relative_url }})
+
+The hands-on labs have their own section: [Hands-on Labs]({{ '/labs/' | relative_url }}).
