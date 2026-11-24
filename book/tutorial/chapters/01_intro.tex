@@ -119,6 +119,24 @@ UCIe 1.0--3.0 (2022--25) & 4--64\,GT/s & NRZ, single-ended, fwd.\ clock & $\le$\
 
 The last row is a useful counterexample: UCIe links chiplets millimeters apart in one package, where thousands of short, matched wires are cheap, so the parallel bus with a forwarded clock wins again. Serial links win when the wire is long, lossy and expensive, which is the situation \OS{} targets.
 
+A standard fixes two numbers, not one: the rate per lane and the reach it must cover. Loss grows with both length and frequency (\cref{ch:channel}), so the two trade against each other, and the product rate~$\times$~reach is a useful yardstick (\cref{fig:ch1-reach}). Chiplet links in a package cover millimeters. Backplane standards cover about \qty{1}{\meter} of board at 10 to \qty{26}{\giga\bit\per\second} per lane, and low-loss twinax cables reach 50 to \qty{200}{\giga\bit\per\second}$\cdot$m. Faster or longer links leave copper for optical fiber.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{ch01_reach}
+  \caption{\textbf{Electrical links trade reach for rate.} Per-lane line rate against reach for chiplet, backplane and cable standards: the IEEE~802.3 backplane (KR) and copper-cable (CR, CX4) clauses, the UCIe advanced- and standard-package channels, and the typical maximum length of SATA cables and of \qty{40}{\giga\bit\per\second} USB4 passive cables. Dashed lines mark a constant rate~$\times$~reach. \OS{} (gold) targets \qty{5}{\giga\bit\per\second} over the \qty{1}{\meter} REF channel. Sources: \cite{ieee8023,p1:ucie,p1:sata,p1:usb4v2}.}
+  \label{fig:ch1-reach}
+\end{figure}
+
+\Cref{fig:ch1-backplane} shows the classic hard case, a backplane. A switch or router holds line cards that plug into a shared board through connectors. A bit leaves the transmitter die through its package, runs down the line card, crosses a connector and a via into an inner layer of the backplane, and climbs the same way to the receiving card. Every piece adds loss or a reflection, yet the receiver must still decide every bit correctly: 10GBASE-KR asks for this over up to \qty{1}{\meter} of board and two connectors at a bit-error rate of $10^{-12}$. The \OS{} reference channel (REF, \cref{sec:refchannel}) stands in for this path: \qty{1}{\meter} of lossy board with a pad at each end, losing \qty{17.4}{\deci\bel} at \qty{2.5}{\giga\hertz}.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{ch01_backplane}
+  \caption{\textbf{A backplane link: what a SerDes has to drive.} Two line cards plug into a backplane through connectors (side view, not to scale). The path of one bit (gold) runs from the TX die through its package, the line-card trace, a connector and a via to an inner layer of the backplane, and back up to the RX. The unused stub of each via (red) adds a notch to the channel (\cref{fig:ch3-via}).}
+  \label{fig:ch1-backplane}
+\end{figure}
+
 \Cref{fig:ch1-rate-year} shows per-lane rates doubling roughly every three to four years. Around \qty{50}{\giga\bit\per\second} the industry moved to PAM4, because the loss at the NRZ Nyquist frequency became too high.
 
 \begin{figure}[htbp]

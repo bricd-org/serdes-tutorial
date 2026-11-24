@@ -262,7 +262,8 @@
 
 % "Open-SERDES spec" side note
 \newtcolorbox{specnote}[1][Open-SERDES target]{tutbase,colback=gtint!45!white,colframe=gold,boxrule=0.6pt,arc=2pt,
-  title={#1},coltitle=white,colbacktitle=gold,fonttitle=\sffamily\bfseries\small}
+  title={#1},coltitle=white,colbacktitle=gold,fonttitle=\sffamily\bfseries\small,
+  unbreakable}% short boxes, often one table: move whole to the next page rather than strand the title
 
 %% ---------- code listings ----------
 \RequirePackage{listings}
