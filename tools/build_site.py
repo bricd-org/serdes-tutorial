@@ -873,7 +873,7 @@ def postprocess(htmltxt, page, label_page, fig_info, pages_by_slug):
         seen.add(m.group(1)); return m.group(0)
     h = re.sub(r' id="([^"]+)"', dedup, h)
     # strip pandoc's leftover data attributes on spans
-    h = re.sub(r' label="[^"]*"', "", h)
+    h = re.sub(r' (?:data-)?label="[^"]*"', "", h)     # pandoc 3.6+ writes data-label
     return h
 
 

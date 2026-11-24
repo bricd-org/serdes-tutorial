@@ -40,12 +40,13 @@ FIGDIR = os.path.normpath(os.path.join(_HERE, "..", "figs"))
 
 
 def _pick_font():
-    for path in ["/usr/share/texmf/fonts/opentype/public/tex-gyre/texgyreheros-regular.otf",
-                 "/usr/share/texmf/fonts/opentype/public/tex-gyre/texgyreheros-bold.otf",
-                 "/usr/share/texmf/fonts/opentype/public/tex-gyre/texgyreheros-italic.otf",
-                 "/usr/share/texmf/fonts/opentype/public/tex-gyre/texgyreheros-bolditalic.otf"]:
-        if os.path.exists(path):
-            font_manager.fontManager.addfont(path)
+    import glob   # TeX Gyre Heros from a Linux texmf tree or a TeX Live install (macOS)
+    for d in ["/usr/share/texmf/fonts/opentype/public/tex-gyre",
+              *sorted(glob.glob("/usr/local/texlive/*/texmf-dist/fonts/opentype/public/tex-gyre"))]:
+        for style in ("regular", "bold", "italic", "bolditalic"):
+            path = os.path.join(d, f"texgyreheros-{style}.otf")
+            if os.path.exists(path):
+                font_manager.fontManager.addfont(path)
     names = {f.name for f in font_manager.fontManager.ttflist}
     return "TeX Gyre Heros" if "TeX Gyre Heros" in names else "DejaVu Sans"
 

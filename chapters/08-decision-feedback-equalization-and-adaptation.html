@@ -56,7 +56,7 @@ and Adaptation</h1>
 <!-- demo:dfe -->{% endraw %}{% include demos/assets.html %}{% include demos/dfe.html %}{% raw %}<!-- /demo -->
 
 <h5 id="error-propagation">Error propagation</h5>
-<p>Instability is a risk for the linear prototype only. With a slicer in the loop the output is bounded, and the real risk is <strong>error propagation</strong>: a wrong decision adds <span class="math inline">\(2w_1\)</span> of error to the next sample instead of removing <span class="math inline">\(w_1\)</span>. In the Lab 5 setup (<span class="math inline">\(w_1=27.6\,\mathrm{mV}\)</span>, half-eye 64.7 mV after two taps) that leaves only 9.5 mV of margin on the next bit. At a BER near <span class="math inline">\(10^{-12}\)</span> first errors are so rare that this at most doubles the BER [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-palermo720eq">22</a>]. Keep <span class="math inline">\(p_{1}/p_{0}\lesssim0.5\)</span> at the DFE input.</p>
+<p>Instability is a risk for the linear prototype only. With a slicer in the loop the output is bounded, and the real risk is <strong>error propagation</strong>: a wrong decision adds <span class="math inline">\(2w_1\)</span> of error to the next sample instead of removing <span class="math inline">\(w_1\)</span>. In the Lab 5 setup (<span class="math inline">\(w_1=27.6\,\mathrm{mV}\)</span>, half-eye 64.7 mV after two taps) that leaves only 9.5 mV of margin on the next bit. At a BER near <span class="math inline">\(10^{-12}\)</span> first errors are so rare that this at most doubles the BER [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-palermo720eq">24</a>]. Keep <span class="math inline">\(p_{1}/p_{0}\lesssim0.5\)</span> at the DFE input.</p>
 <div class="tbox tbox-example">
 <div class="tbox-title">
 <p>Worked Example 8.1 · A DFE alone, and a DFE with a TX pre-tap</p>
@@ -79,7 +79,7 @@ and Adaptation</h1>
 <h5 id="half-rate">Half rate</h5>
 <p>Open-SERDES slices even bits on the rising and odd bits on the falling edge of the 2.5 GHz clock, so each latch has 2 UI to regenerate. Half rate does <em>not</em> relax <a href="#eq:ch8-timing">Equation (8.3)</a>: the even decision must correct the odd sample one UI later, so the tap-1 path crosses between the halves and still has 1 UI.</p>
 <h5 id="loop-unrolling">Loop unrolling</h5>
-<p><strong>Loop unrolling</strong> (<strong>speculation</strong>) removes the summer from the tap-1 path. Two comparators per half precompute both answers, against <span class="math inline">\(+w_1\)</span> and <span class="math inline">\(-w_1\)</span>, and a multiplexer selected by the previous decision picks one [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-palermo720eq">22</a>]: <span id="eq:ch8-unroll"></span><span class="math display">\[\hat a_n=\begin{cases}\operatorname{sgn}(y_n-w_1), &amp; \hat a_{n-1}=+1\\ \operatorname{sgn}(y_n+w_1), &amp; \hat a_{n-1}=-1\end{cases}
+<p><strong>Loop unrolling</strong> (<strong>speculation</strong>) removes the summer from the tap-1 path. Two comparators per half precompute both answers, against <span class="math inline">\(+w_1\)</span> and <span class="math inline">\(-w_1\)</span>, and a multiplexer selected by the previous decision picks one [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-palermo720eq">24</a>]: <span id="eq:ch8-unroll"></span><span class="math display">\[\hat a_n=\begin{cases}\operatorname{sgn}(y_n-w_1), &amp; \hat a_{n-1}=+1\\ \operatorname{sgn}(y_n+w_1), &amp; \hat a_{n-1}=-1\end{cases}
   \qquad\Rightarrow\qquad t_\mathrm{CK\to Q}+t_\mathrm{mux}+t_\mathrm{setup}\le T_\mathrm{b}. \tag{8.4}\]</span> <a href="#fig:ch8-unroll">Figure 8.3</a> shows the half-rate version. The cost is <span class="math inline">\(2^N\)</span> comparators for <span class="math inline">\(N\)</span> unrolled taps, twice the load on the CTLE, and taps that live in comparator thresholds.</p>
 <div id="fig:ch8-unroll">
 
@@ -105,7 +105,7 @@ and Adaptation</h1>
 <!-- demo:tap1 -->{% endraw %}{% include demos/tap1.html %}{% raw %}<!-- /demo -->
 
 <h2 id="sec:adaptation"><span class="secnum">8.3</span>Adapting the taps</h2>
-<p>The ideal taps depend on channel, temperature and supply, so the receiver should find them itself. Define the slicer error <span class="math inline">\(e_n=z_n-d_\mathrm{lev}\,\hat a_n\)</span>, where <span class="math inline">\(d_\mathrm{lev}\)</span> is the expected signal level (ideally <span class="math inline">\(Ap_{0}\)</span>). Since <span class="math inline">\(\partial E[e_n^2]/\partial w_k=-2E[e_n\hat a_{n-k}]\)</span>, stepping against the gradient gives the <strong>LMS</strong> update. Hardware prefers the <strong>sign-sign</strong> form (SS-LMS), which needs only signs [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-palermo720eq">22</a>, <a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-stojanovic2005">23</a>]:</p>
+<p>The ideal taps depend on channel, temperature and supply, so the receiver should find them itself. Define the slicer error <span class="math inline">\(e_n=z_n-d_\mathrm{lev}\,\hat a_n\)</span>, where <span class="math inline">\(d_\mathrm{lev}\)</span> is the expected signal level (ideally <span class="math inline">\(Ap_{0}\)</span>). Since <span class="math inline">\(\partial E[e_n^2]/\partial w_k=-2E[e_n\hat a_{n-k}]\)</span>, stepping against the gradient gives the <strong>LMS</strong> update. Hardware prefers the <strong>sign-sign</strong> form (SS-LMS), which needs only signs [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-palermo720eq">24</a>, <a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-stojanovic2005">25</a>]:</p>
 <div class="tbox tbox-keyeq">
 <div class="tbox-title">
 <p>Key equation · LMS and sign-sign LMS</p>
@@ -167,7 +167,7 @@ and Adaptation</h1>
 <table>
 <caption><span class="capnum">Table 8.1.</span> <strong>PDA eye height (mV) and eye normalized to the unequalized main cursor, by strategy and channel loss.</strong> Regenerated with <code>link.py</code>; method in the text. <span class="math inline">\(^\ast\)</span>Open-SERDES limits: <span class="math inline">\(\lvert c_1\rvert\le0.25\)</span>, <span class="math inline">\(\lvert c_{-1}\rvert\le0.1\)</span>, CTLE <span class="math inline">\(\le12\)</span> dB, open pre-DFE eye.</caption>
 <thead>
-<tr class="header">
+<tr>
 <th style="text-align: left;"></th>
 <th colspan="2" style="text-align: center;"><strong>10 dB</strong></th>
 <th colspan="2" style="text-align: center;"><strong>15 dB</strong></th>
@@ -177,7 +177,7 @@ and Adaptation</h1>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td style="text-align: left;"><span>2-3</span>(lr)<span>4-5</span>(lr)<span>6-7</span>(lr)<span>8-9</span>(l)<span>10-11</span> <strong>Strategy</strong></td>
 <td style="text-align: right;">mV</td>
 <td style="text-align: right;">norm</td>
@@ -190,7 +190,7 @@ and Adaptation</h1>
 <td style="text-align: right;">mV</td>
 <td style="text-align: right;">norm</td>
 </tr>
-<tr class="even">
+<tr>
 <td style="text-align: left;">No equalization</td>
 <td style="text-align: right;">165</td>
 <td style="text-align: right;">0.30</td>
@@ -199,7 +199,7 @@ and Adaptation</h1>
 <td colspan="2" style="text-align: center;">closed</td>
 <td colspan="2" style="text-align: center;">closed</td>
 </tr>
-<tr class="odd">
+<tr>
 <td style="text-align: left;">TX 2-tap FFE</td>
 <td style="text-align: right;">341</td>
 <td style="text-align: right;">0.61</td>
@@ -212,7 +212,7 @@ and Adaptation</h1>
 <td style="text-align: right;">44</td>
 <td style="text-align: right;">0.20</td>
 </tr>
-<tr class="even">
+<tr>
 <td style="text-align: left;">CTLE (0–20 dB)</td>
 <td style="text-align: right;">236</td>
 <td style="text-align: right;">0.42</td>
@@ -225,7 +225,7 @@ and Adaptation</h1>
 <td style="text-align: right;">32</td>
 <td style="text-align: right;">0.15</td>
 </tr>
-<tr class="odd">
+<tr>
 <td style="text-align: left;">CTLE + 2-tap DFE</td>
 <td style="text-align: right;">395</td>
 <td style="text-align: right;">0.71</td>
@@ -238,7 +238,7 @@ and Adaptation</h1>
 <td style="text-align: right;">51</td>
 <td style="text-align: right;">0.23</td>
 </tr>
-<tr class="even">
+<tr>
 <td style="text-align: left;">TX 3-tap + CTLE + 2-tap DFE</td>
 <td style="text-align: right;">396</td>
 <td style="text-align: right;">0.71</td>
@@ -251,7 +251,7 @@ and Adaptation</h1>
 <td style="text-align: right;">75</td>
 <td style="text-align: right;">0.34</td>
 </tr>
-<tr class="odd">
+<tr>
 <td style="text-align: left;">Open-SERDES limits, 2-tap DFE<span class="math inline">\(^\ast\)</span></td>
 <td style="text-align: right;">396</td>
 <td style="text-align: right;">0.71</td>
@@ -264,7 +264,7 @@ and Adaptation</h1>
 <td style="text-align: right;">35</td>
 <td style="text-align: right;">0.16</td>
 </tr>
-<tr class="even">
+<tr>
 <td style="text-align: left;">Open-SERDES limits, 5-tap DFE<span class="math inline">\(^\ast\)</span></td>
 <td style="text-align: right;">467</td>
 <td style="text-align: right;">0.84</td>
@@ -301,7 +301,7 @@ and Adaptation</h1>
 <p><span id="we:ch8-refop"></span> Check the partition with the Lab 5 machinery: PRBS7 through REF, a TX preset, <code>ctle(pk)</code> and an ideal 2-tap DFE. The BER is estimated at 10 mV rms slicer noise.</p>
 <table>
 <thead>
-<tr class="header">
+<tr>
 <th style="text-align: left;">TX preset, CTLE</th>
 <th style="text-align: center;">pre-DFE eye</th>
 <th style="text-align: center;">+ 2-tap DFE</th>
@@ -311,7 +311,7 @@ and Adaptation</h1>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td style="text-align: left;">none, 8 dB (Lab 5)</td>
 <td style="text-align: center;">60.0</td>
 <td style="text-align: center;">129.5</td>
@@ -319,7 +319,7 @@ and Adaptation</h1>
 <td style="text-align: center;">27.6, 11.8</td>
 <td style="text-align: center;"><span class="math inline">\(4.5\times10^{-12}\)</span></td>
 </tr>
-<tr class="even">
+<tr>
 <td style="text-align: left;">none, 0 dB</td>
 <td style="text-align: center;"><span class="math inline">\(-84.0\)</span></td>
 <td style="text-align: center;">167.1</td>
@@ -327,7 +327,7 @@ and Adaptation</h1>
 <td style="text-align: center;">91.2, 45.6</td>
 <td style="text-align: center;"><span class="math inline">\(1.3\times10^{-15}\)</span></td>
 </tr>
-<tr class="odd">
+<tr>
 <td style="text-align: left;"><span class="math inline">\(-3.5\)</span> dB, 0 dB</td>
 <td style="text-align: center;">35.4</td>
 <td style="text-align: center;">169.5</td>
@@ -335,7 +335,7 @@ and Adaptation</h1>
 <td style="text-align: center;">51.1, 23.5</td>
 <td style="text-align: center;"><span class="math inline">\(3.5\times10^{-17}\)</span></td>
 </tr>
-<tr class="even">
+<tr>
 <td style="text-align: left;"><span class="math inline">\(-6\)</span> dB, 0 dB</td>
 <td style="text-align: center;">96.9</td>
 <td style="text-align: center;"><strong>171.8</strong></td>
@@ -343,7 +343,7 @@ and Adaptation</h1>
 <td style="text-align: center;">31.1, 11.7</td>
 <td style="text-align: center;"><span class="math inline">\(3.0\times10^{-18}\)</span></td>
 </tr>
-<tr class="odd">
+<tr>
 <td style="text-align: left;"><span class="math inline">\(-6\)</span> dB, 4 dB</td>
 <td style="text-align: center;">103.0</td>
 <td style="text-align: center;">132.6</td>

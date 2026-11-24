@@ -30,7 +30,7 @@ permalink: "/labs/"
 <table>
 <caption><span class="capnum">Table 16.1.</span> <strong>The labs.</strong> Run times on a laptop; every script is self-contained apart from <code>common.py</code>.</caption>
 <thead>
-<tr class="header">
+<tr>
 <th style="text-align: center;"><strong>Lab</strong></th>
 <th style="text-align: left;"><strong>Title</strong></th>
 <th style="text-align: left;"><strong>Script</strong></th>
@@ -40,7 +40,7 @@ permalink: "/labs/"
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td style="text-align: center;">1</td>
 <td style="text-align: left;"><a href="{% endraw %}{{ '/labs/lab-1/' | relative_url }}{% raw %}">The channel</a></td>
 <td style="text-align: left;"><code>lab1_channel.py</code></td>
@@ -48,7 +48,7 @@ permalink: "/labs/"
 <td style="text-align: left;">Sections <a href="{% endraw %}{{ '/chapters/02-signals-systems-and-the-language-of-links/' | relative_url }}{% raw %}#sec:pulse-response">2.4</a> and <a href="{% endraw %}{{ '/chapters/03-the-channel/' | relative_url }}{% raw %}#sec:refchannel">3.7</a></td>
 <td style="text-align: right;">3 s</td>
 </tr>
-<tr class="even">
+<tr>
 <td style="text-align: center;">2</td>
 <td style="text-align: left;"><a href="{% endraw %}{{ '/labs/lab-2/' | relative_url }}{% raw %}">A PRBS eye through the channel</a></td>
 <td style="text-align: left;"><code>lab2_prbs_eye.py</code></td>
@@ -56,7 +56,7 @@ permalink: "/labs/"
 <td style="text-align: left;"><a href="{% endraw %}{{ '/chapters/02-signals-systems-and-the-language-of-links/' | relative_url }}{% raw %}#sec:eye">Section 2.6</a></td>
 <td style="text-align: right;">2 s</td>
 </tr>
-<tr class="odd">
+<tr>
 <td style="text-align: center;">3</td>
 <td style="text-align: left;"><a href="{% endraw %}{{ '/labs/lab-3/' | relative_url }}{% raw %}">TX FFE</a></td>
 <td style="text-align: left;"><code>lab3_tx_ffe.py</code></td>
@@ -64,7 +64,7 @@ permalink: "/labs/"
 <td style="text-align: left;"><a href="{% endraw %}{{ '/chapters/06-transmit-ffe/' | relative_url }}{% raw %}">Chapter 6</a></td>
 <td style="text-align: right;">3 s</td>
 </tr>
-<tr class="even">
+<tr>
 <td style="text-align: center;">4</td>
 <td style="text-align: left;"><a href="{% endraw %}{{ '/labs/lab-4/' | relative_url }}{% raw %}">CTLE</a></td>
 <td style="text-align: left;"><code>lab4_ctle.py</code></td>
@@ -72,7 +72,7 @@ permalink: "/labs/"
 <td style="text-align: left;"><a href="{% endraw %}{{ '/chapters/07-continuous-time-linear-equalizer/' | relative_url }}{% raw %}">Chapter 7</a></td>
 <td style="text-align: right;">4 s</td>
 </tr>
-<tr class="odd">
+<tr>
 <td style="text-align: center;">5</td>
 <td style="text-align: left;"><a href="{% endraw %}{{ '/labs/lab-5/' | relative_url }}{% raw %}">DFE</a></td>
 <td style="text-align: left;"><code>lab5_dfe.py</code></td>
@@ -80,7 +80,7 @@ permalink: "/labs/"
 <td style="text-align: left;"><a href="{% endraw %}{{ '/chapters/08-decision-feedback-equalization-and-adaptation/' | relative_url }}{% raw %}#ch:dfe">Chapter 8</a></td>
 <td style="text-align: right;">3 s</td>
 </tr>
-<tr class="even">
+<tr>
 <td style="text-align: center;">6</td>
 <td style="text-align: left;"><a href="{% endraw %}{{ '/labs/lab-6/' | relative_url }}{% raw %}">Jitter, noise and BER</a></td>
 <td style="text-align: left;"><code>lab6_jitter_ber.py</code></td>
@@ -88,7 +88,7 @@ permalink: "/labs/"
 <td style="text-align: left;"><a href="{% endraw %}{{ '/chapters/11-jitter/' | relative_url }}{% raw %}">Chapter 11</a></td>
 <td style="text-align: right;">21 s</td>
 </tr>
-<tr class="odd">
+<tr>
 <td style="text-align: center;">7</td>
 <td style="text-align: left;"><a href="{% endraw %}{{ '/labs/lab-7/' | relative_url }}{% raw %}">A bang-bang PI-CDR</a></td>
 <td style="text-align: left;"><code>lab7_bbcdr.py</code></td>
@@ -101,7 +101,7 @@ permalink: "/labs/"
 </div>
 <h2 id="sec:ch16-next"><span class="secnum">16.9</span>Where to go next</h2>
 <h5 id="build-the-gui-demo">Build the GUI demo</h5>
-<p>The proposal lists a GUI front-end for the link model among its deliverables, in the spirit of the Julia SerDes framework (JLSD) [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:jlsd">64</a>] it cites. The labs are the engine: put sliders for loss, taps, peaking and noise in front of <code>channel()</code>, the FFE, <code>ctle()</code>, the DFE and <code>lab7_bbcdr.simulate()</code>, and redraw the eye and bathtub on every change. Cross-check the eyes against PyBERT [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-pybert">44</a>], a mature open link simulator with IBIS-AMI support.</p>
+<p>The proposal lists a GUI front-end for the link model among its deliverables, in the spirit of the Julia SerDes framework (JLSD) [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p6:jlsd">66</a>] it cites. The labs are the engine: put sliders for loss, taps, peaking and noise in front of <code>channel()</code>, the FFE, <code>ctle()</code>, the DFE and <code>lab7_bbcdr.simulate()</code>, and redraw the eye and bathtub on every change. Cross-check the eyes against PyBERT [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-pybert">46</a>], a mature open link simulator with IBIS-AMI support.</p>
 <h5 id="use-a-measured-channel">Use a measured channel</h5>
 <p>Load the test board’s 4-port Touchstone file. <code>sdp.four_port_to_diff</code> assumes ports 1<span class="math inline">\(\to\)</span>2 and 3<span class="math inline">\(\to\)</span>4 and returns <span class="math inline">\(V_\mathrm{out}/V_s\)</span>, half of <span class="math inline">\(S_{21}\)</span> for a matched link; the data must start near DC (<strong>scikit-rf</strong> can extrapolate).</p>
 <div class="sourceCode" id="cb9" data-language="Python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> skrf <span class="im">as</span> rf</span>

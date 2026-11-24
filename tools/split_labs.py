@@ -93,7 +93,9 @@ def main():
         lab = by_n[int(mm.group(2))]
         return (mm.group(1) + '\n<td style="text-align: left;"><a href="%s">%s</a></td>'
                 % (liquid_url(lab["permalink"]), lab["title"]))
-    table = re.sub(r'(<tr class="(?:odd|even)">\s*<td style="text-align: center;">(\d+)</td>)', title_cell, table)
+    # rows are <tr class="odd|even"> up to pandoc 3.5 and plain <tr> from 3.6
+    table, n_rows = re.subn(r'(<tr(?: class="(?:odd|even)")?>\s*<td style="text-align: center;">(\d+)</td>)', title_cell, table)
+    assert n_rows == len(labs) - 1, f"Table 16.1: linked {n_rows} rows, expected {len(labs) - 1}"
 
     # ---- the pages
     sec_link = pn_link("prev", liquid_url("/labs/"), SECTION)
