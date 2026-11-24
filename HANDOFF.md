@@ -13,10 +13,13 @@ This file is excluded from the Jekyll site (`_config.yml` → `exclude`).
   Chapter 16 page into `labs/index.html` (lead, objectives, Table 16.1 with links, "Where to go next") and one
   page per lab (`labs/lab-N.html`), relinks the rest of the site and leaves a forwarding stub at the old
   `/chapters/16-hands-on-labs-with-serdespy/` address. The PDF keeps Chapter 16 and its 16.x numbers.
-- pandoc is not installed on the maintainer's Mac, so the generated pages are usually not rebuilt locally. The Mac has
-  TeX Live (`latexmk` builds the book into `book/_build/` in about 30 s), Docker Desktop and Chrome, but no pandoc,
-  no poppler and only the system Ruby 2.6; the user said "not now" to installing them with Homebrew. So a LaTeX change
-  reaches the site and `assets/pdf/` only after `build_site.py` runs somewhere that has them (see "Book and site" below).
+- pandoc and poppler are not installed on the maintainer's Mac (the user said "not now" to Homebrew), so rebuild the
+  site in Docker (first done 24 Nov, approved by the user). Compile the book locally first (TeX Live is installed;
+  in a fresh checkout `mkdir -p book/_build/tutorial/chapters`, then from `book/`:
+  `latexmk -pdf -interaction=nonstopmode -shell-escape -outdir=_build tutorial.tex`), then from the repo root:
+  `docker run --rm -v "$PWD":/site -w /site --entrypoint sh pandoc/core:3.6 -c 'apk add --no-cache -q python3
+  poppler-utils >/dev/null && python3 -u tools/build_site.py --no-latex'` (about 11 s). pandoc 3.6 writes table rows
+  without the old `class="odd|even"`, which nothing styles; `build_site.py` and `split_labs.py` accept both forms.
 - Every page Jekyll serves needs a layout: plain Jekyll gives none unless `_config.yml`'s `defaults` cover the path
   (they cover `chapters/`, `appendices/`, `parts/`, `labs/`, `preface.html`, `references.html`), so any other page
   must say `layout: default` in its front matter. `/demos/` was served bare for this reason until 19 Nov.
@@ -32,7 +35,7 @@ This file is excluded from the Jekyll site (`_config.yml` → `exclude`).
 
 ## Book and site: open items outside the demos (written 19 Nov 2026)
 
-1. **Section 14.5.3's supply resonance is in the LaTeX only.** Commit `1bc337a` (merged in `134d847`, 11 Nov) added
+1. **Section 14.5.3's supply resonance** (on the site since the Docker rebuild of 24 Nov). Commit `1bc337a` added
    the "Supply and ground pins" paragraph and Worked Example 14.3 (`we:ch14-pdn`) to `14_arch.tex`; energy per bit
    is now Worked Example 14.4. The book compiles cleanly, but `chapters/14-the-open-serdes-architecture.html` and
    `assets/pdf/Open-SERDES_Tutorial.pdf` show the old section until `build_site.py` runs. The numbers are first
@@ -64,10 +67,10 @@ This file is excluded from the Jekyll site (`_config.yml` → `exclude`).
 3. **`thebricd.org` without www does not resolve** (no DNS record; `www.thebricd.org` → `bricd-org.github.io`
    works). The PDF cover and page footers print "thebricd.org", and the Open-BioAFE flyer's footer address uses it.
    The fix is at the domain registrar (GitHub Pages' apex A records or a redirect to www), not in this repo.
-4. **`tools/split_labs.py` has only run on the existing generated pages**, never after a real `build_site.py` run.
-   On the first rebuild, check that it still finds `sec:lab0` … `sec:lab7`, `sec:ch16-next` and `tab:ch16-labs`
-   in Chapter 16 (it asserts the section order), that `labmap` lands on `labs/lab-0.html`, and crawl the site for
-   broken links and anchors (a ≈ 40-line urllib crawler did this on 18–19 Nov: 40 pages, 4262 links, none broken).
+4. **`tools/split_labs.py` passed its first real rebuild** (24 Nov, pandoc 3.6). It needed one fix: pandoc 3.6 drops
+   the row classes its Table 16.1 pattern looked for; it now accepts both and asserts that all seven rows got a title.
+   After every rebuild, crawl the site for broken links and anchors (≈ 40-line urllib crawler: 40 pages, 4582 links
+   and image references on 24 Nov, none broken).
 5. **Outside this repo:** a LinkedIn flyer and caption about the REF pulse response ("What does a metre of PCB do to
    one bit?") are in `~/BRICD/LinkedIn/OpenSERDES_smear_flyer*`, with `make_flyer.py`, which recomputes REF and
    stops unless it matches the book. Not posted; posting is the user's.

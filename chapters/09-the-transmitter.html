@@ -33,7 +33,7 @@ permalink: "/chapters/09-the-transmitter/"
 </figure>
 <h2 id="sec:serializer"><span class="secnum">9.2</span>The serializer</h2>
 <h3 id="sec9.2.1-clocks-not-gates-set-the-speed"><span class="secnum">9.2.1</span>Clocks, not gates, set the speed</h3>
-<p>A 130 nm CMOS gate switches in tens of picoseconds, yet a 5 GHz CMOS serializer does not work, because the clock has to be <em>distributed</em>. A clock passing through a chain of inverters keeps its shape only if each half-period lets every inverter swing fully. Below about 8 fan-out-of-4 delays per period, the pulses shrink at each stage and vanish [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-palermo720ckt">24</a>]. The <strong>FO4 delay</strong> <span class="math inline">\(t_\mathrm{FO4}\)</span>, the delay of an inverter driving four copies of itself, is the natural unit of CMOS speed.</p>
+<p>A 130 nm CMOS gate switches in tens of picoseconds, yet a 5 GHz CMOS serializer does not work, because the clock has to be <em>distributed</em>. A clock passing through a chain of inverters keeps its shape only if each half-period lets every inverter swing fully. Below about 8 fan-out-of-4 delays per period, the pulses shrink at each stage and vanish [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-palermo720ckt">26</a>]. The <strong>FO4 delay</strong> <span class="math inline">\(t_\mathrm{FO4}\)</span>, the delay of an inverter driving four copies of itself, is the natural unit of CMOS speed.</p>
 <div class="tbox tbox-keyeq">
 <div class="tbox-title">
 <p>Key equation · The clock-distribution limit</p>
@@ -61,7 +61,7 @@ permalink: "/chapters/09-the-transmitter/"
 <!-- demo:fo4rule -->{% endraw %}{% include demos/assets.html %}{% include demos/fo4rule.html %}{% raw %}<!-- /demo -->
 
 <h3 id="sec9.2.2-the-half-rate-cml-21-multiplexer"><span class="secnum">9.2.2</span>The half-rate CML 2:1 multiplexer</h3>
-<p>A <strong>half-rate</strong> multiplexer has no full-rate flip-flop at its output. The clock <em>itself</em> is the select: the even bit goes out while CK is high and the odd bit while CK is low [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-palermo720ckt">24</a>]. <a href="#fig:ch9-mux">Figure 9.3</a>(a) shows the HBT version, a stacked (series-gated) CML gate. The clock pair <span class="math inline">\(Q_5/Q_6\)</span> steers the tail current <span class="math inline">\(I_T\)</span> into one of the two data pairs, and the selected pair steers it into one of the shared loads <span class="math inline">\(R_\mathrm{L}\)</span>. The deselected pair carries no current. The data bases sit at CML levels and the clock bases one <span class="math inline">\(V_\mathrm{BE}\)</span> lower, through emitter followers, so every device keeps its <span class="math inline">\(V_\mathrm{CE}\)</span> near 0.8 V on the 2.5 V supply.</p>
+<p>A <strong>half-rate</strong> multiplexer has no full-rate flip-flop at its output. The clock <em>itself</em> is the select: the even bit goes out while CK is high and the odd bit while CK is low [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-palermo720ckt">26</a>]. <a href="#fig:ch9-mux">Figure 9.3</a>(a) shows the HBT version, a stacked (series-gated) CML gate. The clock pair <span class="math inline">\(Q_5/Q_6\)</span> steers the tail current <span class="math inline">\(I_T\)</span> into one of the two data pairs, and the selected pair steers it into one of the shared loads <span class="math inline">\(R_\mathrm{L}\)</span>. The deselected pair carries no current. The data bases sit at CML levels and the clock bases one <span class="math inline">\(V_\mathrm{BE}\)</span> lower, through emitter followers, so every device keeps its <span class="math inline">\(V_\mathrm{CE}\)</span> near 0.8 V on the 2.5 V supply.</p>
 <div id="fig:ch9-mux">
 
 </div>
@@ -114,7 +114,7 @@ permalink: "/chapters/09-the-transmitter/"
 <h5 id="swing">Swing</h5>
 <p>When <span class="math inline">\(Q_2\)</span> takes all of <span class="math inline">\(I_T\)</span>, the current divides between its own load and the line, so each output sees <span class="math inline">\(R_\mathrm{L}\parallel Z_0=25\,\Omega\)</span> and swings <span class="math inline">\(I_T\cdot25\,\Omega\)</span> single-ended. The differential voltage flips sign with the data, so <span class="math inline">\(V_{d,\mathrm{pp}}=2\cdot I_T\cdot25\,\Omega =I_TZ_0\)</span>.</p>
 <h5 id="voltage-mode">Voltage mode</h5>
-<p>The alternative is a <strong>voltage-mode</strong> (VM) driver, usually a source-series-terminated (SST) one: each output is an inverter-like switch pair in series with a resistor, <span class="math inline">\(R_\mathrm{on}+R_S=Z_0\)</span> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p4:wong2004">25</a>]. Its current flows only around the loop of TX resistor, line, 100 Ω RX termination, line and TX resistor: <span class="math inline">\(4Z_0=200\,\Omega\)</span>. A supply <span class="math inline">\(V_s\)</span> drives <span class="math inline">\(I=V_s/4Z_0\)</span>, the RX sees <span class="math inline">\(\pm V_s/2\)</span>, and <span class="math inline">\(V_{d,\mathrm{pp}}=V_s\)</span>.</p>
+<p>The alternative is a <strong>voltage-mode</strong> (VM) driver, usually a source-series-terminated (SST) one: each output is an inverter-like switch pair in series with a resistor, <span class="math inline">\(R_\mathrm{on}+R_S=Z_0\)</span> [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p4:wong2004">27</a>]. Its current flows only around the loop of TX resistor, line, 100 Ω RX termination, line and TX resistor: <span class="math inline">\(4Z_0=200\,\Omega\)</span>. A supply <span class="math inline">\(V_s\)</span> drives <span class="math inline">\(I=V_s/4Z_0\)</span>, the RX sees <span class="math inline">\(\pm V_s/2\)</span>, and <span class="math inline">\(V_{d,\mathrm{pp}}=V_s\)</span>.</p>
 <div class="tbox tbox-keyeq">
 <div class="tbox-title">
 <p>Key equation · Driver current for a differential swing <span class="math inline">\(V_{d,\mathrm{pp}}\)</span></p>
@@ -217,7 +217,7 @@ permalink: "/chapters/09-the-transmitter/"
 <!-- demo:tcoil -->{% endraw %}{% include demos/tcoil.html %}{% raw %}<!-- /demo -->
 
 <h5 id="the-t-coil">The T-coil</h5>
-<p>When the budget does not close, a <strong>bridged T-coil</strong> separates the capacitance from the line [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p4:galal2003">26</a>, <a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p4:kossel2008">27</a>]. Two coupled inductors connect pad and termination, the capacitive load hangs on their center tap, and a small <span class="math inline">\(C_B\)</span> bridges the ends (<a href="#fig:ch9-tcoil">Figure 9.9</a>b). With the right values the inductive and capacitive impedances cancel exactly [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p4:razavi2015tcoil">28</a>].</p>
+<p>When the budget does not close, a <strong>bridged T-coil</strong> separates the capacitance from the line [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p4:galal2003">28</a>, <a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p4:kossel2008">29</a>]. Two coupled inductors connect pad and termination, the capacitive load hangs on their center tap, and a small <span class="math inline">\(C_B\)</span> bridges the ends (<a href="#fig:ch9-tcoil">Figure 9.9</a>b). With the right values the inductive and capacitive impedances cancel exactly [<a href="{% endraw %}{{ '/references/' | relative_url }}{% raw %}#ref-p4:razavi2015tcoil">30</a>].</p>
 <div class="tbox tbox-keyeq">
 <div class="tbox-title">
 <p>Key equation · Bridged T-coil, <span class="math inline">\(\zeta=1/\sqrt2\)</span></p>
@@ -250,44 +250,44 @@ permalink: "/chapters/09-the-transmitter/"
 <table>
 <caption><span class="capnum">Table 9.1.</span> <strong>TX checklist and first-cut power at 1 Vppd.</strong> CML gates as in <a href="#we:ch9-hbt">Worked Example 9.3</a>, about 1.2 mA each with emitter followers. Confirm every line in <strong>ngspice</strong>.</caption>
 <thead>
-<tr class="header">
+<tr>
 <th style="text-align: left;">Block</th>
 <th style="text-align: left;">Check before layout</th>
 <th style="text-align: right;">Power</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td style="text-align: left;">3-tap CML driver</td>
 <td style="text-align: left;"><span class="math inline">\(I_T=20\)</span> mA (16 mA at 0.8 Vppd); every <span class="math inline">\(V_\mathrm{CE}&lt;\mathrm{BV}_\mathrm{CEO}\)</span> at <span class="math inline">\(V_\mathrm{CC}+5\,\%\)</span></td>
 <td style="text-align: right;">50 mW</td>
 </tr>
-<tr class="even">
+<tr>
 <td style="text-align: left;">Pre-drivers (<span class="math inline">\(\times3\)</span>)</td>
 <td style="text-align: left;">full switching (<span class="math inline">\(\ge4V_T\)</span>); tap paths matched to a few ps</td>
 <td style="text-align: right;">10 mW</td>
 </tr>
-<tr class="odd">
+<tr>
 <td style="text-align: left;">2:1 muxes (<span class="math inline">\(\times3\)</span>), latches (<span class="math inline">\(\times4\)</span>)</td>
 <td style="text-align: left;">glitch-free phases; 5-bit tap DACs, <span class="math inline">\(-3.5\)</span>/<span class="math inline">\(-6\)</span> dB presets</td>
 <td style="text-align: right;">21 mW</td>
 </tr>
-<tr class="even">
+<tr>
 <td style="text-align: left;">Clock buffers, 4:2, <span class="math inline">\(\div2\)</span></td>
 <td style="text-align: left;">duty cycle <span class="math inline">\(50\pm1\,\%\)</span>; clock-to-data windows at all corners</td>
 <td style="text-align: right;">20 mW</td>
 </tr>
-<tr class="odd">
+<tr>
 <td style="text-align: left;">CMOS 16:4 (1.2 V)</td>
 <td style="text-align: left;">FO4 measured; timing closed at 625 MHz</td>
 <td style="text-align: right;">3 mW</td>
 </tr>
-<tr class="even">
+<tr>
 <td style="text-align: left;">Termination and pad</td>
 <td style="text-align: left;">poly <span class="math inline">\(R_\mathrm{L}\)</span> for 20 mA; <span class="math inline">\(C_p&lt;0.85\)</span> pF or T-coil; RL <span class="math inline">\(\ge10\)</span> dB at <span class="math inline">\(f_\mathrm{N}\)</span></td>
 <td style="text-align: right;">–</td>
 </tr>
-<tr class="odd">
+<tr>
 <td style="text-align: left;"><strong>Total TX</strong></td>
 <td style="text-align: left;">41 mA from 2.5 V, 2.5 mA from 1.2 V</td>
 <td style="text-align: right;"><strong><span class="math inline">\(\approx\)</span>104 mW</strong></td>
