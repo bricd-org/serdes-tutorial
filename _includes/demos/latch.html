@@ -12,6 +12,19 @@
   </div>
   <div class="bd-read" aria-live="polite"><span>τ <b data-o="tau">–</b></span><span>decision time <b data-o="td">–</b></span><span>gain e<sup>T/τ</sup> <b data-o="g">–</b></span><span>P<sub>meta</sub> <b data-o="pm">–</b></span><span>at 2.5 GS/s <b data-o="rate">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Decide a small input.</b> StrongARM with 1 mV in: τ = 13 ps and the decision takes 109 ps. With only 10 µV it needs 169 ps.</li>
+    <li><b>Count metastable events.</b> With 140 ps to regenerate, P<sub>meta</sub> = 4.2e−5, about 1.1e5 events per second at 2.5 GS/s. Add two latch stages behind it: 8.7e−14, one every 4.6e3 s.</li>
+    <li><b>Switch to the HBT latch.</b> Click <i>HBT CML latch</i>: τ = 4 ps, a 17 ps decision and P<sub>meta</sub> = 4.2e−16 with no extra stages.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>For a fixed regeneration time T, what does halving the latch time constant τ do to P<sub>meta</sub>?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-why="Pmeta falls exponentially with T/τ, not in proportion to τ.">It halves it</button>
+      <button type="button" data-why="The exponent is T/τ, so τ matters as much as T.">Nothing: only T matters</button>
+      <button type="button" data-correct data-why="Doubling T/τ squares the factor e^(−T/τ): that is why the 4 ps HBT latch reaches 4.2e−16 against 4.2e−5.">It falls enormously, because P<sub>meta</sub> ∝ e<sup>−T/τ</sup> and halving τ doubles the exponent</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

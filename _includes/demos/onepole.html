@@ -10,6 +10,19 @@
   </div>
   <div class="bd-read" aria-live="polite"><span>τ <b data-o="tau">–</b></span><span>10–90 % rise <b data-o="tr">–</b></span><span>loss at f<sub>N</sub> <b data-o="ln">–</b></span><span>worst-case eye <b data-o="eye">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Put the bandwidth at Nyquist.</b> With f<sub>3dB</sub> = f<sub>N</sub> = 2.5 GHz: τ = 63.7 ps, a 140 ps edge (0.70 UI), 3.0 dB of loss at f<sub>N</sub> and a worst-case eye of 913 mV of 1 V.</li>
+    <li><b>Halve the bandwidth.</b> Click f<sub>N</sub>/2: the edge doubles to 280 ps (1.40 UI), the loss at f<sub>N</sub> grows to 7.0 dB and the eye falls to 585 mV.</li>
+    <li><b>Double it.</b> Click 2f<sub>N</sub>: a 70 ps edge (0.35 UI), 1.0 dB at f<sub>N</sub> and a 996 mV eye. Past about f<sub>N</sub>, more bandwidth buys little.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>A one-pole system shows a 10–90 % rise time of 100 ps. What is its bandwidth?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-why="1/tr overestimates by almost three times: for one pole, f3dB = 0.35/tr.">About 10 GHz, the inverse of the rise time</button>
+      <button type="button" data-why="That treats the rise time as τ; the 10–90 % edge is 2.2τ, so f3dB = 0.35/tr = 3.5 GHz.">About 1.6 GHz, from 1/(2π·100 ps)</button>
+      <button type="button" data-correct data-why="tr = 2.2τ and f3dB = 1/(2πτ), so f3dB·tr = 0.35, and 0.35/100 ps = 3.5 GHz.">About 3.5 GHz, from f<sub>3dB</sub> = 0.35/t<sub>r</sub></button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

@@ -14,6 +14,19 @@
   </div>
   <div class="bd-read" aria-live="polite"><span>locked after <b data-o="lk">–</b></span><span>tracking error <b data-o="rms">–</b></span><span>wander pp <b data-o="pp">–</b></span><span>integral register <b data-o="fr">–</b></span><span>slew limit of K<sub>P</sub> <b data-o="sl">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Run the baseline.</b> +200 ppm, K<sub>P</sub> = 1/8 LSB, K<sub>P</sub>/K<sub>I</sub> = 128: locks in 0.15 µs and tracks with 2.5 ps rms (14 ps pp); the integral register settles at 202 ppm.</li>
+    <li><b>Use an integer K<sub>P</sub>.</b> Click <i>integer K<sub>P</sub> = 1 LSB</i>: it locks in 0.02 µs, but the tracking error grows to 10.1 ps rms (50 ps pp).</li>
+    <li><b>Push the offset.</b> With the baseline, +500 ppm still locks (0.25 µs) with the register at 500 ppm, beyond the 488 ppm that K<sub>P</sub> alone can slew. The integral path carries the frequency.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>What does the integral path of the CDR loop filter do?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-why="The integer-KP preset locks fastest; the integral path is about tracking a frequency offset.">It speeds up the initial lock</button>
+      <button type="button" data-correct data-why="With the offset held in the integral register, the PI no longer has to slew continuously, and the loop can track beyond the KP slew limit.">It learns the frequency offset (202 ppm here), so the proportional path only has to correct phase noise</button>
+      <button type="button" data-why="Dither comes from the proportional step; the integral path handles the frequency offset.">It removes the bang-bang dither</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

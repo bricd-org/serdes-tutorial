@@ -14,6 +14,19 @@
   </div>
   <div class="bd-read" aria-live="polite"><span>2Qσ<sub>n</sub> <b data-o="nz">–</b></span><span>V<sub>sens</sub> = 2Qσ<sub>s</sub> + V<sub>min</sub> + 2·0.46 mV <b data-o="vs">–</b></span><span>margin M <b data-o="m">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Read the system budget.</b> σ<sub>n</sub> = 1.5 mV: the noise takes 2Qσ<sub>n</sub> = 21.1 mV, the sampler needs V<sub>sens</sub> = 20.0 mV, and the margin is M = 76.4 mV, the book's 76 mV.</li>
+    <li><b>Use the circuit estimate.</b> Click 1.08 mV (Worked Example 10.3): the noise term shrinks to 15.2 mV and the margin grows to 82.3 mV.</li>
+    <li><b>Double the noise.</b> Set σ<sub>n</sub> to 3 mV: 2Qσ<sub>n</sub> = 42.2 mV and the margin falls to 55.3 mV. Calibrating the offset to zero instead buys 10 mV (86.4 mV).</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>Why does noise enter the margin as 2Qσ<sub>n</sub>, with Q ≈ 7?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-why="Quadrature sums combine independent sources; the 2Q comes from the BER target.">Because noise powers add in quadrature</button>
+      <button type="button" data-correct data-why="The eye loses Q·σn at the top and at the bottom, so 2Qσn = 14σn, 21.1 mV at 1.5 mV.">At 10<sup>−12</sup> noise can move a sample about 7σ, on the 1 level and on the 0 level</button>
+      <button type="button" data-why="Q is set by the BER target (Q = 7.03 for 10^−12), not by a count of sources.">Because there are about seven noise sources in the receiver</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

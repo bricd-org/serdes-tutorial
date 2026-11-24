@@ -8,6 +8,19 @@
   <div class="bd-scope tall"><canvas data-c="h" aria-hidden="true"></canvas><span class="bd-tag">offset distribution: untrimmed (faint), after trimming (gold), log scale</span></div>
   <div class="bd-read" aria-live="polite"><span>LSB <b data-o="lsb">–</b></span><span>single samplers in spec: raw <b data-o="y1">–</b></span><span>trimmed <b data-o="y1t">–</b></span><span>4-sampler receivers: raw <b data-o="y4">–</b></span><span>trimmed <b data-o="y4t">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Read the default.</b> A 5-bit DAC over ±3σ (±14.7 mV) gives a 0.92 mV LSB. Raw, 70 % of samplers meet ±5.1 mV but only 24 % of 4-sampler receivers; trimmed, 99.99 % and 99.96 %.</li>
+    <li><b>Use fewer bits.</b> With 3 bits the LSB grows to 3.68 mV, still inside the ±5.1 mV spec: 99.92 % of receivers pass.</li>
+    <li><b>Narrow the range.</b> Set ±1.5σ with 5 bits: the LSB halves to 0.46 mV, but samplers beyond the range cannot be trimmed and receivers drop to 95 %.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>Raw, 70 % of single samplers meet the spec but only 24 % of 4-sampler receivers. Why?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-correct data-why="The four offsets are independent, so the chances multiply: 0.70 × 0.70 × 0.70 × 0.70 ≈ 0.24.">All four samplers of a receiver must pass, and 0.70<sup>4</sup> ≈ 0.24</button>
+      <button type="button" data-why="Loading does not set the offset; the yield falls because every sampler must pass.">Four samplers load the input four times as much</button>
+      <button type="button" data-why="The spec is the same ±5.1 mV for every sampler.">The receiver's spec is four times tighter</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

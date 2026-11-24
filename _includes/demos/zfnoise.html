@@ -7,6 +7,19 @@
   <div class="bd-scope tall"><canvas data-c="h" aria-hidden="true"></canvas><span class="bd-tag">REF |H| (blue), the inverse 1/|H| (gold), and the noise band (shaded), dB</span></div>
   <div class="bd-read" aria-live="polite"><span>inverse gain at B <b data-o="g">–</b></span><span>noise enhancement (1/B)∫|H|<sup>−2</sup>df <b data-o="n">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Equalize to f<sub>N</sub>.</b> Inverting REF up to 2.5 GHz needs +17.4 dB of gain there, and the noise integrated to f<sub>N</sub> grows by 12.1 dB.</li>
+    <li><b>Chase 2f<sub>N</sub>.</b> Click <i>to 2f<sub>N</sub></i>: +30.1 dB at 5 GHz and 22.4 dB of noise enhancement. Going past Nyquist costs dearly.</li>
+    <li><b>Stop early.</b> Set B to 0.5 f<sub>N</sub>: only +10.4 dB at 1.25 GHz and 6.9 dB of noise, but the ISI above 1.25 GHz is left in place.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>Why not simply invert the channel up to 2f<sub>N</sub>?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-correct data-why="A linear equalizer cannot tell signal from noise: whatever it gains back, it gains on the noise too.">The inverse would boost noise and crosstalk as much as the signal, 22.4 dB here</button>
+      <button type="button" data-why="It exists (the demo plots it); the problem is the gain it needs and the noise that gain amplifies.">The inverse of a channel does not exist above f<sub>N</sub></button>
+      <button type="button" data-why="The NRZ spectrum still has about 10 % of its power above fb; the issue is the noise gain.">Above f<sub>N</sub> the signal has no power</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

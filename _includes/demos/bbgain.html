@@ -11,6 +11,19 @@
   </div>
   <div class="bd-read" aria-live="polite"><span>P(late) − P(early) <b data-o="o">–</b></span><span>K<sub>BB</sub> = √(2/π)/σ<sub>j</sub> <b data-o="k">–</b></span><span>linear range ≈ ±σ<sub>j</sub> <b data-o="lr">–</b></span><span>in ps at 5 Gb/s <b data-o="ps">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Read the default.</b> σ<sub>j</sub> = 0.03 UI and a +0.02 UI phase error: P(late) − P(early) = +0.495. K<sub>BB</sub> = √(2/π)/σ<sub>j</sub> = 26.6 per UI, linear over about ±0.03 UI (±6 ps).</li>
+    <li><b>Less jitter.</b> Click 0.01 UI: the gain triples to 79.8 per UI and the same error gives +0.954, almost saturated.</li>
+    <li><b>More jitter.</b> Click 0.1 UI: the gain falls to 8.0 per UI and the output to +0.159. Jitter linearizes the detector but lowers its gain.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>Why does a bang-bang phase detector behave linearly at all?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-why="Each decision is a hard sign; the linearity comes from averaging.">Its output stage is a linear amplifier</button>
+      <button type="button" data-correct data-why="Without jitter it would be a pure sign function; with σj the slope at zero is √(2/π)/σj.">Edge jitter turns the hard sign into a probability: averaged over many edges the output is an erf of φ/σ<sub>j</sub>, linear near zero</button>
+      <button type="button" data-why="The filter averages the output, but the slope comes from the jitter distribution.">Because the CDR loop filter linearizes it</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

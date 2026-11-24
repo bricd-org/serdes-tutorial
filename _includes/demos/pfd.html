@@ -7,6 +7,19 @@
   <div class="bd-scope tall"><canvas data-c="w" aria-hidden="true"></canvas><span class="bd-tag">one 20 ns reference period</span></div>
   <div class="bd-read" aria-live="polite"><span>UP width <b data-o="up">–</b></span><span>DN width <b data-o="dn">–</b></span><span>net charge per cycle <b data-o="q">–</b></span><span>V<sub>ctrl</sub> step on C<sub>1</sub> <b data-o="dv">–</b></span><span>average current <b data-o="ia">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Lead by 1 ns.</b> REF leads by 1 ns: UP 1.50 ns, DN 0.50 ns (the reset delay), a net 200 fC per cycle, 3.80 mV on C<sub>1</sub> and 10.0 µA on average (Worked Example 12.1).</li>
+    <li><b>Lock.</b> Set Δt to 0: both pulses are 0.50 ns wide and the net charge is zero. The reset delay keeps both on briefly, so small errors still produce a pulse.</li>
+    <li><b>Reverse it.</b> DIV leads by 2 ns: DN 2.50 ns, −400 fC, −7.60 mV, −20 µA, linear in Δt. A longer reset delay (1.5 ns) widens both pulses but leaves the net charge at 200 fC.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>Why does the PFD keep UP and DN both on for a short reset delay, even at lock?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-why="Both currents flowing at once wastes a little charge; the delay is there for linearity.">To save power in the charge pump</button>
+      <button type="button" data-correct data-why="Very narrow pulses never switch the charge pump fully; overlapping UP and DN by the reset delay keeps the gain constant near zero.">So that even tiny phase errors produce a full pulse: without it the charge pump would ignore small Δt (a dead zone)</button>
+      <button type="button" data-why="The loop filter does the filtering; the reset delay removes the dead zone.">To filter the reference noise</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

@@ -11,6 +11,19 @@
   <div class="bd-scope tall"><canvas data-c="b" aria-hidden="true"></canvas><span class="bd-tag">|H(f)|, dB: response (blue) and its asymptotes (dashed); f<sub>N</sub> = 2.5 GHz</span></div>
   <div class="bd-read" aria-live="polite"><span>DC gain <b data-o="dc">–</b></span><span>ideal peaking 1 + g<sub>m</sub>R<sub>S</sub>/2 <b data-o="ip">–</b></span><span>|H(f<sub>N</sub>)| <b data-o="hn">–</b></span><span>boost realized at f<sub>N</sub> <b data-o="rb">–</b></span><span>f<sub>z</sub>, f<sub>p1</sub>, f<sub>p2</sub> <b data-o="pz">–</b></span><span>peak at <b data-o="pk">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Read Ex 7.1 (Lab 4).</b> The ideal peaking 1 + g<sub>m</sub>R<sub>S</sub>/2 is 14.0 dB, but the boost realized at f<sub>N</sub> is 10.9 dB: f<sub>z</sub> 499 MHz, f<sub>p1</sub> 2.50 GHz, f<sub>p2</sub> 10.0 GHz, peak at 4.9 GHz.</li>
+    <li><b>Load the HBT example.</b> Click <i>Ex 7.2 HBT</i>: 10.0 dB promised, 7.0 dB realized, because f<sub>p1</sub> sits right at f<sub>N</sub>.</li>
+    <li><b>Fix it.</b> Click <i>Ex 7.2 fixed</i>: f<sub>p1</sub> moves to 4.97 GHz, 17.1 dB ideal and 10.0 dB realized, peak at 6.2 GHz. In Ex 7.1, raising C<sub>L</sub> to 600 fF pulls f<sub>p2</sub> down to 5.3 GHz and costs 0.6 dB.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>Why is the boost realized at f<sub>N</sub> smaller than the ideal 1 + g<sub>m</sub>R<sub>S</sub>/2?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-why="Noise does not change the transfer function; the poles do.">The degeneration resistor adds noise</button>
+      <button type="button" data-why="The DC gain sets the starting level; the shortfall at fN comes from where the poles sit.">The DC gain is too low</button>
+      <button type="button" data-correct data-why="With fp1 = fN, Ex 7.2 realizes 7.0 of its 10 dB; moving fp1 to 2fN recovers most of it.">The poles roll the response off before it reaches its full high-frequency gain, so at f<sub>N</sub> only part of the peaking is there</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

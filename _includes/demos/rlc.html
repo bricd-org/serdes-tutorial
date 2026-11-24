@@ -10,6 +10,19 @@
   </div>
   <div class="bd-read" aria-live="polite"><span>peaking at ω<sub>n</sub> <b data-o="p">–</b></span><span>maximum of |Z| <b data-o="mx">–</b></span><span>overshoot <b data-o="os">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Light damping.</b> ζ 0.2: 16.6 dB of peaking at ω<sub>n</sub>, and the step overshoots to 2.74× its final value.</li>
+    <li><b>ζ 0.5.</b> 3.0 dB at ω<sub>n</sub> (the maximum is 3.3 dB at 0.85 ω<sub>n</sub>) and the step overshoots to 1.30×.</li>
+    <li><b>Damp it fully.</b> ζ 0.707 leaves a 0.2 dB maximum and 1.07× overshoot; at ζ 1 there is no peaking and no overshoot.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>Why not design an inductively peaked load for ζ = 0.2 to get the most boost?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-correct data-why="Peaking and ringing are the same pole pair: a high peak means a step response that rings for several UI.">The 16.6 dB peak comes with a step that rings to 2.74× its final value, which is ISI of its own</button>
+      <button type="button" data-why="The DC response is set by R, not by ζ; the problem is the ringing.">At ζ = 0.2 the circuit has no gain at DC</button>
+      <button type="button" data-why="ζ can be lowered with R or C as well; the reason to avoid it is the ringing.">Low damping needs a larger inductor than the chip can hold</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

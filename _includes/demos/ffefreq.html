@@ -10,6 +10,19 @@
   </div>
   <div class="bd-read" aria-live="polite"><span>taps c<sub>0</sub>, c<sub>1</sub> <b data-o="c">–</b></span><span>transition level <b data-o="tr">–</b></span><span>repeated-bit level <b data-o="rp">–</b></span><span>REF × FFE at f<sub>N</sub> <b data-o="n">–</b></span><span>at DC <b data-o="dc">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Read −6 dB.</b> Taps 0.751 and −0.249: transitions swing ±500 mV and repeated bits ±251 mV. REF × FFE still loses 17.4 dB at f<sub>N</sub>, but only 6.6 dB at DC.</li>
+    <li><b>Try the other presets.</b> −3.5 dB: repeated bits at ±334 mV and −4.1 dB at DC. −9.5 dB: ±167 mV and −10.1 dB at DC.</li>
+    <li><b>Turn it off.</b> At 0 dB the DC loss is just REF's own 0.6 dB, and at f<sub>N</sub> the cascade is −17.4 dB for every setting: de-emphasis never boosts Nyquist, it pulls the low frequencies down to meet it.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>How does −6 dB of de-emphasis flatten REF?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-why="A TX cannot exceed its peak swing: at fN the cascade stays at −17.4 dB.">It boosts f<sub>N</sub> by 6 dB</button>
+      <button type="button" data-correct data-why="Repeated bits are sent smaller (±251 mV) while transitions keep the full ±500 mV, which lowers the response at low frequency.">It attenuates the low frequencies, so the cascade loses 17.4 dB at f<sub>N</sub> but only 6.6 dB at DC</button>
+      <button type="button" data-why="The channel is unchanged; the FFE only changes the spectrum that is sent into it.">It halves the channel length</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

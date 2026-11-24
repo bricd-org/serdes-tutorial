@@ -8,6 +8,19 @@
   <div class="bd-scope"><canvas data-c="b" aria-hidden="true"></canvas><span class="bd-tag">maximum bit rate with a clock period of at least 8 FO4</span></div>
   <div class="bd-read" aria-live="polite"><span>max clock 1/(8·FO4) <b data-o="fc">–</b></span><span>UI at target <b data-o="ui">–</b></span><span>UI in FO4 <b data-o="n">–</b></span><span>half-rate margin <b data-o="m">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Read the default.</b> With FO4 = 42 ps the clock tree tops out near 2.98 GHz, 1/(8·FO4). A 5 Gb/s UI is only 4.8 FO4, and a half-rate stage clears the target by 19 %.</li>
+    <li><b>Go to the slow corner.</b> Click 55 ps: the limit drops to 2.27 GHz and half rate misses by 9 %. That is why the last serializer stages of Open-SERDES are HBT CML, not CMOS.</li>
+    <li><b>Aim for 10 Gb/s.</b> Back at 42 ps, set 10 Gb/s: a UI is 2.4 FO4 and half rate falls 40 % short.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>With FO4 = 42 ps, roughly what is the fastest bit rate a full-rate CMOS stage reaches under the 8-FO4 rule?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-why="A gate delay is not a clock period: the 8-FO4 rule limits a distributed clock to about 3 GHz.">About 24 Gb/s, one bit per FO4</button>
+      <button type="button" data-why="That is half rate, which sends a bit on each clock edge, two per period.">About 6 Gb/s</button>
+      <button type="button" data-correct data-why="1/(8 × 42 ps) = 2.98 GHz; full rate sends one bit per period, about 3 Gb/s, and half rate doubles it.">About 3 Gb/s, one bit per 8-FO4 clock period</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

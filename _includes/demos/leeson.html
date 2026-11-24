@@ -9,6 +9,19 @@
   <div class="bd-scope tall"><canvas data-c="p" aria-hidden="true"></canvas><span class="bd-tag">ℒ(Δf), dBc/Hz; the dot is the quoted −100.8 dBc/Hz at 1 MHz</span></div>
   <div class="bd-read" aria-live="polite"><span>R<sub>p</sub> = Qω<sub>0</sub>L <b data-o="rp">–</b></span><span>P<sub>sig</sub> = V²/2R<sub>p</sub> <b data-o="ps">–</b></span><span>ℒ(1 MHz) <b data-o="l1">–</b></span><span>excess to match −100.8 <b data-o="ex">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Read the default.</b> Q 16.8, 0.6 V peak, F = 2: R<sub>p</sub> = 1.06 kΩ, P<sub>sig</sub> = 171 µW and ℒ(1 MHz) = −122.3 dBc/Hz, 21.5 dB better than the −100.8 the budget assumes.</li>
+    <li><b>Halve the Q.</b> Set Q to 8.4: only 3 dB worse (−119.3 dBc/Hz), because R<sub>p</sub> halves too and the same amplitude now carries twice the power.</li>
+    <li><b>Raise the swing.</b> Double the amplitude to 1.2 V: four times the power and −128.3 dBc/Hz. Doubling F to 4 costs 3 dB.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>In this model, why does halving the tank Q cost 3 dB here rather than 6 dB?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-why="The noise does scale as 1/Q²; part of that loss is given back by the signal power.">Leeson's model scales with Q, not Q²</button>
+      <button type="button" data-why="F is held at 2 in this comparison.">The noise factor F improves at lower Q</button>
+      <button type="button" data-correct data-why="Psig = V²/2Rp doubles when Rp halves: +6 dB from the Q, −3 dB from the power.">The noise rises as Q² falls, but R<sub>p</sub> = Qω<sub>0</sub>L halves too, so the same amplitude carries twice the signal power and gives 3 dB back</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

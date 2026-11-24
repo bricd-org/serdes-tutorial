@@ -104,6 +104,20 @@
     if (window.ResizeObserver) new ResizeObserver(go).observe(root); else window.addEventListener('resize', go);
     return go;
   }
+  /* ---- "Check yourself" questions (.bd-check): one listener for the whole page, so no per-demo script */
+  function checkClick(e) {
+    var b = e.target && e.target.closest ? e.target.closest('.bd-check-opts button') : null; if (!b) return;
+    var box = b.closest('.bd-check'), fb = box.querySelector('.bd-check-fb'), ok = b.hasAttribute('data-correct');
+    b.setAttribute('data-state', ok ? 'right' : 'wrong');
+    if (ok) box.querySelectorAll('.bd-check-opts button').forEach(function (o) { if (o !== b) o.removeAttribute('data-state'); });
+    if (fb) {
+      var why = b.getAttribute('data-why') || (ok ? '' : 'Try another answer.');
+      fb.innerHTML = '';
+      var tag = document.createElement('span'); tag.className = ok ? 'ok' : 'bad'; tag.textContent = ok ? 'Right. ' : 'Not quite. ';
+      fb.appendChild(tag); fb.appendChild(document.createTextNode(why));
+    }
+  }
+  document.addEventListener('click', checkClick);
   window.BD = { C: C, setup: setup, frame: frame, line: line, hline: hline, vline: vline, dot: dot, logticks: logticks,
                 eng: eng, fft: fft, gauss: gauss, rng: rng, bind: bind, seg: seg, toggle: toggle, observe: observe };
 })();

@@ -8,6 +8,19 @@
   <div class="bd-scope tall"><canvas data-c="p" aria-hidden="true"></canvas><span class="bd-tag">edge-time PDF, log scale: true (blue), dual-Dirac fit to the tails (gold, dashed)</span></div>
   <div class="bd-read" aria-live="polite"><span>DJ<sub>pp</sub> <b data-o="pp">–</b></span><span>fitted DJ<sub>δδ</sub> <b data-o="dd">–</b></span><span>fitted σ <b data-o="sg">–</b></span><span>TJ at 10<sup>−12</sup>: true <b data-o="tj">–</b></span><span>dual-Dirac model <b data-o="tm">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Fit pure DCD.</b> 20 ps of DCD with 2 ps of RJ: the dual-Dirac fit returns DJδδ = 20.0 ps and σ = 2.00 ps exactly, and TJ at 10<sup>−12</sup> = 47.7 ps.</li>
+    <li><b>Try sinusoidal DJ.</b> The same 20 ps pp fits as DJδδ = 17.5 ps with σ = 2.10 ps, yet the model still predicts the TJ (46.6 ps).</li>
+    <li><b>Try uniform DJ.</b> DJδδ = 15.6 ps (the case of Fig 11.4), σ = 2.17 ps, and TJ 45.7 ps against 45.8 ps from the model.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>For sinusoidal or uniform DJ, why is the fitted DJδδ smaller than DJ<sub>pp</sub>?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-why="The fit works: it reproduces the TJ at 10^−12 to a tenth of a picosecond.">The fit has failed</button>
+      <button type="button" data-correct data-why="The dual-Dirac model only has to match the tails; DCD is truly two Diracs, so only there does DJδδ equal DJpp.">These distributions put little probability at their extremes, so in the tails they look like two Diracs closer together plus a little extra RJ</button>
+      <button type="button" data-why="With DCD the fit recovers the full 20 ps despite the same RJ; the shape of the DJ is what matters.">RJ always hides part of the DJ</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

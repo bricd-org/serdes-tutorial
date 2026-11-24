@@ -94,6 +94,13 @@ local repo `~/BRICD/biomedical-ic-design`, which has 14 of them).
   aria-label and "// try it ·" head: do not edit by hand). Each demo is `_includes/demos/<name>.html`: one `.bd`
   block plus one IIFE, no external libraries, readouts with `aria-live`, works at 375 px and in dark mode.
   Captions are set from JS, so use HTML `<sub>/<sup>`, not `\( \)` maths (KaTeX renders only at load).
+- **Every demo ends with "Three things to try" and "Check yourself"** (same pattern as the photonics tutorial): right
+  after the caption line, a `<div class="bd-try">` with three numbered tries (bold title + what to do + the numbers the
+  readouts then show) and a `<div class="bd-check">` with one question and 3 answers, exactly one with `data-correct`,
+  each with a one-line plain-text explanation in `data-why` (shown via textContent, so no HTML there). Styles in
+  `demos.css`, one page-wide click handler in `demos.js`; no per-demo script. Every number in a try must be read off the
+  demo itself, not the book: drive the controls from the console (set `input.value` + dispatch `input`, click the
+  `data-*` preset buttons) and read `.bd-read [data-o]`.
 - **Placement survives rebuilds**: `tools/insert_demos.py` holds the registry (`DEMOS`: page slug, demo name,
   anchor) and inserts `{% endraw %}{% include demos/NAME.html %}{% raw %}` between `<!-- demo:NAME -->`
   markers after the anchor's figure (`after: "fig:..."`), at the end of a section (`end: "sec:..."`) or just
@@ -378,6 +385,10 @@ noise, jitter) → stat eye and margin, the whole book on one panel. todo
   theme since 15 Nov because `demos.md` had no layout; `write_index()` now writes `layout: default` (`21618e6`). The
   temporary `serdes-labs` and `serdes-demos` launch entries and their worktrees are removed; `serdes` (port 4007)
   remains.
+- 23–24 Nov (same session): "Three things to try" and a "Check yourself" question added to all 58 demos (63
+  placements), every number read off the demo with a console probe. Checked on every chapter page: one correct answer
+  each, right/wrong feedback works, no JS errors, no overflow at 375 px. Fixed on the way: `eyefold` showed
+  "1000000000392 mV" with one window (no 0 and 1 seen yet), now "– (needs a 0 and a 1)".
 
 ### Next steps (written 18 Nov 2026, when the user said to stop here)
 
@@ -422,7 +433,7 @@ Branch `interactive-demos` on GitHub is at `b29ffb2`, behind `main`: merge `main
 - Ch 2 text: PDA eye of the 10 dB line is 230 mV; SL gives 204 mV with 13 cursors. Check the LaTeX/figsrc: the book
   may be wrong, or uses a different cursor count.
 - `pllnoise`: 1.73 ps at f_u = 0.5 MHz vs the book's 1.91 (2–6 MHz match); the book's VCO model may add close-in noise.
-- `dualdirac`: does not reproduce Fig 11.4's 15.6 ps case (its DCD + three-bit ISI mix is not specified in the text).
+- `dualdirac`: resolved 24 Nov: the *uniform* preset at 20 ps pp with 2 ps RJ fits DJδδ = 15.6 ps, Fig 11.4's value.
 - `superpos`: the book's 334/156 mV come from its own bit pattern, not reproduced.
 
 **Site and book**
@@ -438,7 +449,8 @@ Branch `interactive-demos` on GitHub is at `b29ffb2`, behind `main`: merge `main
 **How to work (lessons from this run)**
 - Per demo: write `_includes/demos/<name>.html` (no assets include) → add it to `DEMOS` in `tools/insert_demos.py`
   → `python3 tools/insert_demos.py` (also regenerates `demos.md`) → check the readouts against the book in the browser
-  (load the chapter in a hidden iframe and read `.bd-read [data-o]`) → mark it `done` above → commit on
+  (load the chapter in a hidden iframe and read `.bd-read [data-o]`) → write its three tries and check question from
+  numbers the demo shows → mark it `done` above → commit on
   `interactive-demos`, merge `--no-ff` into `main`, push (the user approved merging verified demo batches).
 - Two bugs met twice: a `dispatchEvent` at start-up before a helper `var` is defined (put defaults in the HTML
   `value=` instead), and bit-history offsets shorter than the longest cursor span (NaN decisions).

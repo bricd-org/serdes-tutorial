@@ -7,6 +7,19 @@
   <div class="bd-scope"><canvas data-c="e" aria-hidden="true"></canvas><span class="bd-tag">power against bit rate, with lines of constant energy per bit</span></div>
   <div class="bd-read" aria-live="polite"><span>energy per bit <b data-o="e">–</b></span><span>energy per 16-bit word <b data-o="w">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Read the default.</b> 50 mW at 5 Gb/s is 10.0 pJ for every bit, 160 pJ for each 16-bit word.</li>
+    <li><b>Load the Open-SERDES budget.</b> Drag the power to about 215 mW (the first-cut budget of Chapter 14 is 216 mW) and keep 5 Gb/s: about 43 pJ/b.</li>
+    <li><b>Compare with the Purdue OpenSerDes.</b> Set about 438 mW at 2 Gb/s: about 219 pJ/b, five times the energy per bit of the Open-SERDES first cut.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>Link A uses 100 mW at 10 Gb/s, link B 30 mW at 2 Gb/s. Which spends less energy per bit?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-why="B burns less power but moves five times fewer bits: 30 mW / 2 Gb/s = 15 pJ/b against A&#x27;s 10 pJ/b.">B, because it burns less power</button>
+      <button type="button" data-correct data-why="Energy per bit is P/fb: 100 mW / 10 Gb/s = 10 pJ/b and 30 mW / 2 Gb/s = 15 pJ/b.">A: 10 pJ/b against B's 15 pJ/b</button>
+      <button type="button" data-why="Energy per bit is P/fb, which gives 10 pJ/b for A and 15 pJ/b for B.">They are the same, because both scale linearly with the rate</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

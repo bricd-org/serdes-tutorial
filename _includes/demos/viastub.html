@@ -8,6 +8,19 @@
   <div class="bd-scope tall"><canvas data-c="s" aria-hidden="true"></canvas><span class="bd-tag">through-path |S<sub>21</sub>| with an open stub, dB</span></div>
   <div class="bd-read" aria-live="polite"><span>notch f = c/(4L√ε) <b data-o="fn">–</b></span><span>notch / f<sub>b</sub> <b data-o="rat">–</b></span><span>|S<sub>21</sub>| at f<sub>N</sub> <b data-o="sn">–</b></span><span>stub limit for notch ≥ 1.5 f<sub>b</sub> <b data-o="lmax">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Read the default.</b> A 6 mm stub (ε<sub>eff</sub> 4) notches at 6.2 GHz, 1.25 f<sub>b</sub> at 5 Gb/s. It costs only 0.65 dB at f<sub>N</sub>, but the stub limit for a notch above 1.5 f<sub>b</sub> is 5.0 mm.</li>
+    <li><b>Go to 10 Gb/s.</b> The same stub now notches at 0.62 f<sub>b</sub>, close to f<sub>N</sub>: −5.62 dB at Nyquist, and the limit halves to 2.5 mm.</li>
+    <li><b>Go to 25 Gb/s.</b> The limit is 1.0 mm. Even a 2 mm stub puts the notch at 18.7 GHz, 0.75 f<sub>b</sub>, and costs 2.58 dB at f<sub>N</sub>: fast boards back-drill their vias.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>A via stub notches at f = c/(4L√ε<sub>eff</sub>). What halves the notch frequency?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-why="The notch is set by the geometry alone; a higher bit rate only moves fN closer to it.">Doubling the bit rate</button>
+      <button type="button" data-why="A lower εeff raises the notch, by √2 for half the permittivity.">Halving ε<sub>eff</sub></button>
+      <button type="button" data-correct data-why="The stub resonates when it is a quarter wavelength long, so the notch frequency halves when L doubles.">Doubling the stub length</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

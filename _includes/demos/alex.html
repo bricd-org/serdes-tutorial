@@ -8,6 +8,19 @@
   <div class="bd-scope"><canvas data-c="w" aria-hidden="true"></canvas><span class="bd-tag">data around one bit boundary; S1 previous bit, S2 edge, S3 current bit</span></div>
   <div class="bd-read" aria-live="polite"><span>S1, S2, S3 <b data-o="s">–</b></span><span>decision <b data-o="d">–</b></span><span>votes over 1000 edges: late / early <b data-o="v">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Clock early.</b> On a 0 → 1 transition with the clock 0.12 UI early, the samples read 0, 0, 1: the edge sample matches the first bit, so <i>clock early → move later</i>, 1000 votes out of 1000.</li>
+    <li><b>Clock late.</b> Set +0.12 UI: 0, 1, 1, so <i>move earlier</i>. Click <i>no transition</i> and all three samples agree: the detector abstains.</li>
+    <li><b>Add jitter.</b> At −0.02 UI with 0.1 UI of edge jitter the votes split 423 / 577, yet the majority still points the right way. That is all a bang-bang loop needs.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>Without a data transition, why does the Alexander detector abstain?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-why="It abstains whenever there is no transition, locked or not.">Because the CDR is locked</button>
+      <button type="button" data-correct data-why="Timing information exists only at transitions; on a run of equal bits early and late look the same.">All three samples are equal, so the edge sample carries no timing information</button>
+      <button type="button" data-why="It still samples; it simply has nothing to compare the edge sample with.">To save power during runs</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

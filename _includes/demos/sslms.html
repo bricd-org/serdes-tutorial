@@ -9,6 +9,19 @@
   <div class="bd-read" aria-live="polite"><span>UI <b data-o="ui">0</b></span><span>d<sub>lev</sub> <b data-o="d">–</b></span><span>w<sub>1</sub> <b data-o="w1">–</b></span><span>w<sub>2</sub> <b data-o="w2">–</b></span><span>w<sub>1</sub> within 2 mV after <b data-o="t1">–</b></span><span>decision errors <b data-o="er">0</b></span></div>
   <div class="bd-controls"><button type="button" class="bd-toggle" data-t="run" aria-pressed="false">run</button><button type="button" class="bd-btn" data-b="all">jump to 6000 UI</button><button type="button" class="bd-btn" data-b="reset">reset</button></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Let it converge.</b> Click <i>jump to 6000 UI</i>: d<sub>lev</sub> 90.5 mV, w<sub>1</sub> 26.5 mV, w<sub>2</sub> 11.5 mV, close to the zero-forcing 91.6 / 27.6 / 11.8. w<sub>1</sub> was within 2 mV after 277 UI, with no decision errors.</li>
+    <li><b>Take bigger steps.</b> Reset, set μ to 1 mV and jump again: w<sub>1</sub> settles in only 46 UI, but the taps dither further from the answer (w<sub>2</sub> 10.0 mV).</li>
+    <li><b>Leave a pre-cursor.</b> Reset, add 30 mV of uncancelled pre-cursor and jump: w<sub>1</sub> needs 527 UI, d<sub>lev</sub> drifts to 97.5 mV and 2 decision errors appear.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>Sign-sign LMS moves each tap by ±μ using only signs. What does that simplicity cost?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-correct data-why="The steps are a fixed size, so the tap error never shrinks below about μ: 277 UI at 0.25 mV, 46 UI at 1 mV with more dither.">Speed and precision: a small μ converges slowly, a large μ converges fast but dithers around the answer</button>
+      <button type="button" data-why="It does converge, to within a few μ of the zero-forcing taps.">It never converges</button>
+      <button type="button" data-why="It learns from the error and data signs alone; no channel model is needed.">It needs the channel's pulse response in advance</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

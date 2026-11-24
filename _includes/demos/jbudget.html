@@ -12,6 +12,19 @@
   <div class="bd-scope short"><canvas data-c="b" aria-hidden="true"></canvas><span class="bd-tag">one 200 ps UI: DJ stacked linearly (gold), 2Q·σ<sub>RJ</sub> (blue), eye left (green)</span></div>
   <div class="bd-read" aria-live="polite"><span>DJ <b data-o="dj">–</b></span><span>σ<sub>RJ</sub> (RSS) <b data-o="rj">–</b></span><span>TJ = DJ + 14.07σ <b data-o="tj">–</b></span><span>eye at 10<sup>−12</sup> <b data-o="eye">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Read Table 11.1.</b> DJ 8 + 6 + 6 + 20 = 40 ps and RJ 1.32 ps (RSS): TJ = 58.6 ps = 0.293 UI, an eye of 141.4 ps.</li>
+    <li><b>Halve the CDR term.</b> Cut the PI step and dither from 20 to 10 ps: TJ 48.6 ps and the eye grows to 151.4 ps.</li>
+    <li><b>Double one RJ term.</b> Raise the TX clock RJ from 1 to 2 ps rms: the RSS grows to 2.18 ps and TJ to 70.6 ps. That one extra picosecond of RJ costs 12 ps of eye.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>Why are the DJ terms added directly but the RJ terms combined as a root sum of squares?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-correct data-why="Bounded peak values add; for independent random sources the variances add, so their σ combine as √(Σσ²).">DJ terms are bounded and can all reach their worst at once; independent Gaussian sources add in variance</button>
+      <button type="button" data-why="Size is not the reason; the rule follows from how each kind of jitter is distributed.">Because RJ is smaller</button>
+      <button type="button" data-why="It is the correct statistics: summing RJ linearly would overestimate it.">It is only a convention that makes the budget look better</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

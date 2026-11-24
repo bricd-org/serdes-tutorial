@@ -10,6 +10,19 @@
   </div>
   <div class="bd-read" aria-live="polite"><span>p<sub>0</sub> <b data-o="p0">–</b></span><span>Σ|p<sub>k</sub>|, k = −2…N <b data-o="isi">–</b></span><span>PDA eye <b data-o="eh">–</b></span><span>full tail (300 UI) <b data-o="ef">–</b></span><span>hidden by truncation <b data-o="hid">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Read REF.</b> With 10 post-cursors counted, p<sub>0</sub> = 0.340 V faces Σ|p<sub>k</sub>| = 0.501 V: the PDA eye is −161 mV. The full 300-UI tail closes it to −255 mV, so truncation hides 94 mV.</li>
+    <li><b>Change how much tail you count.</b> Count only 3 post-cursors: the eye looks like −35 mV and 220 mV is hidden. Count 100: −249 mV, with 6 mV hidden. A truncated tail flatters the eye.</li>
+    <li><b>Add the 2-tap TX FFE.</b> p<sub>0</sub> drops to 0.209 V but the ISI falls to 0.059 V: the eye opens to 150 mV (125 mV with the full tail).</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>How does peak distortion analysis find the worst-case eye?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-why="That would give a typical eye; PDA looks for the single worst pattern, where every cursor pulls the wrong way.">It averages the eye over many random patterns</button>
+      <button type="button" data-correct data-why="In the worst pattern every cursor pulls against the bit, so the eye is 2A(p0 − Σ|pk|).">It subtracts the sum of the magnitudes of all the other cursors from p<sub>0</sub></button>
+      <button type="button" data-why="That is the statistical eye; PDA ignores probability and assumes the worst pattern occurs.">It reads the eye height at a BER of 10<sup>−12</sup></button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

@@ -12,6 +12,19 @@
   </div>
   <div class="bd-read" aria-live="polite"><span>at f<sub>N</sub>: conductor <b data-o="c">–</b></span><span>dielectric <b data-o="d">–</b></span><span>total <b data-o="t">–</b></span><span>|S<sub>21</sub>(f<sub>N</sub>)| <b data-o="s">–</b></span><span>length for 10 dB <b data-o="l10">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Read REF.</b> At f<sub>N</sub> the conductor loses 0.208 dB/in and the dielectric 0.230 dB/in, 0.438 dB/in in all: −17.4 dB for 1 m, and 10 dB after 58 cm.</li>
+    <li><b>Smooth the copper.</b> Click <i>smooth 5-mil stripline</i> (k<sub>R</sub> 29): the conductor part halves to 0.101 dB/in, the total is 0.332 dB/in and 1 m loses 13.2 dB.</li>
+    <li><b>Change the laminate.</b> Click <i>low-loss laminate</i> (tan δ 0.0045): the dielectric part falls to 0.052 dB/in, the total to 0.153 dB/in, and 10 dB now takes 1.66 m.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>To lower the loss of a board at 10 GHz, which change helps most?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-why="On REF the conductor part is already under half the total at 2.5 GHz, and its share falls as frequency rises.">Smoother copper, because conductor loss always dominates</button>
+      <button type="button" data-correct data-why="The two are about equal on REF at 2.5 GHz (0.230 and 0.208 dB/in); at 10 GHz the dielectric part is twice the conductor part.">A lower-loss laminate, because dielectric loss grows as f and conductor loss only as √f</button>
+      <button type="button" data-why="The edges do not change the line: loss is a property of the copper and the laminate.">Faster driver edges</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

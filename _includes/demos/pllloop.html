@@ -14,6 +14,19 @@
   <div class="bd-scope short"><canvas data-c="s" aria-hidden="true"></canvas><span class="bd-tag">output phase after a reference phase step</span></div>
   <div class="bd-read" aria-live="polite"><span>f<sub>u</sub> <b data-o="fu">–</b></span><span>phase margin <b data-o="pm">–</b></span><span>f<sub>−3dB</sub> <b data-o="bw">–</b></span><span>peaking <b data-o="pk">–</b></span><span>f<sub>n</sub>, ζ (Eq 12.1) <b data-o="fz">–</b></span><span>overshoot <b data-o="os">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Read Example 12.1.</b> I<sub>CP</sub> 200 µA, R 11.3 kΩ, C<sub>1</sub> 52.6 pF, C<sub>2</sub> 4.07 pF: f<sub>u</sub> = 1.00 MHz with 60.0° of margin, f<sub>−3dB</sub> 1.56 MHz, 1.7 dB of peaking, 19 % overshoot.</li>
+    <li><b>Load Example 12.2.</b> Three times the current and a third of the capacitance: f<sub>u</sub> = 3.00 MHz, still 60°, f<sub>−3dB</sub> 4.69 MHz.</li>
+    <li><b>Spoil the margin.</b> In Example 12.1 drag C<sub>2</sub> up to about 14 pF: 39° of margin, 3.8 dB of peaking, 40 % overshoot. Or drag R down to about 4 kΩ: 34°, 5.8 dB, 44 %.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>What sets the phase margin of this type-II charge-pump loop?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-why="ICP moves fu; the margin depends on where fu sits between the zero and the high pole.">Only the charge-pump current</button>
+      <button type="button" data-correct data-why="Pulling C2 up brings the pole down towards fu, and shrinking R moves the zero up: both cut the margin.">Where f<sub>u</sub> sits between the zero (R, C<sub>1</sub>) and the high pole (R, C<sub>2</sub>): the margin peaks at their geometric mean</button>
+      <button type="button" data-why="The VCO gain enters the loop gain, but the margin is set by the zero and pole around fu.">The VCO frequency</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {
