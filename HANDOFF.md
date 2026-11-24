@@ -33,18 +33,23 @@ This file is excluded from the Jekyll site (`_config.yml` → `exclude`).
   `git worktree prune`). git here is 2.15: no `git worktree remove`, no `git merge -F` (use `-m`), no
   `git branch --show-current`.
 
-## Book and site: open items outside the demos (written 19 Nov 2026)
+## Book and site: open items outside the demos (updated 24 Nov 2026)
 
-1. **Section 14.5.3's supply resonance** (on the site since the Docker rebuild of 24 Nov). Commit `1bc337a` added
-   the "Supply and ground pins" paragraph and Worked Example 14.3 (`we:ch14-pdn`) to `14_arch.tex`; energy per bit
-   is now Worked Example 14.4. The book compiles cleanly, but `chapters/14-the-open-serdes-architecture.html` and
-   `assets/pdf/Open-SERDES_Tutorial.pdf` show the old section until `build_site.py` runs. The numbers are first
-   estimates: two 2.5 nH DVDD wires in parallel plus 0.15 nH of paddle down-bonds give L_loop ≈ 1.4 nH; with the
-   210 pF of Ex 15.2, f_res = 294 MHz against the 312.5 MHz clock; √(L/C) = 2.6 Ω; R_loop 0.25–0.5 Ω (a 25 µm gold
-   wire 2.5 mm long is ≈ 0.21 Ω at 300 MHz) gives Q 5–10, a 13–26 Ω peak and 11–16 Ω at 312.5 MHz, so 2 mA at the
-   clock makes 20–30 mV. A second 210 pF behind 2.6 Ω brings the peak to ≈ 5 Ω (≈ 3 Ω at 312.5 MHz); four DVDD
-   wires move f_res to ≈ 390 MHz. A supply-resonance demo next to `padbond` would be a natural addition.
-2. **Proposed corrections to Section 14.5.3, not made (waiting for the user).** A package study (the REF `channel()`
+Done since 19 Nov, for context (nothing to do):
+- Section 14.5.3's supply resonance ("Supply and ground pins" and Worked Example 14.3, `we:ch14-pdn`; energy per bit
+  is now Worked Example 14.4) is on the site and in the PDF since the Docker rebuild (`9d8bfec`).
+- Chapter 1 has Figure 1.4, per-lane rate against reach for real standards with lines of constant rate × reach, and
+  Figure 1.5, a backplane link with the job it must do (`figsrc/ch01_figs.py`, reaches and sources in its comments and
+  in the caption). They follow Figures 1 and 2 of the Open-SerDes proposal PDF the user shared; its
+  Figure 3, a SerDes block diagram, is already Figures 1.2 and 1.3. The specnote box is now unbreakable.
+- `tools/split_labs.py` passed its first real rebuild (24 Nov) after a fix for pandoc 3.6, which drops the table-row
+  classes; it now asserts that all seven Table 16.1 rows got a title.
+- On thebricd.org (repo `~/BRICD/bricd-org.github.io`, commits straight to `main`) the Open-SERDES card, Project 03,
+  links "Read the design tutorial" to this site (`8400c2f`), like Project 01 does for Open-BioAFE.
+
+Still open:
+
+1. **Proposed corrections to Section 14.5.3, not made (waiting for the user).** A package study (the REF `channel()`
    with a die pad C, a bond-wire L and 0.25 pF of lead and board land at each end; best PDA eye over the book's
    3-tap FFE, 0–12 dB CTLE and 2-tap DFE ranges, 120 cursors) found:
    - In a 7 × 7 mm QFN-48 the lead tips are ≈ 3.1 mm from the centre and a 2 × 2 mm die's pads ≈ 0.95 mm, so the
@@ -64,16 +69,19 @@ This file is excluded from the Jekyll site (`_config.yml` → `exclude`).
      design its traces to REF's loss.
    The study script lived in a session scratchpad and is gone; it is ≈ 150 lines (common.py's `channel()` written as
    numpy ABCD matrices, the package sections and a grid search) and quick to rebuild.
-3. **`thebricd.org` without www does not resolve** (no DNS record; `www.thebricd.org` → `bricd-org.github.io`
+2. **`thebricd.org` without www does not resolve** (no DNS record; `www.thebricd.org` → `bricd-org.github.io`
    works). The PDF cover and page footers print "thebricd.org", and the Open-BioAFE flyer's footer address uses it.
    The fix is at the domain registrar (GitHub Pages' apex A records or a redirect to www), not in this repo.
-4. **`tools/split_labs.py` passed its first real rebuild** (24 Nov, pandoc 3.6). It needed one fix: pandoc 3.6 drops
-   the row classes its Table 16.1 pattern looked for; it now accepts both and asserts that all seven rows got a title.
-   After every rebuild, crawl the site for broken links and anchors (≈ 40-line urllib crawler: 40 pages, 4582 links
-   and image references on 24 Nov, none broken).
-5. **Outside this repo:** a LinkedIn flyer and caption about the REF pulse response ("What does a metre of PCB do to
-   one bit?") are in `~/BRICD/LinkedIn/OpenSERDES_smear_flyer*`, with `make_flyer.py`, which recomputes REF and
-   stops unless it matches the book. Not posted; posting is the user's.
+3. **PLL chip area: use 0.347 mm².** The user confirmed it (24 Nov); Chapter 14 (`smacd2026pll`), thebricd.org and
+   the PLL flyer use it. Other numbers exist: the arXiv text and Table I of the SMACD 2026 paper (2607.08852) say
+   930 × 666 µm ≈ 0.619 mm²; the project README quotes 660 × 526.5 µm ≈ 0.347 mm² as the paper's floorplan and
+   measures its current GDS, "a different floorplan", at 907 × 670 µm ≈ 0.608 mm².
+4. **After every LaTeX change:** compile the book, run the Docker build and crawl the site for broken links and
+   anchors (see "How the site is built"; on 24 Nov: 40 pages, 4582 links, none broken).
+5. **Outside this repo** (not posted; posting is the user's): LinkedIn flyers and captions in `~/BRICD/LinkedIn`:
+   `OpenSERDES_smear_flyer*` (the REF pulse response; `make_flyer.py` recomputes REF and stops unless it matches the
+   book) and `BRICD_PLL_2G4_flyer*` (thebricd.org Project 05, the 2.4 GHz PLL; `flyer.html` + `render.sh`, facts from
+   arXiv 2607.08852, the project README and the team's LinkedIn post).
 
 ## Interactive demos (started 15 Nov 2026)
 
@@ -392,14 +400,17 @@ noise, jitter) → stat eye and margin, the whole book on one panel. todo
   placements), every number read off the demo with a console probe. Checked on every chapter page: one correct answer
   each, right/wrong feedback works, no JS errors, no overflow at 375 px. Fixed on the way: `eyefold` showed
   "1000000000392 mV" with one window (no 0 and 1 seen yet), now "– (needs a 0 and a 1)".
+- 24 Nov (same session): Chapter 1 Figures 1.4 and 1.5, and the first full site rebuild in Docker (pandoc 3.6), merged
+  and pushed (`9d8bfec`); the demo tries and check questions merged and pushed (`baa165f`). Both deploys checked live.
 
 ### Next steps (written 18 Nov 2026, when the user said to stop here)
 
-**State** (updated 19 Nov). 63 demo placements (58 distinct demos; `fo4rule`, `clockplan`, `padbond`, `margin`, `pllnoise`
-appear in two chapters) on every chapter 1–15, plus `labmap` on the Lab 0 page (`/labs/lab-0/`). All merged into `main`
-and pushed (main = `21618e6` plus this HANDOFF commit). `/demos/` index page generated by `tools/insert_demos.py`
-(`demos.md`, now with the site layout); shared assets load once per page; all 63 panels have been checked at 375 px.
-Branch `interactive-demos` on GitHub is at `b29ffb2`, behind `main`: merge `main` into it before the next demo commit.
+**State** (updated 24 Nov). 63 demo placements (58 distinct demos; `fo4rule`, `clockplan`, `padbond`, `margin`, `pllnoise`
+appear in two chapters) on every chapter 1–15, plus `labmap` on the Lab 0 page (`/labs/lab-0/`). Every demo ends with
+three things to try and a check-yourself question. All merged into `main` and pushed (main = `baa165f` plus this HANDOFF
+commit). `/demos/` is generated by `tools/insert_demos.py` (`demos.md`, with the site layout). Branch
+`interactive-demos` (GitHub `b29ffb2`; the main checkout's local copy is at `5989ccb`) is behind `main`: merge `main`
+into it, or branch from `main`, before the next demo commit.
 
 **Remaining demos (13 after `lumped`, done 18 Nov), cheapest first; the book values each must reproduce are in the proposal list above:**
 2. `calc` (Appendix A): UI/f_N, Q↔BER, dB↔ratio, skin depth, energy per bit.
@@ -443,8 +454,8 @@ Branch `interactive-demos` on GitHub is at `b29ffb2`, behind `main`: merge `main
 - Start heavy demos only when they scroll into view (IntersectionObserver in `BD.observe`, or a lazy wrapper):
   `ctleref`, `dfe`, `pam4`, `isipdf` compute dozens of eye scans or channels at load.
 - Version string v0.1 (October 2026) in README.md and index.md → v0.2 (user's decision; not done).
-- PDF: an "interactive version online" note under the figures that have demos. LaTeX change; needs the book rebuilt
-  with `tools/build_site.py` (pandoc is not installed on the maintainer's Mac).
+- PDF: an "interactive version online" note under the figures that have demos. LaTeX change; rebuild the site and
+  the PDF with the Docker command in "How the site is built".
 - The site build prints 91 Sass deprecation warnings from the theme; harmless, could be silenced (quiet_deps).
 - Not checked: light mode (panels use fixed navy colours, low risk) and a visual look at the drawings of the newest
   demos (their numbers and 375 px layout are checked).
