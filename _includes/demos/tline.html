@@ -8,6 +8,19 @@
   <div class="bd-scope short"><canvas data-c="t" aria-hidden="true"></canvas><span class="bd-tag">trace length against the t<sub>r</sub>v/6 limit (log scale)</span></div>
   <div class="bd-read" aria-live="polite"><span>v <b data-o="v">–</b></span><span>delay <b data-o="d">–</b></span><span>limit t<sub>r</sub>v/6 <b data-o="lim">–</b></span><span>L, C per metre <b data-o="lc">–</b></span><span>this trace <b data-o="vd">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Read the default.</b> 10 mm of FR-4 (ε<sub>r</sub> 4) and a 50 ps edge: v = 1.5×10<sup>8</sup> m/s, 6.67 ps/mm. Anything longer than t<sub>r</sub>v/6 = 1.25 mm is a transmission line, and this trace is one (Worked Example 3.1).</li>
+    <li><b>Slow the edge.</b> Set the rise time to 500 ps: the limit grows to 12.5 mm and the same 10 mm trace becomes lumped. The edge, not the bit rate, decides.</li>
+    <li><b>Go on-chip.</b> Set 1 mm: with a 50 ps edge it is lumped. Sharpen the edge to 20 ps and even 1 mm is a line (limit 0.50 mm). A 50 Ω line has 334 nH and 133 pF per metre.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>A driver has 30 ps edges. On FR-4 (ε<sub>r</sub> = 4), above roughly what length is a trace a transmission line?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-why="λ/10 at 2.5 GHz is 6 mm, but a 30 ps edge holds energy far above Nyquist; the edge rule gives 0.75 mm.">About 6 mm, a tenth of the wavelength at the Nyquist frequency</button>
+      <button type="button" data-why="tr·v = 4.5 mm is the length of the rising edge on the line; reflections stay hidden only below about a sixth of it.">About 4.5 mm, the distance the edge travels during its rise time</button>
+      <button type="button" data-correct data-why="v = c/√4 = 0.15 mm/ps, so tr·v/6 = 30 × 0.15 / 6 = 0.75 mm. On a board almost every trace is a line.">About 0.75 mm, from t<sub>r</sub>v/6</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

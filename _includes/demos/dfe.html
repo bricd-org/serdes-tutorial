@@ -12,6 +12,19 @@
   <div class="bd-scope short"><canvas data-c="h" aria-hidden="true"></canvas><span class="bd-tag">eye height against the number of DFE taps</span></div>
   <div class="bd-read" aria-live="polite"><span>data level A·p<sub>0</sub> <b data-o="d">–</b></span><span>taps w<sub>1</sub>, w<sub>2</sub> <b data-o="w">–</b></span><span>eye without DFE <b data-o="e0">–</b></span><span>eye with DFE <b data-o="e1">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Add taps one at a time.</b> After an 8 dB CTLE: no DFE 60 mV, 1 tap 108 mV, 2 taps (the chip) 129 mV, 5 taps 152 mV. The first tap is worth more than the next four together.</li>
+    <li><b>Lean on the CTLE.</b> With 2 taps, raise the CTLE to 12 dB: the taps shrink to 13.1 and 2.2 mV and the eye goes from 104 to 125 mV. Little is left for the DFE.</li>
+    <li><b>Lean on the DFE.</b> With no CTLE (0 dB) the taps must grow to 98 and 48 mV against a 166 mV data level. Big taps make a wrong decision expensive: it adds the ISI instead of removing it.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>Why does a DFE not amplify noise the way a CTLE does?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-why="Size is not the reason; even large taps add no noise.">Its taps are too small to matter</button>
+      <button type="button" data-correct data-why="The feedback comes from decisions, which are noiseless (when correct), so no noise passes through the taps.">It subtracts a clean ±w value chosen by the decided bit, not a filtered copy of the noisy signal</button>
+      <button type="button" data-why="Only linear equalizers amplify noise; a DFE feeds back decisions.">It does amplify noise, by the sum of its taps</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

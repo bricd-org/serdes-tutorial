@@ -9,6 +9,19 @@
   <div class="bd-scope tall"><canvas data-c="p" aria-hidden="true"></canvas><span class="bd-tag">pulse and cursors (×A): pre-cursor red, first post-cursors blue, tail teal; DFE-cancelled cursors hollow</span></div>
   <div class="bd-read" aria-live="polite"><span>main A·p<sub>0</sub> <b data-o="m">–</b></span><span>pre A·|p<sub>−1</sub>| <b data-o="pre">–</b></span><span>first posts A(|p<sub>1</sub>|+|p<sub>2</sub>|) <b data-o="post">–</b></span><span>tail A·Σ|p<sub>k≥3</sub>| <b data-o="tail">–</b></span><span>PDA eye <b data-o="eh">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Start with nothing on.</b> The main cursor gives 170 mV against 24 mV of pre-cursor, 136 mV in the first two post-cursors and 130 mV in the tail: the PDA eye is −242 mV.</li>
+    <li><b>Add the DFE, then the CTLE.</b> The 2-tap DFE removes the first posts and the eye opens to +31 mV. CTLE 8 dB then cuts the tail from 130 to 45 mV (the main cursor drops to 92 mV): 78 mV.</li>
+    <li><b>Add the TX taps.</b> The pre-tap takes the pre-cursor to 2 mV: 83 mV. Add the post-tap too and the eye falls to 80 mV: the DFE already owns those cursors, so the post-tap only spends swing.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>Why can a DFE not remove the pre-cursor?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-why="Tap size is not the limit; a DFE simply has no decision to work from yet.">Its taps are too small</button>
+      <button type="button" data-correct data-why="The pre-cursor belongs to the next bit; only a TX pre-tap or a CTLE can act on it.">It subtracts ISI using bits already decided, and a pre-cursor comes from a bit that has not been decided yet</button>
+      <button type="button" data-why="Pre-cursors are deterministic ISI from the next bit, as predictable as post-cursors.">Pre-cursors are random noise</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

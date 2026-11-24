@@ -16,6 +16,19 @@
   <div class="bd-read" aria-live="polite"><span>period 2<sup>n</sup> − 1 <b data-o="per">–</b></span><span>bits sent <b data-o="cnt">–</b></span><span>ones / zeros <b data-o="oz">–</b></span><span>longest run <b data-o="lr">–</b></span></div>
   <div class="bd-controls"><button type="button" class="bd-btn" data-b="step">step 1 bit</button><button type="button" class="bd-btn" data-b="per">run one period</button><button type="button" class="bd-toggle" data-t="run" aria-pressed="false">run</button><button type="button" class="bd-btn" data-b="reset">reset</button></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Run one PRBS7 period.</b> Click <i>run one period</i>: 127 bits, 64 ones and 63 zeros, and a longest run of 7. Every 7-bit pattern except all zeros appears exactly once.</li>
+    <li><b>Try PRBS9.</b> Click PRBS9, then <i>reset</i> and <i>run one period</i>: 511 bits, 256 / 255 and a longest run of 9. Each extra stage doubles the period and lengthens the worst run by one.</li>
+    <li><b>Look at PRBS31.</b> Its period is 2,147,483,647 bits, about 0.43 s at 5 Gb/s, with runs of 31: a hard test for the CDR. That is why the test chip carries both PRBS7 and PRBS31.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>Why does a PRBS7 pattern never contain eight 1s in a row?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-why="A PRBS is balanced only on average (64 ones, 63 zeros) and does contain runs of seven.">The generator alternates bits to keep the line DC-balanced</button>
+      <button type="button" data-why="That would be bit stuffing; an LFSR needs none, because its structure already limits the run.">The transmitter inserts a 0 after seven 1s</button>
+      <button type="button" data-correct data-why="The register holds the last seven bits; a run of eight would repeat the all-ones state, which a maximal LFSR never does.">Each 7-bit state appears only once per period, and eight 1s in a row would need the all-ones state twice running</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

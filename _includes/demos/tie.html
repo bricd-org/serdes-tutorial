@@ -5,6 +5,19 @@
   <div class="bd-read" aria-live="polite"><span>TIE pp <b data-o="pp">–</b></span><span>TIE rms <b data-o="ti">–</b></span><span>period jitter rms <b data-o="pj">–</b></span><span>cycle-to-cycle rms <b data-o="cc">–</b></span></div>
   <div class="bd-controls"><button type="button" class="bd-btn" data-b="new">new random clock</button></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Read Worked Example 11.1.</b> Six edges: TIE 2.00 ps pp and 0.69 ps rms, period jitter 1.42 ps rms, cycle-to-cycle 3.00 ps rms. Three numbers from the same edges, each answering a different question.</li>
+    <li><b>Lock the clock.</b> Click <i>locked clock</i>: the TIE stays bounded, because the PLL keeps pulling every edge back towards the ideal grid.</li>
+    <li><b>Let it run free.</b> Click <i>free-running</i> and <i>new random clock</i> a few times: the TIE usually wanders further than for the locked clock, although its period jitter is only about half as large. Small period errors add up.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>A free-running oscillator has small period jitter, yet its TIE keeps growing. Why?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-correct data-why="Each period is only slightly off, but nothing pulls the edges back, so the time error integrates; a PLL bounds it.">The TIE is the running sum of the period errors, so independent errors accumulate like a random walk</button>
+      <button type="button" data-why="All three numbers come from the same edges; the TIE accumulates by definition.">The TIE is measured with a worse instrument</button>
+      <button type="button" data-why="Not here: for a free-running clock the accumulated TIE outgrows the period jitter.">Period jitter is always the larger number</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

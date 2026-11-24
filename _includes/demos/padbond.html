@@ -8,6 +8,19 @@
   <div class="bd-scope tall"><canvas data-c="r" aria-hidden="true"></canvas><span class="bd-tag">return loss, dB (higher is better): wire alone (gold), pad alone (teal), wire + pad (blue)</span></div>
   <div class="bd-read" aria-live="polite"><span>at f<sub>N</sub>: wire <b data-o="l">–</b></span><span>pad <b data-o="c">–</b></span><span>both <b data-o="b">–</b></span><span>10 dB limits: wire ≤ <b data-o="lm">–</b></span><span>pad ≤ <b data-o="cm">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Read the default.</b> At 5 Gb/s a 1 mm wire alone gives 16.2 dB of return loss at f<sub>N</sub> and the 0.63 pF pad alone 12.4 dB, but both together 18.5 dB: the wire partly tunes out the pad. The 10 dB limits are 2.12 mm and 0.85 pF.</li>
+    <li><b>Lengthen the wire.</b> At 2.5 mm the wire alone gives 8.7 dB, below the 10 dB goal (Worked Example 14.2), yet with the pad the pair still reaches 12.5 dB. At 1.00 pF, √(L/C) = 50 Ω, the artificial line of Chapter 3 (10.6 dB).</li>
+    <li><b>Go to 10 Gb/s.</b> Click 10 Gb/s: at 5 GHz the 1 mm wire gives 10.5 dB and the pad only 7.1 dB. The limits halve to 1.06 mm and 0.42 pF, which is why the 10 Gb/s target needs a T-coil.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>At 5 Gb/s, about how much pad capacitance can a 50 Ω termination carry and still meet 10 dB of return loss?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-why="That is the 10 Gb/s limit, where fN doubles to 5 GHz.">About 0.42 pF</button>
+      <button type="button" data-correct data-why="10 dB of return loss at 2.5 GHz allows ωZ0C = 0.667, so C ≤ 0.85 pF, as the readout shows.">About 0.85 pF</button>
+      <button type="button" data-why="The pad capacitance sits across the termination and shorts it out at high frequency, so the match degrades.">Any amount, because the termination absorbs the wave</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

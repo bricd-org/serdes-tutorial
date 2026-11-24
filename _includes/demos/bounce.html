@@ -12,6 +12,19 @@
   </div>
   <div class="bd-read" aria-live="polite"><span>Γ<sub>S</sub> <b data-o="gs">–</b></span><span>Γ<sub>L</sub> <b data-o="gl">–</b></span><span>launched <b data-o="v1">–</b></span><span>first step at load <b data-o="vl1">–</b></span><span>final <b data-o="vf">–</b></span><span>within 1 % after <b data-o="ts">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Run the book example.</b> R<sub>S</sub> 25 Ω, Z<sub>0</sub> 50 Ω, R<sub>L</sub> 100 Ω: Γ<sub>S</sub> −0.333 and Γ<sub>L</sub> +0.333. The line launches 0.667 V, the load first jumps to 0.889 V and settles at 0.800 V within 5 t<sub>d</sub>.</li>
+    <li><b>Match both ends.</b> Click <i>matched</i>: both Γ are 0, the load sees 0.500 V on the first arrival and nothing else ever comes back.</li>
+    <li><b>Mismatch both ends.</b> Click <i>low Z both ends</i> (10 Ω, 50 Ω, 10 Ω): 0.833 V is launched but the first step at the load is only 0.278 V, and the ringing takes 11 t<sub>d</sub> to settle at 0.500 V.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>Serial links terminate both ends of the line, although that halves the received swing. Why?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-why="Double termination halves it (0.5 V from a 1 V source); it is chosen to absorb echoes, not for amplitude.">Because it doubles the voltage at the receiver</button>
+      <button type="button" data-correct data-why="With RS = Z0, ΓS = 0: a reflection from the load is absorbed on its first return, so it cannot reach the receiver again later.">So that whatever an imperfect receiver reflects dies at the source instead of returning as an echo</button>
+      <button type="button" data-why="A source resistor does not speed up edges; its job is to absorb the waves that return from the line.">Because a source resistor makes the edges faster</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

@@ -8,6 +8,19 @@
   <div class="bd-scope tall"><canvas data-c="p" aria-hidden="true"></canvas><span class="bd-tag">distribution of the received sample for a "1", log scale</span></div>
   <div class="bd-read" aria-live="polite"><span>patterns <b data-o="pat">–</b></span><span>"1"s below the threshold <b data-o="below">–</b></span><span>level at 10<sup>−12</sup> <b data-o="q12">–</b></span><span>PDA worst case <b data-o="pda">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Read REF without EQ.</b> 6.1 % of the transmitted 1s land below the threshold. The 10<sup>−12</sup> level is −120 mV, a little above the PDA worst case of −126 mV.</li>
+    <li><b>Convolve fewer cursors.</b> Set noise to 0 and keep 7 cursors (p<sub>−2</sub>…p<sub>4</sub>): 64 patterns, 4.5 % below threshold, worst case −35 mV. Each cursor you add splits every spike in two.</li>
+    <li><b>Add the 2-tap FFE.</b> The 1s below threshold drop under 1e−15, and the 10<sup>−12</sup> level is +60 mV, close to the PDA worst case of 63 mV.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>Without EQ, why is the 10<sup>−12</sup> level (−120 mV) a little better than the PDA worst case (−126 mV)?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-why="Noise spreads the levels both ways; at 10^−12 it lowers the level, not raises it.">The noise raises the level</button>
+      <button type="button" data-why="It convolves all 153 cursors, the same tail the PDA uses.">The statistical method ignores the tail</button>
+      <button type="button" data-correct data-why="The worst case is real but vanishingly rare; at a finite BER the level that matters sits a little above it.">The PDA pattern needs all 153 cursors to line up at their worst, which happens far less often than once in 10<sup>12</sup> bits</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

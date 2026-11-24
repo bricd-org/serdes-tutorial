@@ -8,6 +8,19 @@
   <div class="bd-scope short"><canvas data-c="b" aria-hidden="true"></canvas><span class="bd-tag">I<sub>T</sub> = 20 mA from 32 cells of 0.625 mA, split between the three tap pairs</span></div>
   <div class="bd-read" aria-live="polite"><span>I<sub>−1</sub>, I<sub>0</sub>, I<sub>1</sub> <b data-o="i">–</b></span><span>cells <b data-o="n">–</b></span><span>transition swing <b data-o="tr">–</b></span><span>repeated-bit swing <b data-o="rp">–</b></span><span>supply <b data-o="p">50 mW</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Read −6 dB.</b> 24 + 8 cells of 0.625 mA: I<sub>0</sub> 15 mA, I<sub>1</sub> 5 mA. Transitions swing 1.00 V<sub>ppd</sub>, repeated bits 0.50 V<sub>ppd</sub>, and the supply stays 50 mW (Worked Example 9.4).</li>
+    <li><b>Try other presets.</b> −9.5 dB: 21 / 11 cells and repeated bits at 0.31 V<sub>ppd</sub>. 0 dB: all 32 cells in the main tap and 1.00 V<sub>ppd</sub> for every bit.</li>
+    <li><b>Add a pre-tap.</b> At −6 dB set c<sub>−1</sub> = −0.10: 3 cells move to the pre-tap (1.88 mA) and the main tap drops to 21. The total is still 20 mA and 50 mW.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>Why does de-emphasis not change the CML driver's supply power?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-why="All 32 cells stay on; they only switch which output they pull.">The post-tap cells are switched off during transitions</button>
+      <button type="button" data-correct data-why="A CML FFE splits a constant current among the taps; de-emphasis changes where it flows, not how much flows.">The tap cells only steer the same 20 mA tail between the two outputs, so the total current never changes</button>
+      <button type="button" data-why="The readout stays at 50 mW for every preset.">It does: −6 dB halves the power</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

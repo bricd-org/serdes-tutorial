@@ -10,6 +10,19 @@
   <div class="bd-scope"><canvas data-c="n" aria-hidden="true"></canvas><span class="bd-tag">test time against the BER claimed, for 0–3 errors seen</span></div>
   <div class="bd-read" aria-live="polite"><span>bits needed <b data-o="n">–</b></span><span>× 1/BER <b data-o="x">–</b></span><span>test time <b data-o="t">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Claim 10<sup>−12</sup>.</b> At 95 % confidence with no errors you need 3.00×10<sup>12</sup> bits, 9.99 min at 5 Gb/s: the 3/BER rule.</li>
+    <li><b>Ask for more.</b> 99 % confidence needs 4.61×10<sup>12</sup> bits (15.4 min). Seeing 2 errors at 95 % needs 6.30×10<sup>12</sup> (21.0 min).</li>
+    <li><b>Raise the bar.</b> 10<sup>−15</sup> needs 3.00×10<sup>15</sup> bits, 6.93 days at 5 Gb/s. At 25 Gb/s, 10<sup>−12</sup> takes 2.00 min.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>You sent 10<sup>12</sup> bits at 5 Gb/s with zero errors. What can you claim at 95 % confidence?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-why="With zero errors, 95 % confidence needs 3/BER bits: 10^12 bits support only 3×10^−12.">BER < 10<sup>−12</sup></button>
+      <button type="button" data-correct data-why="Zero errors in N bits bounds the BER below 3/N at 95 % confidence.">BER < 3×10<sup>−12</sup></button>
+      <button type="button" data-why="No finite test can show a zero BER; it only bounds it.">BER = 0</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

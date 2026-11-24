@@ -7,6 +7,19 @@
   <div class="bd-scope tall"><canvas data-c="c" aria-hidden="true"></canvas><span class="bd-tag">cursors before (outline) and after the ZF FFE (filled); shaded = the cursors forced to zero</span></div>
   <div class="bd-read" aria-live="polite"><span>taps <b data-o="t">–</b></span><span>main cursor <b data-o="m">–</b></span><span>ISI left outside the window <b data-o="o">–</b></span><span>PDA eye <b data-o="e">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Read 1 pre + 1 post.</b> Taps [−0.085, 0.596, −0.319]: main cursor 86 mV, 17 mV of ISI left outside the window, PDA eye 129 mV.</li>
+    <li><b>Drop the pre-tap.</b> With 0 pre-taps you get [0.651, −0.349], the 2-tap answer of Lab 3: main 102 mV, 39 mV left outside, PDA 127 mV.</li>
+    <li><b>Widen the window.</b> 2 pre-taps and 4 post-taps leave only 9 mV outside and raise the PDA eye to 146 mV, but the extra taps are tiny (0.013, 0.014, −0.010, −0.013).</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>Zero forcing with one pre-tap and one post-tap forces which cursors to zero?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-why="Three taps give only three equations: the main cursor and the cursors at k = −1 and k = +1.">All of them</button>
+      <button type="button" data-correct data-why="Two side taps zero the ISI at k = −1 and k = +1; the 17 mV outside the window is left untouched.">p<sub>−1</sub> and p<sub>1</sub>, while the main cursor is held; cursors outside the window stay as they are</button>
+      <button type="button" data-why="The main cursor is the one kept; the side taps cancel its neighbours.">Only the main cursor</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

@@ -11,6 +11,19 @@
   </div>
   <div class="bd-read" aria-live="polite"><span>ideal phase <b data-o="id">–</b></span><span>actual <b data-o="ac">–</b></span><span>error <b data-o="er">–</b></span><span>amplitude <b data-o="am">–</b></span><span>worst INL <b data-o="wi">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Use linear weights.</b> Code 4 should give 22.50° but lands at 18.43° (−4.07° = 4.52 ps), with 79.1 % amplitude. The worst INL is ±4.07°.</li>
+    <li><b>Go to the midpoint.</b> Code 8 (45°) is exact, but the amplitude dips to 70.7 %.</li>
+    <li><b>Switch to sin/cos.</b> With 6 bits, code 4 gives 22.14° and the worst INL is ±0.55° (0.61 ps) at nearly constant amplitude. With only 4 bits the INL grows to ±1.62°.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>Why do linear weights give a phase error between the end points?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-correct data-why="At a = 3/4 the phase is atan(1/3) = 18.43°, not 22.5°; sin/cos weights keep the phasor on a circle.">The weighted sum of I and Q has a phase of atan((1−a)/a), which is not linear in a, and its amplitude dips in the middle</button>
+      <button type="button" data-why="The demo assumes perfect quadrature; the error comes from the weighting itself.">Because the clock phases I and Q are not 90° apart</button>
+      <button type="button" data-why="Even with ideal resolution, linear weights give ±4.07°; resolution only adds a small extra error.">Because the DAC has too few bits</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

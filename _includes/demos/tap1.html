@@ -12,6 +12,19 @@
   <div class="bd-scope short"><canvas data-c="b" aria-hidden="true"></canvas><span class="bd-tag">the tap-1 path against 1 UI (200 ps) and half a UI</span></div>
   <div class="bd-read" aria-live="polite"><span>summer τ = R<sub>L</sub>C <b data-o="tau">–</b></span><span>total <b data-o="t">–</b></span><span>slack to 1 UI <b data-o="s1">–</b></span><span>to ½ UI <b data-o="s2">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Read direct feedback.</b> Clock-to-Q, tap switch, summer settling (τ = R<sub>L</sub>C = 20 ps), setup and margin add up to 140 ps: 60 ps of slack in a 200 ps UI, but −40 ps against the 100 ps UI of 10 Gb/s (Worked Example 8.2).</li>
+    <li><b>Unroll tap 1.</b> Click <i>unrolled</i>: precomputing both outcomes takes the summer out of the loop. 80 ps in all: 120 ps of slack, and +20 ps at 10 Gb/s.</li>
+    <li><b>Slow the summer.</b> Back to direct feedback, set R<sub>L</sub> to 400 Ω: τ = 32 ps, 176 ps in all, and only 24 ps of slack at 5 Gb/s.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>Why must the tap-1 loop close within one UI?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-correct data-why="Tap 1 cancels the first post-cursor of the bit just decided, and the next sample comes one UI after it.">The decision on bit n has to be subtracted before bit n+1 is sampled, one UI later</button>
+      <button type="button" data-why="The CDR loop is much slower; the one-UI limit comes from the DFE feedback.">The CDR updates its phase every UI</button>
+      <button type="button" data-why="A master-slave latch holds it; the constraint is when the next bit arrives.">The latch forgets its decision after one UI</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

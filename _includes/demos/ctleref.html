@@ -14,6 +14,19 @@
   </div>
   <div class="bd-read" aria-live="polite"><span>p<sub>−1</sub> <b data-o="pm">–</b></span><span>main cursor <b data-o="p0">–</b></span><span>vs 0 dB <b data-o="dr">–</b></span><span>p<sub>1</sub> <b data-o="p1">–</b></span><span>PRBS7 eye <b data-o="eye">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>No peaking.</b> At 0 dB the main cursor is 0.337 V and p<sub>1</sub> 0.182: the PRBS7 eye is −84 mV.</li>
+    <li><b>Add peaking.</b> 8 dB: main 0.183 V (−5.3 dB), p<sub>1</sub> 0.055, eye 60 mV. 12 dB: 104 mV. 14 dB: 113 mV, the best (main −7.6 dB, p<sub>1</sub> 0.010).</li>
+    <li><b>Overdo it.</b> At 16 dB p<sub>1</sub> reaches zero and the eye holds at 113 mV; at 20 dB p<sub>1</sub> goes negative (−0.014) and the eye falls to 83 mV: over-equalization.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>At 14 dB the CTLE lowers the main cursor by 7.6 dB, yet the eye opens. How?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-why="The readout shows the main cursor falling; the CTLE is a filter, not an amplifier of the bit.">It amplifies the main cursor at high frequency</button>
+      <button type="button" data-why="A CTLE boosts high frequencies, noise included; it does not remove noise.">It removes the receiver noise</button>
+      <button type="button" data-correct data-why="The eye depends on the main cursor minus the ISI; cutting the low frequencies removes the tail faster than the peak.">It shrinks the ISI far more than the main cursor: p<sub>1</sub> falls from 0.182 to 0.010</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

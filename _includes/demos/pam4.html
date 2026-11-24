@@ -7,6 +7,19 @@
   <div class="bd-scope tall"><canvas data-c="l" aria-hidden="true"></canvas><span class="bd-tag">loss at 2.5 GHz (NRZ f<sub>N</sub>, blue) and 1.25 GHz (PAM4 f<sub>N</sub>, teal); their difference Δ (gold) against the 9.54 dB PAM4 penalty</span></div>
   <div class="bd-read" aria-live="polite"><span>loss at 2.5 GHz <b data-o="a">–</b></span><span>at 1.25 GHz <b data-o="b">–</b></span><span>Δ <b data-o="d">–</b></span><span>verdict <b data-o="v">–</b></span><span>crossover <b data-o="x">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Read REF.</b> 1 m loses 17.4 dB at 2.5 GHz but only 10.4 dB at PAM4's 1.25 GHz Nyquist. PAM4 saves 7.0 dB of loss but costs 9.54 dB of eye, so NRZ wins by 2.6 dB.</li>
+    <li><b>Reach the crossover.</b> Click 1.37 m: the saving grows to 9.5 dB and the verdict is a tie, at 23.8 dB of loss at 2.5 GHz.</li>
+    <li><b>Go further.</b> Click 2 m: 34.6 dB against 20.8 dB, a 13.9 dB saving, and PAM4 wins by 4.3 dB.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>Why does PAM4 start 9.54 dB behind NRZ?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-correct data-why="Four levels in the same peak-to-peak swing leave three eyes, each a third of the NRZ eye.">It fits three eyes into the same swing, so each eye is a third as tall: 20 log<sub>10</sub>3 = 9.54 dB</button>
+      <button type="button" data-why="Longer symbols are PAM4&#x27;s advantage: they halve the Nyquist frequency and so the loss.">Its symbols are twice as long</button>
+      <button type="button" data-why="The penalty is in eye height at a fixed swing, not in transmit power.">It needs four times the transmit power</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

@@ -13,6 +13,19 @@
   </div>
   <div class="bd-read" aria-live="polite"><span>total jitter <b data-o="t">–</b></span><span>from the VCO <b data-o="v">–</b></span><span>from the in-band floor <b data-o="f">–</b></span><span>optimum f<sub>u</sub> <b data-o="o">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Read 3 MHz.</b> At f<sub>u</sub> = 3 MHz the total is 1.00 ps rms: 0.69 ps from the VCO and 0.72 ps from the in-band floor, right at the optimum (2.9 MHz).</li>
+    <li><b>Move the bandwidth.</b> At 1 MHz the VCO dominates (1.20 of 1.27 ps); at 6 MHz the floor dominates (1.02 of 1.13 ps).</li>
+    <li><b>Improve the VCO.</b> Set the VCO to −110 dBc/Hz at 1 MHz: the optimum drops to 1.0 MHz with 0.59 ps there, and 3 MHz now gives 0.76 ps.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>Why is there an optimum PLL bandwidth?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-correct data-why="A wider loop suppresses more VCO noise but lets more in-band floor through; the total is lowest where the two contributions cross.">Inside the loop bandwidth the PLL passes the reference and charge-pump floor, outside it the VCO's own noise; the best f<sub>u</sub> balances the two</button>
+      <button type="button" data-why="Past the optimum the in-band floor grows faster than the VCO noise falls (1.13 ps at 6 MHz).">A wider loop is always better, the limit is only stability</button>
+      <button type="button" data-why="A narrow loop leaves the VCO noise unsuppressed (1.27 ps at 1 MHz).">A narrower loop is always better for jitter</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

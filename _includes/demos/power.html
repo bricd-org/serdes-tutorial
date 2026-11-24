@@ -11,6 +11,19 @@
   <div class="bd-scope short"><canvas data-c="b" aria-hidden="true"></canvas><span class="bd-tag">energy per bit, pJ/b</span></div>
   <div class="bd-read" aria-live="polite"><span>TX driver <b data-o="d">–</b></span><span>other CML <b data-o="o">–</b></span><span>PLL, CMOS, DACs <b data-o="c">25 mW</b></span><span>total <b data-o="t">–</b></span><span>energy per bit <b data-o="e">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Read the first cut.</b> TX driver 50 mW, other CML 141 mW, PLL, CMOS and DACs 25 mW: 216 mW, 43.2 pJ/b at 5 Gb/s (Table 14.3).</li>
+    <li><b>Swap the driver.</b> Turn on <i>SST driver</i>: 6 mW for the driver, 172 mW and 34.4 pJ/b. Adding the 0.8 V<sub>ppd</sub> swing then saves only 1 mW more.</li>
+    <li><b>Trim the CML.</b> Remove five CML gates from the clock paths: 201 mW. Or lower the CML supply to 2.0 V: 178 mW, 35.6 pJ/b.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>Where does most of the first-cut power go?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-why="The PLL is 12.7 mW of 216; the CML blocks dominate.">The PLL</button>
+      <button type="button" data-why="The CMOS blocks and DACs together are under 25 mW.">The CMOS logic</button>
+      <button type="button" data-correct data-why="CML draws its tail current whatever the data, so the budget is the sum of the tails times the supply.">Static CML tail currents: the driver and the other CML blocks take 191 of the 216 mW</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

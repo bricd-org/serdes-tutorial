@@ -9,6 +9,19 @@
   <div class="bd-scope tall"><canvas data-c="b" aria-hidden="true"></canvas><span class="bd-tag">BER against sampling instant, 5 Gb/s (UI = 200 ps)</span></div>
   <div class="bd-read" aria-live="polite"><span>Q <b data-o="q">–</b></span><span>TJ = DJ<sub>δδ</sub> + 2Qσ<sub>RJ</sub> <b data-o="tj">–</b></span><span>eye width <b data-o="ew">–</b></span><span>RJ share of TJ <b data-o="rs">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Read the budget.</b> DJδδ = 40 ps plus 2Q × 1.32 ps of RJ: TJ = 58.6 ps, an eye 141 ps (0.71 UI) wide, with RJ 32 % of the TJ.</li>
+    <li><b>Add RJ.</b> Click 3 ps: TJ 82.2 ps and 0.59 UI (RJ now 51 %). At 5 ps: 0.45 UI.</li>
+    <li><b>Change the BER target.</b> 10<sup>−15</sup> needs Q = 7.94 and leaves 0.70 UI; 10<sup>−6</sup> needs only Q = 4.75 and leaves 0.74 UI.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>Why does a picosecond of RJ cost about 14 ps of eye at 10<sup>−12</sup>, but a picosecond of DJ only 1 ps?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-why="The factor is 2Q, set by the BER target, not a conversion between units.">Because RJ is measured rms and DJ peak-to-peak, which differ by a factor of 14</button>
+      <button type="button" data-correct data-why="At 10^−12 each Gaussian tail extends Q ≈ 7σ, on both sides of the eye.">TJ = DJδδ + 2Qσ<sub>RJ</sub> with Q = 7.03: RJ is unbounded, so the eye must allow about 14σ of it, while bounded DJ counts once</button>
+      <button type="button" data-why="The cost per picosecond depends on how jitter is distributed, not on where it comes from.">Because RJ comes from the PLL, which is noisier</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

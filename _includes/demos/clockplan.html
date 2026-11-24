@@ -8,6 +8,19 @@
   <div class="bd-scope tall"><canvas data-c="c" aria-hidden="true"></canvas><span class="bd-tag">clock frequencies (log scale): HBT CML at ≥ 1.25 GHz (blue), CMOS below (teal)</span></div>
   <div class="bd-read" aria-live="polite"><span>UI <b data-o="ui">–</b></span><span>f<sub>N</sub> <b data-o="fn">–</b></span><span>PLL divide ratio N <b data-o="n">–</b></span><span>f<sub>ref</sub>/f<sub>u</sub> at a 3 MHz loop <b data-o="r">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Read the default plan.</b> At 5 Gb/s with a 50 MHz reference: UI 200 ps, f<sub>N</sub> 2.5 GHz and a PLL divide ratio N = 50. The CDR loop (625 MHz) and the word clock (312.5 MHz) stay in CMOS.</li>
+    <li><b>Double the rate.</b> Click 10 Gb/s: UI 100 ps, f<sub>N</sub> 5 GHz, N = 100, and the caption warns that the CDR loop clock now reaches 1.25 GHz, too fast for CMOS logic.</li>
+    <li><b>Pick an awkward reference.</b> Back at 5 Gb/s, set the reference to 30 MHz: N = 83.33 (fractional) and f<sub>ref</sub>/f<sub>u</sub> drops from 17 to 10. An integer-N PLL wants a reference that divides 2.5 GHz.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>Why does the PLL run at 2.5 GHz, not 5 GHz, for a 5 Gb/s link?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-why="N can be whatever the divider supports; the demo uses N = 100 at 10 Gb/s. The 2.5 GHz comes from the half-rate datapath.">Because N is limited to 50 by the 50 MHz reference</button>
+      <button type="button" data-why="The numbers coincide, but the clock frequency is set by the architecture; a full-rate design would need a 5 GHz clock.">Because 2.5 GHz is the Nyquist frequency where the channel loss is quoted</button>
+      <button type="button" data-correct data-why="Half-rate serializers and samplers use both edges of a 2.5 GHz clock, so the PLL only needs fb/2.">Because the datapath is half-rate: each clock period carries two bits, one on each edge</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

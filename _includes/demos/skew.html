@@ -8,6 +8,19 @@
   <div class="bd-scope tall"><canvas data-c="t" aria-hidden="true"></canvas><span class="bd-tag">valid window of each lane (one bit time), FR-4 at 6.7 ps/mm</span></div>
   <div class="bd-read" aria-live="polite"><span>bit time <b data-o="tb">–</b></span><span>skew <b data-o="sk">–</b></span><span>skew / bit time <b data-o="fr">–</b></span><span>window left for all 16 lanes <b data-o="w">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Start where buses lived.</b> Click 312.5 Mb/s. The 67 ps of skew from 10 mm of mismatch is 2.1 % of the 3.2 ns bit, and 3.1 ns of each bit is still valid on all 16 lanes at once.</li>
+    <li><b>Go to 5 Gb/s.</b> The same 67 ps is now 33.5 % of a 200 ps bit, and only 133 ps is left for all 16 lanes before any jitter is counted (Worked Example 1.1).</li>
+    <li><b>Close the bus.</b> At 5 Gb/s drag the mismatch to 30 mm: the skew (201 ps) passes the bit time and the window reads none. Halving the mismatch to 5 mm buys back only 33 ps (166 ps left).</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>Why can lane skew never close the eye of the serial link (gold) in this demo?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-why="Length alone does not matter: what closes the bus is the difference between lanes, and a serial link has no other lane.">Its trace is shorter than the bus lanes</button>
+      <button type="button" data-correct data-why="The CDR takes the sampling instant from the transitions of the same lane, so lane-to-lane skew does not exist.">It has one lane and recovers its clock from its own data, so there is nothing to be skewed against</button>
+      <button type="button" data-why="It runs faster, 5 Gb/s on one lane against 312.5 Mb/s per bus lane; the embedded clock is what removes skew.">It runs at a lower bit rate than the bus</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

@@ -7,6 +7,19 @@
   <div class="bd-scope"><canvas data-c="s" aria-hidden="true"></canvas><span class="bd-tag">their sum, sampled at t<sub>s</sub> + nT<sub>b</sub></span></div>
   <div class="bd-read" aria-live="polite"><span>selected bit <b data-o="sel">–</b></span><span>sample <b data-o="smp">–</b></span><span>its own pulse A·p<sub>0</sub> <b data-o="own">–</b></span><span>ISI from the neighbours <b data-o="isi">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Read one sample.</b> On the 10 dB line, bit #2 samples at 242 mV: its own pulse gives 278 mV and its neighbours' tails take away 36 mV.</li>
+    <li><b>Find a lone 1.</b> Click bit #6 twice (it flips back and stays selected): a 1 after three 0s samples at only 118 mV (ISI −160 mV). Bit #10, the end of a run of three 1s, gets +60 mV and samples at 338 mV.</li>
+    <li><b>Switch to REF.</b> The same lone 1 now samples at −57 mV, below zero: the neighbours' tails (−227 mV) outweigh its own 170 mV pulse. This channel cannot be received without equalization.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>On REF a lone 1 after a run of 0s samples far lower than a 1 at the end of a run of 1s. Why?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-why="Every bit leaves the TX at the same ±A; the difference comes from the neighbours&#x27; tails at the receiver.">The transmitter sends a lone 1 with less amplitude</button>
+      <button type="button" data-correct data-why="Each sample is A·p0 plus the sum of its neighbours&#x27; cursors, so the pattern before a bit decides where it lands.">Its own pulse is the same, but the tails of the preceding 0s pull it down, while preceding 1s push it up</button>
+      <button type="button" data-why="The channel is linear and time-invariant, so every bit gets the same pulse; only the sum of tails changes.">The channel loses more on isolated bits</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

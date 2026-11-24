@@ -14,6 +14,19 @@
   <div class="bd-read" aria-live="polite"><span>v <b data-o="v">–</b></span><span>t<sub>d</sub> <b data-o="td">–</b></span><span>λ<sub>min</sub> = v/f<sub>max</sub> <b data-o="lam">–</b></span><span>Eq 15.2: N ≥ <b data-o="nmin">–</b></span><span>Δℓ = ℓ/N <b data-o="dl">–</b></span><span>ladder cutoff f<sub>c</sub> <b data-o="fc">–</b></span><span>error at f<sub>N</sub> = 2.5 GHz <b data-o="en">–</b></span><span>at f<sub>max</sub> <b data-o="em">–</b></span><span>R, L, G, C elements <b data-o="el">–</b></span></div>
   <div class="bd-controls"><button type="button" class="bd-btn" data-act="rule">set N by Eq 15.2</button></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Apply Eq 15.2 to REF.</b> 1 m, ε<sub>r</sub> 4, f<sub>max</sub> 10 GHz: N ≥ 667 sections of 1.50 mm (λ/10), a ladder cutoff at 31.8 GHz and 2668 R, L, G, C elements.</li>
+    <li><b>Read the phase error.</b> With 667 sections the ladder is off by only 6.2° (6.9 ps) at f<sub>N</sub>, but by 413° (115 ps) at f<sub>max</sub>: the small error of each section adds up over 667 of them.</li>
+    <li><b>Change N.</b> 100 sections cut off at 4.8 GHz (315° off at f<sub>N</sub>); 2000 bring the error at f<sub>max</sub> down to 44° (12 ps) for 8000 elements. A 10 cm line needs only 67.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>Why does the Open-SERDES flow apply the channel in Python rather than as a 667-section ladder in SPICE?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-why="It can; the ladder is simply large, slow and still inexact at high frequency.">SPICE cannot simulate inductors</button>
+      <button type="button" data-correct data-why="Splitting the problem at the channel keeps SPICE for the circuits and uses the exact channel model in between.">The ladder is slow, drifts in phase over many sections and needs extra R–L branches for the skin effect; convolving with h(t) is exact for a matched link</button>
+      <button type="button" data-why="It does; the split works because the link is matched, so the channel can be applied as a convolution.">The channel does not affect the circuits</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

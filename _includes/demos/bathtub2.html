@@ -8,6 +8,19 @@
   <div class="bd-scope"><canvas data-c="b" aria-hidden="true"></canvas><span class="bd-tag">BER against sampling instant within the UI</span></div>
   <div class="bd-read" aria-live="polite"><span>σ <b data-o="ps">–</b></span><span>opening at 10<sup>−12</sup> <b data-o="o">–</b></span><span>BER at the centre <b data-o="c">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>The book's case.</b> σ = 0.02 UI (4 ps at 5 Gb/s): the eye stays open over 0.72 UI at 10<sup>−12</sup>.</li>
+    <li><b>Double the jitter.</b> Click 0.04 UI (8 ps): the opening shrinks to 0.45 UI, because each Gaussian tail is about 7σ wide at 10<sup>−12</sup>. At 0.08 UI the bathtub closes: even the centre reaches 2.1e−10.</li>
+    <li><b>Change the transition density.</b> Drag it from 0.5 to 0.1 or to 1: the opening barely moves (0.73 or 0.72 UI). The density scales the BER, but the tails are so steep that the width hardly changes.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>Random jitter of 3 ps rms on a 200 ps UI: roughly how much of the eye is left at 10<sup>−12</sup>?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-why="rms is one σ; at 10^−12 each Gaussian tail extends about 7σ, so about 42 ps is lost.">About 0.97 UI: only 6 ps (±1σ) is lost</button>
+      <button type="button" data-correct data-why="2 × 7 × 3 ps ≈ 42 ps, so about 158 ps (0.79 UI) remains. Set σ = 0.015 UI to see it.">About 0.79 UI: about 7σ is lost on each side, 42 ps in all</button>
+      <button type="button" data-why="The tails are unbounded, but at a finite BER they cut off near 7σ, so the eye stays open.">Nothing: random jitter is unbounded, so the eye is always closed</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

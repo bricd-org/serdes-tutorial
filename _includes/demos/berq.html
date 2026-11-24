@@ -11,6 +11,19 @@
   </div>
   <div class="bd-read" aria-live="polite"><span>Q = EH/2σ<sub>n</sub> <b data-o="q">–</b></span><span>SNR <b data-o="snr">–</b></span><span>BER <b data-o="ber">–</b></span><span>one error every <b data-o="mt">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Hit 10<sup>−12</sup>.</b> The defaults, EH 100 mV and σ<sub>n</sub> 7.11 mV, give Q = 7.03, SNR 16.9 dB and a BER of 1.0e−12: one error every 3.28 min at 5 Gb/s, and every 1.64 min at 10 Gb/s.</li>
+    <li><b>Lose or win 1 dB.</b> Raise σ<sub>n</sub> to 7.98 mV (SNR 15.9 dB): 1.9e−10, an error every 1.08 s. Lower it to 6.34 mV (17.9 dB): 1.6e−15, one error every 1.49 days.</li>
+    <li><b>Halve the eye.</b> Set EH to 50 mV: Q 3.52, BER 2.2e−4, an error every 914 ns.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>A link runs at a BER of 10<sup>−12</sup>. Its SNR improves by just 1 dB. Roughly what happens to the BER?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-correct data-why="Near Q = 7 the Gaussian tail is so steep that 1 dB moves the BER by about three decades: 1.0e−12 becomes 1.6e−15 here.">It falls by about three decades, to near 10<sup>−15</sup></button>
+      <button type="button" data-why="The BER depends on the tail of a Gaussian, not linearly on power: 1 dB is about three decades near 10^−12.">It falls by about 26 %, because 1 dB is a 26 % power ratio</button>
+      <button type="button" data-why="The BER depends on Q = EH/2σn; less noise raises Q just as a taller eye does.">Nothing changes unless the eye height changes</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

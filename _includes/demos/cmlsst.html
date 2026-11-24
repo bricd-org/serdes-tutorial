@@ -9,6 +9,19 @@
   <div class="bd-scope"><canvas data-c="b" aria-hidden="true"></canvas><span class="bd-tag">output-stage current and power (Equation 9.3, Z<sub>0</sub> = 50 Ω)</span></div>
   <div class="bd-read" aria-live="polite"><span>CML I<sub>T</sub> = V/Z<sub>0</sub> <b data-o="ic">–</b></span><span>CML power <b data-o="pc">–</b></span><span>SST I = V/4Z<sub>0</sub> <b data-o="is">–</b></span><span>SST power <b data-o="ps">–</b></span><span>energy at 5 Gb/s <b data-o="e">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Read 1 V<sub>ppd</sub>.</b> CML needs I<sub>T</sub> = V/Z<sub>0</sub> = 20 mA, 50 mW from 2.5 V (10.0 pJ/b at 5 Gb/s). SST needs 5 mA, 6.0 mW from 1.2 V: 1.2 pJ/b.</li>
+    <li><b>Lower the swing.</b> Click 0.8 V<sub>ppd</sub>: 16 mA and 40 mW against 4 mA and 4.8 mW (Eq 9.3).</li>
+    <li><b>Lower the CML supply.</b> At 1 V<sub>ppd</sub>, set the CML supply to 1.8 V: the current stays 20 mA but the power falls to 36 mW (7.2 pJ/b). The supply, not the swing, sets the rest.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>You double the swing of a CML driver. What happens to its power?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-correct data-why="The tail current is proportional to the swing (16 mA at 0.8 V, 20 mA at 1 V), and the supply is fixed.">It doubles, because I<sub>T</sub> = V/Z<sub>0</sub> grows with the swing and P = V<sub>CC</sub>I<sub>T</sub></button>
+      <button type="button" data-why="V² applies to a resistor driven by that voltage; a CML driver draws a tail current set by the swing.">It quadruples, as power goes with V²</button>
+      <button type="button" data-why="The tail current is chosen for the swing: twice the swing needs twice the current.">It stays the same, as the tail current is fixed</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

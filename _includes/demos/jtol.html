@@ -8,6 +8,19 @@
   <div class="bd-scope tall"><canvas data-c="j" aria-hidden="true"></canvas><span class="bd-tag">JTOL, UI<sub>pp</sub>: mask (white), BB estimate TM + 2S/ω (teal), linear CDR (dotted), book's simulation (gold dots)</span></div>
   <div class="bd-read" aria-live="polite"><span>slew S = K<sub>P</sub>·LSB/T<sub>upd</sub> <b data-o="s">–</b></span><span>needed at 0.5 MHz <b data-o="need">–</b></span><span>worst margin of the estimate <b data-o="m">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Read the default.</b> K<sub>P</sub> = 1/8 LSB gives a slew of 2.44×10<sup>6</sup> UI/s against ≳ 2.64×10<sup>6</sup> needed at 0.5 MHz: the estimate of Eq 13.4 misses the mask there by 0.6 dB. The simulated points (gold) are the real test.</li>
+    <li><b>Change K<sub>P</sub>.</b> 1/4 LSB doubles the slew (4.88×10<sup>6</sup> UI/s) for +4.7 dB of margin; 1/16 LSB halves it (−5.2 dB).</li>
+    <li><b>Eat the timing margin.</b> Lower TM to 0.20 UI: the need rises to 2.83×10<sup>6</sup> UI/s and the margin to −1.1 dB.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>At low jitter frequencies, what limits a bang-bang CDR's jitter tolerance?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-why="The resolution sets the step size, but tolerance at low frequency is set by how fast the steps can accumulate.">The phase interpolator's resolution</button>
+      <button type="button" data-correct data-why="Large, slow sinusoidal jitter demands a high phase slope; once that exceeds the slew rate the CDR falls behind.">Its slew rate: it moves at most K<sub>P</sub> steps per update, so it cannot follow phase that moves faster</button>
+      <button type="button" data-why="Metastability sets a BER floor; the low-frequency tolerance is a loop-dynamics limit.">The sampler's metastability</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

@@ -11,6 +11,19 @@
   </div>
   <div class="bd-read" aria-live="polite"><span>main tap c<sub>0</sub> = 1 − |c<sub>−1</sub>| − |c<sub>1</sub>| <b data-o="c0">–</b></span><span>de-emphasis <b data-o="de">–</b></span><span>main cursor <b data-o="m">–</b></span><span>PDA eye <b data-o="pda">–</b></span><span>PRBS7 eye <b data-o="eye">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Turn the FFE off.</b> Click <i>no FFE</i>: the main cursor is 340 mV, but the PDA eye is −161 mV and the PRBS7 eye −78 mV. REF is closed.</li>
+    <li><b>Try the PCIe presets.</b> −3.5 dB opens the PRBS7 eye to 42 mV (the PDA eye is still −10 mV); −6 dB gives 103 mV.</li>
+    <li><b>Compare 2 and 3 taps.</b> <i>2-tap ZF</i> (c<sub>1</sub> = −0.349, −10.4 dB) gives 163 mV. <i>3-tap ZF</i> adds c<sub>−1</sub> = −0.085 and gets only 145 mV: the pre-tap costs more main-cursor swing than the pre-cursor it removes (Lab 3).</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>Why does a stronger post-tap shrink the main cursor?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-why="The channel is fixed; a TX FFE only reshapes what is sent into it.">The channel loss rises when the FFE is on</button>
+      <button type="button" data-correct data-why="Every bit of de-emphasis comes out of the main tap. At c1 = −0.349 the main cursor falls from 340 to 209 mV, while the ISI falls far more.">The taps share a fixed peak swing: c<sub>0</sub> = 1 − |c<sub>−1</sub>| − |c<sub>1</sub>|</button>
+      <button type="button" data-why="A TX FFE adds no noise; its cost is the swing it takes from the main tap.">The post-tap adds noise that hides the main cursor</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

@@ -11,6 +11,19 @@
   </div>
   <div class="bd-read" aria-live="polite"><span>slew rate at the crossing <b data-o="sr">–</b></span><span>jitter σ<sub>t</sub> <b data-o="st">–</b></span><span>measured from 300 edges <b data-o="sm">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Read the default.</b> A 0.4 V<sub>ppd</sub> clock at 2.5 GHz crosses at 3.14 mV/ps, so 5 mV of noise becomes σ<sub>t</sub> = 1.59 ps (300 measured edges give 1.56 ps).</li>
+    <li><b>Shrink the swing.</b> Click 0.1 V<sub>ppd</sub>: the slew falls to 0.79 mV/ps and the same noise makes 6.37 ps, four times the jitter.</li>
+    <li><b>Double the noise.</b> Back at 0.4 V<sub>ppd</sub>, set σ<sub>v</sub> to 10 mV: 3.18 ps. σ<sub>t</sub> = σ<sub>v</sub>/SR is linear in both.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>A clock buffer's output swing is halved and its noise stays the same. The jitter it adds:</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-why="Jitter is σv divided by the slew rate, which only halves; it goes as 1/swing, not 1/swing².">Quadruples</button>
+      <button type="button" data-correct data-why="Half the swing halves the slew rate at the crossing, and σt = σv/SR doubles.">Doubles</button>
+      <button type="button" data-why="The same voltage noise moves a slower edge further in time.">Stays the same, because the noise did not change</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

@@ -10,6 +10,19 @@
   </div>
   <div class="bd-read" aria-live="polite"><span>skin depth δ <b data-o="d">–</b></span><span>R<sub>DC</sub> <b data-o="rdc">–</b></span><span>R at f <b data-o="r">–</b></span><span>skin effect starts at <b data-o="fs">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Read the default.</b> At 2.5 GHz the skin depth is 1.32 µm, far thinner than the 17.5 µm copper: R rises from 7.7 Ω/m at DC to 45.8 Ω/m.</li>
+    <li><b>Go down in frequency.</b> At 100 MHz δ = 6.60 µm and R = 11.9 Ω/m. At 10 MHz δ (20.9 µm) is thicker than the copper and R is back near DC (8.2 Ω/m): the skin effect starts near 56.9 MHz.</li>
+    <li><b>Thicken the copper.</b> Set 35 µm: R<sub>DC</sub> halves to 3.9 Ω/m, but at 2.5 GHz R only falls to 40.5 Ω/m. The current already flows in the skin, so extra copper barely helps.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>Well above the onset, conductor resistance grows as √f. Going from 2.5 GHz to 10 GHz multiplies it by about:</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-correct data-why="δ ∝ 1/√f, so four times the frequency thins the conducting layer by two and doubles R.">2</button>
+      <button type="button" data-why="Growth in proportion to f is the dielectric loss; conductor loss grows as √f.">4</button>
+      <button type="button" data-why="Above the onset the current crowds into a skin δ ∝ 1/√f, so R keeps rising as √f.">1: above the onset R stops changing</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

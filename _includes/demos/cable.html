@@ -10,6 +10,19 @@
   </div>
   <div class="bd-read" aria-live="polite"><span>k<sub>d</sub>l <b data-o="k">–</b></span><span>main y<sub>0</sub> <b data-o="y0">–</b></span><span>y<sub>±1</sub>, y<sub>±2</sub> <b data-o="y1">–</b></span><span>Σ|y<sub>k≠0</sub>| <b data-o="s">–</b></span><span>PDA half-eye <b data-o="h">–</b></span><span>ZF noise enhancement to f<sub>N</sub> <b data-o="n">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Read 15 dB.</b> k<sub>d</sub>l = 691 ps: main y<sub>0</sub> 0.470, y<sub>±1</sub> 0.153, y<sub>±2</sub> 0.043, and Σ|y<sub>k≠0</sub>| = 0.527 exceeds y<sub>0</sub>, so the PDA half-eye is −0.057. Zero-forcing to f<sub>N</sub> would cost 9.5 dB of noise.</li>
+    <li><b>Lower the loss.</b> Click 10 dB: y<sub>0</sub> 0.597, Σ 0.400 and an open half-eye of 0.197 (5.9 dB of ZF noise). At 5 dB: y<sub>0</sub> 0.776 and 0.554.</li>
+    <li><b>Raise it.</b> Click 20 dB: y<sub>0</sub> falls to 0.381 while Σ grows to 0.614, and the half-eye reaches −0.233.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>This zero-phase cable model gives a symmetric pulse. What does that say about its pre-cursors?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-why="A symmetric pulse has as much energy before its peak as after it.">There are none</button>
+      <button type="button" data-correct data-why="y−1 = y1 in a zero-phase model. Real, causal channels have smaller pre-cursors: REF has p−1 = 0.049 against p1 = 0.182.">They are as large as the post-cursors, so a DFE, which only removes post-cursors, cannot open this eye alone</button>
+      <button type="button" data-why="Symmetry makes them equal, not larger.">They are always larger than the post-cursors</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

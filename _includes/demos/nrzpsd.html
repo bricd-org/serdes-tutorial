@@ -11,6 +11,19 @@
   </div>
   <div class="bd-read" aria-live="polite"><span>f <b data-o="f">–</b></span><span>PSD at f <b data-o="psd">–</b></span><span>power below f <b data-o="frac">–</b></span><span>f<sub>N</sub> <b data-o="fn">–</b></span></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Find where the power is.</b> At f = f<sub>N</sub> the PSD is only 3.9 dB below DC and 77.4 % of the power lies below 2.5 GHz. That is why channel loss is quoted at Nyquist.</li>
+    <li><b>Move to the first null.</b> Click f = f<sub>b</sub>: the PSD has a null at 5 GHz with 90.3 % of the power below it. At 1.5 f<sub>b</sub> the second lobe is 13.5 dB down and 93.1 % is below.</li>
+    <li><b>Change the bit rate.</b> Set 10 Gb/s: f<sub>N</sub> moves to 5 GHz, but the readouts at f = f<sub>N</sub> stay at −3.9 dB and 77.4 %. The spectrum depends only on f·T<sub>b</sub>.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>A channel loses 20 dB at 2.5 GHz and 40 dB at 7.5 GHz. Why does the 20 dB matter more for a 5 Gb/s NRZ link?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-correct data-why="The NRZ spectrum is a sinc² that falls past fN, so the loss at Nyquist decides the eye. That is why links are specified at fN.">77 % of the signal power lies below 2.5 GHz, and the PSD at 7.5 GHz is already 13.5 dB down</button>
+      <button type="button" data-why="The sinc² has lobes above fb (−13.5 dB at 1.5 fb); they shape the edges but hold little of the power.">7.5 GHz is above the bit rate, so it carries no data at all</button>
+      <button type="button" data-why="Loss grows with frequency; it matters less up there only because there is little signal power left to lose.">Loss at high frequencies is always negligible</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {

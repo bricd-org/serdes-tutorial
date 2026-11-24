@@ -8,6 +8,19 @@
   <div class="bd-read" aria-live="polite"><span>traces <b data-o="n">–</b></span><span>inner eye so far <b data-o="eh">–</b></span><span>full PRBS7 eye <b data-o="ef">–</b></span></div>
   <div class="bd-controls"><button type="button" class="bd-toggle" data-t="run" aria-pressed="false">animate</button></div>
   <p class="bd-caption" data-o="cap"></p>
+  <div class="bd-try"><p class="bd-try-h">Three things to try</p><ol>
+    <li><b>Fold one window.</b> Set 1 window: one 2-UI trace, and no eye yet, because an eye needs both a 0 and a 1 at the sampling instant.</li>
+    <li><b>Add a second.</b> At 2 windows the inner eye already reads 783 mV, the full PRBS7 eye: on this mild channel the worst pattern turns up almost at once.</li>
+    <li><b>Fold them all.</b> Drag to 126 windows or press <i>animate</i>: the opening stays at 783 mV. On a channel with a long tail, rare long runs would keep closing it.</li>
+  </ol></div>
+  <div class="bd-check"><p class="bd-check-q"><span class="bd-check-h">Check yourself</span>Why does a simulated eye on a channel with a long tail need a long pattern?</p>
+    <div class="bd-check-opts" role="group" aria-label="Answers">
+      <button type="button" data-why="An eye diagram is a persistence plot, not an average: more traces can only close it further.">Because noise averages out over many traces</button>
+      <button type="button" data-correct data-why="The inner eye is set by the worst sequence; with a long tail that sequence is a long run, which a short pattern may never contain.">Because the worst pattern, a long run followed by a lone bit, is rare and may not appear in a short pattern</button>
+      <button type="button" data-why="Triggering is not the issue; the opening keeps shrinking until the worst pattern has been drawn.">Because the scope needs many triggers to lock</button>
+    </div>
+    <p class="bd-check-fb" aria-live="polite"></p>
+  </div>
 </div>
 <script>
 (function () {
@@ -20,7 +33,7 @@
   var S = BD.bind(root, { n: { fmt: String } }, function () { draw(); });
   var q = function (s) { return root.querySelector(s); }, sl = q('[data-k="n"]'), tb = q('[data-t="run"]');
   BD.toggle(tb, function (on) { clearInterval(timer); if (on) timer = setInterval(function () { if (!root.isConnected) return clearInterval(timer); var v = +sl.value; sl.value = v >= 126 ? 1 : v + 1; sl.dispatchEvent(new Event('input')); }, 120); });
-  function eyeH(k) { var lo = 1e9, hi = -1e9; for (var j = 0; j < 2 * k; j++) { var b = j, v = w[base + b * SPS + SPS - 1]; if (bits[b % N]) lo = Math.min(lo, v); else hi = Math.max(hi, v); } return lo - hi; }
+  function eyeH(k) { var lo = 1e9, hi = -1e9; for (var j = 0; j < 2 * k; j++) { var b = j, v = w[base + b * SPS + SPS - 1]; if (bits[b % N]) lo = Math.min(lo, v); else hi = Math.max(hi, v); } return lo > 1e8 || hi < -1e8 ? NaN : lo - hi; }   // NaN until a 0 and a 1 have both been seen
   function draw() {
     var n = S.n, d = BD.setup(q('[data-c="w"]')), span = Math.min(2 * n + 2, 24), f = BD.frame(d, { x: [0, span], y: [-0.6, 0.6], xt: [[0, '0'], [span, span + ' UI']], yt: [[-0.5, '−A'], [0.5, '+A']], pad: { l: 30, t: 16, b: 22 } });
     var g = d.g; for (var k = 0; k < Math.min(n, span / 2); k++) { g.fillStyle = cols[k % 6].replace(')', ',.12)').replace('#', '#'); g.globalAlpha = 0.14; g.fillStyle = cols[k % 6]; g.fillRect(f.X(2 * k), f.p.t, f.X(2 * k + 2) - f.X(2 * k), d.h - f.p.t - f.p.b); g.globalAlpha = 1; }
@@ -29,7 +42,7 @@
     for (k = 0; k < n; k++) { var tx = [], ty = []; for (j = 0; j <= 2 * SPS; j++) { tx.push(j / SPS); ty.push(w[base + 2 * k * SPS + j - 1]); }
       BD.line(fe, tx, ty, k < 6 ? cols[k] : 'rgba(170,205,240,.22)', k < 6 ? 1.8 : 1); }
     q('[data-o="n"]').textContent = n;
-    q('[data-o="eh"]').textContent = (eyeH(n) * 1e3).toFixed(0) + ' mV';
+    var e = eyeH(n); q('[data-o="eh"]').textContent = isNaN(e) ? '– (needs a 0 and a 1)' : (e * 1e3).toFixed(0) + ' mV';
     q('[data-o="ef"]').textContent = (eyeH(N) * 1e3).toFixed(0) + ' mV';
     q('[data-o="cap"]').innerHTML = 'An oscilloscope triggered on the clock draws every 2-UI slice of the waveform on top of the others. The first few traces (coloured) show single patterns; the rest fill in the eye around them. ' +
       'On this mild channel the worst pattern, a lone bit after a short run, turns up within a few traces, so the opening settles at once; on a channel with a long tail, rare long runs keep closing it, which is why an eye is only as deep as the number of bits behind it.';
